@@ -48,8 +48,8 @@ def mlp(
     output_dim: int = 1,
     hidden_dims: int | Sequence[int] = 64,
     num_layers: int = 2,
-    activation: str = "tanh",
-    output_activation: str | None = None,
+    activation: Callable = jnp.tanh,
+    output_activation: Callable | None = None,
     use_bias: bool = True,
     final_layer_bias: bool = True,
     dropout_rate: float = 0.0,
@@ -65,7 +65,7 @@ def mlp(
         output_dim: Number of output features.
         hidden_dims: Width(s) of hidden layers.
         num_layers: Number of hidden layers (when ``hidden_dims`` is ``int``).
-        activation: Activation name.
+        activation: Activation function (e.g. ``jax.nn.gelu``, ``jnp.tanh``).
         key: PRNG key for initialization.
 
     Returns:

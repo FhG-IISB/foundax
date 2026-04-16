@@ -6,7 +6,6 @@ instead of a custom Linear layer.
 
 from typing import Callable, Optional, Sequence
 
-import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
@@ -23,9 +22,10 @@ class MLP(nn.Module):
         identical hidden layers.
     num_layers : int
         Number of hidden layers (used when ``hidden_dims`` is an ``int``).
-    activation : str
-        Activation name (``'tanh'``, ``'gelu'``, ``'relu'``, ``'silu'``).
-    output_activation : str | None
+    activation : Callable
+        Activation function for hidden layers (e.g. ``jax.nn.gelu``,
+        ``jnp.tanh``, ``jax.nn.silu``).
+    output_activation : Callable | None
         Optional activation applied to the output.
     use_bias : bool
         Whether hidden Dense layers use bias.
@@ -42,8 +42,8 @@ class MLP(nn.Module):
     output_dim: int = 1
     hidden_dims: int | Sequence[int] = 64
     num_layers: int = 2
-    activation: str = "tanh"
-    output_activation: Optional[str] = None
+    activation: Callable = jnp.tanh
+    output_activation: Optional[Callable] = None
     use_bias: bool = True
     final_layer_bias: bool = True
     dropout_rate: float = 0.0
@@ -52,10 +52,8 @@ class MLP(nn.Module):
 
     @nn.compact
     def __call__(self, *inputs: jnp.ndarray, deterministic: bool = True) -> jnp.ndarray:
-        act_fn = _get_activation(self.activation)
-        out_act_fn = (
-            _get_activation(self.output_activation) if self.output_activation else None
-        )
+        act_fn = self.activation
+        out_act_fn = self.output_activation
 
         if isinstance(self.hidden_dims, int):
             widths = [self.hidden_dims] * self.num_layers
@@ -84,18 +82,3 @@ class MLP(nn.Module):
         if out_act_fn is not None:
             h = out_act_fn(h)
         return h
-
-
-def _get_activation(name: str) -> Callable:
-    _map = {
-        "gelu": jax.nn.gelu,
-        "relu": jax.nn.relu,
-        "tanh": jnp.tanh,
-        "elu": jax.nn.elu,
-        "leaky_relu": jax.nn.leaky_relu,
-        "sigmoid": jax.nn.sigmoid,
-        "silu": jax.nn.silu,
-        "swish": jax.nn.silu,
-        "celu": jax.nn.celu,
-    }
-    return _map[name.lower()]
