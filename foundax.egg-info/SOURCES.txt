@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 foundax/__init__.py
@@ -20,8 +21,18 @@ foundax.egg-info/entry_points.txt
 foundax.egg-info/requires.txt
 foundax.egg-info/top_level.txt
 foundax/architectures/__init__.py
+foundax/architectures/cno.py
+foundax/architectures/common.py
+foundax/architectures/deeponet.py
 foundax/architectures/fno.py
+foundax/architectures/geofno.py
+foundax/architectures/gnot.py
+foundax/architectures/linear.py
+foundax/architectures/mgno.py
 foundax/architectures/mlp.py
+foundax/architectures/pcno.py
+foundax/architectures/pit.py
+foundax/architectures/pointnet.py
 foundax/architectures/transformer.py
 foundax/architectures/unet.py
 tests/test_dispatch.py

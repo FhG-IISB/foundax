@@ -1,106 +1,96 @@
 Metadata-Version: 2.4
 Name: foundax
 Version: 0.1.0
-Summary: One-stop JAX foundation model dispatch repository
+Summary: One-stop JAX foundation model repository
+License-Expression: MIT
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
+License-File: LICENSE
 Requires-Dist: jax>=0.4
 Requires-Dist: flax>=0.8
+Requires-Dist: equinox>=0.11
+Requires-Dist: einops
+Dynamic: license-file
 
 # foundax
 
-One-stop JAX foundation model hub for this workspace.
+<p align="center">
+  <img src="assets/logo.png" alt="foundax logo" width="400">
+</p>
 
-The source repositories are vendored locally under `repos/`, so `foundax` can run against internal copies instead of the separate sibling repositories.
+A unified JAX model zoo for neural operators, PINNs, and foundation models.
 
-This repository provides **one convert script** and **one compare script** that dispatch to vendored model repositories under `repos/`:
+```
+pip install foundax
+```
 
-- `jax_morph`
-- `jax_mpp`
-- `jax_pdeformer2`
-- `jax_poseidon`
-- `jax_prose`
-- `jax_walrus`
-- `jax_dpot`
-- `jax_bcat`
-
-## Python API
-
-You can import `foundax` as a package and instantiate models via:
+## Usage
 
 ```python
-import foundax
+import foundax as fx
 
-# MORPH-Ti
-model = foundax.morph.Ti()
+# Neural operator architectures (returns initialized FlaxModel)
+model = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
+model = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
+model = fx.unet2d(in_channels=1, out_channels=1)
+model = fx.transformer(num_tokens=1000, d_model=128, num_heads=8)
 
-# MPP-Base
-model = foundax.mpp.B(n_states=12)
+# Poseidon — (B, 128, 128, C) → (B, 128, 128, C)
+model = fx.poseidon.T()   # T/B/L variants
+model = fx.poseidon.B()
+model = fx.poseidon.L()
 
-# Poseidon-L
-model = foundax.poseidon.L(num_in_channels=1, num_out_channels=1)
+# MORPH — (B, t, F, C, D, H, W) → (B, F, C, D, H, W)
+model = fx.morph.Ti()    # Ti/S/M/L variants
+model = fx.morph.S()
+model = fx.morph.M()
+model = fx.morph.L()
+
+# MPP — (T, B, C, H, W) → (B, C, H, W)
+model = fx.mpp.Ti(n_states=12)  # Ti/S/B/L variants
+model = fx.mpp.S(n_states=12)
+model = fx.mpp.B(n_states=12)
+model = fx.mpp.L(n_states=12)
+
+# Walrus — (B, T, H, W, C) → (B, T, H, W, C_out)
+model = fx.walrus.base()
+
+# BCAT — (B, T_in+T_out, 128, 128, C) → (B, T_out, 128, 128, C)
+model = fx.bcat.base()
+
+# PDEformer-2 — graph inputs → (n_graph, n_points, 1)
+model = fx.pdeformer2.small()  # small/base/fast variants
+model = fx.pdeformer2.base()
+model = fx.pdeformer2.fast()
+
+# DPOT — (B, 128, 128, T, C) → (B, 128, 128, T_out, C)
+model = fx.dpot.Ti()    # Ti/S/M/L/H variants
+model = fx.dpot.S()
+model = fx.dpot.M()
+model = fx.dpot.L()
+model = fx.dpot.H()
+
+# PROSE — various sequence-to-sequence configurations
+model, variables = fx.prose.fd_1to1()                          # (B, T_in, 128, 128, C) → (B, T_out, 128, 128, C)
+model, variables = fx.prose.fd_2to1(n_words=64)                # (B, T_in, 128, 128, C) + symbols → predictions
+model, variables = fx.prose.ode_2to1(n_words=64, pad_index=0)  # (T, 1, C) + text → (T_out, C)
+model, variables = fx.prose.pde_2to1(n_words=64, pad_index=0)  # (T, 1, C) + text → spatial field
 ```
 
-Version/size namespaces (mirroring `jno/architectures/models.py`):
+## Integration with [jNO](https://github.com/FhG-IISB/jNO)
 
-- `foundax.poseidon`: `T`, `B`, `L`
-- `foundax.walrus`: `base` (aliases: `default`, `v1`)
-- `foundax.morph`: `Ti`, `S`, `M`, `L`
-- `foundax.mpp`: `Ti`, `S`, `B`, `L`
-- `foundax.bcat`: `base` (aliases: `default`, `v1`)
-- `foundax.pdeformer2`: `small`, `base`, `fast`
-- `foundax.dpot`: `Ti`, `S`, `M`, `L`, `H`
-- `foundax.prose`: `fd_1to1`, `fd_2to1`, `ode_2to1`, `pde_2to1`
+```python
+import foundax as fx
+import jno
 
-Lowercase aliases are also available for size variants where useful (for example `foundax.morph.ti()`, `foundax.poseidon.b()`, `foundax.dpot.h()`).
-
-## Quick Start
-
-From `foundax/`:
-
-```bash
-python scripts/convert.py morph -- --input /path/to/model.pth --output /path/to/model.msgpack --model-size Ti
-python scripts/compare.py morph -- --model-size Ti --checkpoint /path/to/model.pth
+net = jno.nn.wrap(fx.mlp(in_features=2, output_dim=1))
+net.optimizer(optax.adam, lr=1e-3)
 ```
 
-Vendored repositories live at:
+## License
 
-```text
-foundax/repos/jax_morph
-foundax/repos/jax_mpp
-foundax/repos/jax_pdeformer2
-foundax/repos/jax_poseidon
-foundax/repos/jax_prose
-foundax/repos/jax_walrus
-foundax/repos/jax_bcat
-foundax/repos/jax_dpot
-```
+This project is licensed under the [MIT License](LICENSE).
 
-General pattern:
-
-```bash
-python scripts/convert.py <model> [model-options...]
-python scripts/compare.py <model> [model-options...]
-```
-
-If model options contain flags that overlap with foundax flags, put `--` before model options.
-
-Examples:
-
-```bash
-# DPOT
-python scripts/convert.py dpot -- --input ../jax_dpot/ogrepo/model_Ti.pth --output ./artifacts/dpot_ti.msgpack
-python scripts/compare.py dpot -- --checkpoint ../jax_dpot/ogrepo/model_Ti.pth
-
-# PROSE ODE
-python scripts/convert.py prose --prose-variant ode -- --input /path/prose_ode.pth --output /path/prose_ode.msgpack
-python scripts/compare.py prose --prose-variant ode -- --checkpoint /path/prose_ode.pth --msgpack /path/prose_ode.msgpack
-
-# BCAT (conversion supported directly in foundax)
-python scripts/convert.py bcat -- --checkpoint /path/bcat.pt --output /path/bcat.msgpack
-```
-
-## Notes
-
-- `compare` for `bcat` is not available yet because there is no existing comparison script in `jax_bcat`.
-- This repo intentionally reuses each vendored model repo's conversion/validation logic instead of duplicating that code.
+Foundation models are subject to their original licenses.
+See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for details.
+Note that some pretrained weights (e.g. Poseidon) are released under non-commercial licenses.
