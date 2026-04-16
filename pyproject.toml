@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foundax"
-version = "0.1.0"
+version = "0.1.2"
 description = "One-stop JAX foundation model repository"
 license = "MIT"
 readme = "README.md"
