@@ -1,1 +1,9 @@
 foundax
+jax_bcat
+jax_dpot
+jax_morph
+jax_mpp
+jax_pdeformer2
+jax_poseidon
+jax_prose
+jax_walrus

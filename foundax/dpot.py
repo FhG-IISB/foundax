@@ -1,113 +1,157 @@
-"""DPOT — DPOTNet (2-D) model wrappers.
+"""DPOT -- DPOTNet (2-D) model wrappers.
 
-Lazy-loading factories for the vendored ``jax_dpot`` package.
-
-Architecture: ``DPOTNet`` — a patched Fourier / AFNO-based neural
+Architecture: ``DPOTNet`` -- a patched Fourier / AFNO-based neural
 operator with temporal aggregation for 2-D PDE surrogate modelling.
 
-Variants:
+Usage::
 
-=========  ======  =====  ========  ==========  ===========
-Variant    embed   depth  n_blocks  img_size    patch_size
-=========  ======  =====  ========  ==========  ===========
-Ti         512     4      4         128         8
-S          1024    6      8         128         8
-M          1024    12     8         128         8
-L          1536    24     16        128         8
-H          2048    27     8         128         8
-=========  ======  =====  ========  ==========  ===========
-
-All share: ``in_channels=4``, ``out_channels=4``, ``in_timesteps=10``,
-``out_timesteps=1``, ``modes=32``, ``n_cls=12``, ``normalize=False``,
-``act="gelu"``, ``time_agg="exp_mlp"``, ``mixing_type="afno"``.
-
-Lowercase names (``ti``, ``s``, ``m``, ``l``, ``h``) are aliases.
+    model = foundax.dpot.Ti(in_channels=1, out_channels=1)
+    model = foundax.dpot(embed_dim=512, depth=4, in_channels=1, out_channels=1)
 """
 
 import importlib
-from typing import Any
 
 from ._vendors import ensure_repo_on_path
+from . import _callable_module
 
 
-def Ti() -> Any:
-    """Create DPOTNet-Ti (Tiny).
-
-    Delegates to ``jax_dpot.dpot_ti``.
-
-    Config: embed_dim=512, depth=4, n_blocks=4, img_size=128, patch_size=8.
-
-    Returns
-    -------
-    DPOTNet
-        Uninitialised Flax ``nn.Module``.
-    """
+def _build(
+    img_size=224,
+    patch_size=16,
+    mixing_type="afno",
+    in_channels=1,
+    out_channels=4,
+    in_timesteps=1,
+    out_timesteps=1,
+    n_blocks=4,
+    embed_dim=768,
+    out_layer_dim=32,
+    depth=12,
+    modes=32,
+    mlp_ratio=1.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
     ensure_repo_on_path("jax_dpot")
-    return importlib.import_module("jax_dpot").dpot_ti()
+    mod = importlib.import_module("jax_dpot")
+    return mod.DPOTNet(**{k: v for k, v in locals().items() if k != "mod"})
 
 
-def S() -> Any:
-    """Create DPOTNet-S (Small).
-
-    Delegates to ``jax_dpot.dpot_s``.
-
-    Config: embed_dim=1024, depth=6, n_blocks=8, img_size=128, patch_size=8.
-
-    Returns
-    -------
-    DPOTNet
-        Uninitialised Flax ``nn.Module``.
-    """
-    ensure_repo_on_path("jax_dpot")
-    return importlib.import_module("jax_dpot").dpot_s()
-
-
-def M() -> Any:
-    """Create DPOTNet-M (Medium).
-
-    Delegates to ``jax_dpot.dpot_m``.
-
-    Config: embed_dim=1024, depth=12, n_blocks=8, img_size=128, patch_size=8.
-
-    Returns
-    -------
-    DPOTNet
-        Uninitialised Flax ``nn.Module``.
-    """
-    ensure_repo_on_path("jax_dpot")
-    return importlib.import_module("jax_dpot").dpot_m()
+def Ti(
+    img_size=128,
+    patch_size=8,
+    mixing_type="afno",
+    in_channels=4,
+    out_channels=4,
+    in_timesteps=10,
+    out_timesteps=1,
+    n_blocks=4,
+    embed_dim=512,
+    out_layer_dim=32,
+    depth=4,
+    modes=32,
+    mlp_ratio=1.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
+    """DPOTNet-Ti (Tiny). embed=512, depth=4, n_blocks=4."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
-def L() -> Any:
-    """Create DPOTNet-L (Large).
+def S(
+    img_size=128,
+    patch_size=8,
+    mixing_type="afno",
+    in_channels=4,
+    out_channels=4,
+    in_timesteps=10,
+    out_timesteps=1,
+    n_blocks=8,
+    embed_dim=1024,
+    out_layer_dim=32,
+    depth=6,
+    modes=32,
+    mlp_ratio=1.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
+    """DPOTNet-S (Small). embed=1024, depth=6, n_blocks=8."""
+    return _build(**{k: v for k, v in locals().items()})
 
-    Delegates to ``jax_dpot.dpot_l``.
 
-    Config: embed_dim=1536, depth=24, n_blocks=16, img_size=128, patch_size=8.
+def M(
+    img_size=128,
+    patch_size=8,
+    mixing_type="afno",
+    in_channels=4,
+    out_channels=4,
+    in_timesteps=10,
+    out_timesteps=1,
+    n_blocks=8,
+    embed_dim=1024,
+    out_layer_dim=32,
+    depth=12,
+    modes=32,
+    mlp_ratio=4.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
+    """DPOTNet-M (Medium). embed=1024, depth=12, n_blocks=8."""
+    return _build(**{k: v for k, v in locals().items()})
 
-    Returns
-    -------
-    DPOTNet
-        Uninitialised Flax ``nn.Module``.
-    """
-    ensure_repo_on_path("jax_dpot")
-    return importlib.import_module("jax_dpot").dpot_l()
+
+def L(
+    img_size=128,
+    patch_size=8,
+    mixing_type="afno",
+    in_channels=4,
+    out_channels=4,
+    in_timesteps=10,
+    out_timesteps=1,
+    n_blocks=16,
+    embed_dim=1536,
+    out_layer_dim=128,
+    depth=24,
+    modes=32,
+    mlp_ratio=4.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
+    """DPOTNet-L (Large). embed=1536, depth=24, n_blocks=16."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
-def H() -> Any:
-    """Create DPOTNet-H (Huge).
-
-    Delegates to ``jax_dpot.dpot_h``.
-
-    Config: embed_dim=2048, depth=27, n_blocks=8, img_size=128, patch_size=8.
-
-    Returns
-    -------
-    DPOTNet
-        Uninitialised Flax ``nn.Module``.
-    """
-    ensure_repo_on_path("jax_dpot")
-    return importlib.import_module("jax_dpot").dpot_h()
+def H(
+    img_size=128,
+    patch_size=8,
+    mixing_type="afno",
+    in_channels=4,
+    out_channels=4,
+    in_timesteps=10,
+    out_timesteps=1,
+    n_blocks=8,
+    embed_dim=2048,
+    out_layer_dim=128,
+    depth=27,
+    modes=32,
+    mlp_ratio=4.0,
+    n_cls=12,
+    normalize=False,
+    act="gelu",
+    time_agg="exp_mlp",
+):
+    """DPOTNet-H (Huge). embed=2048, depth=27, n_blocks=8."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
 ti = Ti
@@ -116,5 +160,6 @@ m = M
 l = L
 h = H
 
-
 __all__ = ["Ti", "S", "M", "L", "H", "ti", "s", "m", "l", "h"]
+
+_callable_module.install(__name__, _build)

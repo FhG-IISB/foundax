@@ -36,6 +36,7 @@ from .model import FlaxModel
 
 # ── helpers ──────────────────────────────────────────────────
 
+
 def _resolve_key(key):
     if key is None:
         return jax.random.PRNGKey(0)
@@ -56,6 +57,7 @@ def linear(
 ) -> eqx.Module:
     """Create a batched Linear layer."""
     from .architectures.linear import Linear
+
     return Linear(in_features, out_features, use_bias, key=_resolve_key(key))
 
 
@@ -76,6 +78,7 @@ def mlp(
 ) -> eqx.Module:
     """Create a Multi-Layer Perceptron."""
     from .architectures.mlp import MLP
+
     return MLP(
         in_features,
         output_dim,
@@ -109,6 +112,7 @@ def fno1d(
 ) -> eqx.Module:
     """Create a 1-D Fourier Neural Operator."""
     from .architectures.fno import FNO1D
+
     norm_type = norm[0] if isinstance(norm, tuple) else norm
     return FNO1D(
         in_features=in_features,
@@ -144,6 +148,7 @@ def fno2d(
 ) -> eqx.Module:
     """Create a 2-D Fourier Neural Operator."""
     from .architectures.fno import FNO2D
+
     return FNO2D(
         in_features=in_features,
         hidden_channels=hidden_channels,
@@ -180,6 +185,7 @@ def fno3d(
 ) -> eqx.Module:
     """Create a 3-D Fourier Neural Operator."""
     from .architectures.fno import FNO3D
+
     return FNO3D(
         in_features=in_features,
         hidden_channels=hidden_channels,
@@ -213,6 +219,7 @@ def unet1d(
 ) -> eqx.Module:
     """Create a 1-D UNet."""
     from .architectures.unet import UNet1D
+
     return UNet1D(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -241,6 +248,7 @@ def unet2d(
 ) -> eqx.Module:
     """Create a 2-D UNet."""
     from .architectures.unet import UNet2D
+
     return UNet2D(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -269,6 +277,7 @@ def unet3d(
 ) -> eqx.Module:
     """Create a 3-D UNet."""
     from .architectures.unet import UNet3D
+
     return UNet3D(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -296,6 +305,7 @@ def transformer(
 ) -> eqx.Module:
     """Create a Transformer (encoder-decoder)."""
     from .architectures.transformer import Transformer
+
     return Transformer(
         encoder_num_layers=num_layers,
         decoder_num_layers=num_layers,
@@ -333,6 +343,7 @@ def deeponet(
 ) -> eqx.Module:
     """Create a Deep Operator Network (DeepONet)."""
     from .architectures.deeponet import DeepONet
+
     hidden_dims = tuple([hidden_dim] * n_layers)
     return DeepONet(
         branch_type=branch_type,
@@ -378,6 +389,7 @@ def cno2d(
 ) -> eqx.Module:
     """Create a 2-D Continuous Neural Operator (CNO)."""
     from .architectures.cno import CNO2D
+
     return CNO2D(
         in_dim=in_dim,
         out_dim=out_dim,
@@ -405,6 +417,7 @@ def mgno1d(
 ) -> eqx.Module:
     """Create a 1-D Multigrid Neural Operator."""
     from .architectures.mgno import MgNO1D
+
     if num_iteration is None:
         num_iteration = [(1, 1)] * 5
     return MgNO1D(
@@ -434,6 +447,7 @@ def mgno2d(
 ) -> eqx.Module:
     """Create a 2-D Multigrid Neural Operator."""
     from .architectures.mgno import MgNO
+
     if num_iteration is None:
         num_iteration = [(1, 1)] * 5
     return MgNO(
@@ -464,6 +478,7 @@ def geofno(
     """Create a Geometry-aware Fourier Neural Operator."""
     from .architectures.geofno import GeoFNO
     from .architectures.common import compute_Fourier_modes as _compute_modes
+
     modes = _compute_modes(ndims, list(nks), list(Ls))
     modes = jnp.array(modes)
     return GeoFNO(
@@ -496,6 +511,7 @@ def pcno(
     """Create a Point Cloud Neural Operator."""
     from .architectures.pcno import PCNO
     from .architectures.pcno import compute_Fourier_modes as _pcno_modes
+
     modes = _pcno_modes(ndims, nks, Ls)
     modes = jnp.array(modes)
     nmeasures = len(nks) // ndims
@@ -534,6 +550,7 @@ def cgptno(
 ) -> eqx.Module:
     """Create a Cross-attention GPT Neural Operator (CGPTNO)."""
     from .architectures.gnot import CGPTNO
+
     return CGPTNO(
         trunk_size=trunk_size,
         branch_sizes=branch_sizes,
@@ -573,6 +590,7 @@ def gnot(
 ) -> eqx.Module:
     """Create a General Neural Operator Transformer (GNOT)."""
     from .architectures.gnot import GNOT
+
     return GNOT(
         trunk_size=trunk_size,
         branch_sizes=branch_sizes,
@@ -613,6 +631,7 @@ def moegptno(
 ) -> eqx.Module:
     """Create a single-input MoE GPT Neural Operator."""
     from .architectures.gnot import MoEGPTNO
+
     return MoEGPTNO(
         trunk_size=trunk_size,
         branch_size=branch_size,
@@ -647,6 +666,7 @@ def pit(
 ) -> eqx.Module:
     """Create a Position-induced Transformer (PiT)."""
     from .architectures.pit import PiT as _PiT, PiTWithCoords
+
     if m_dists is not None:
         return _PiT(
             in_channels=in_channels,
@@ -684,6 +704,7 @@ def pointnet(
 ) -> eqx.Module:
     """Create a PointNet-style network."""
     from .architectures.pointnet import PointNet
+
     return PointNet(
         in_features=in_features,
         output_dim=output_dim,
@@ -697,560 +718,600 @@ def pointnet(
 
 
 # =====================================================================
+
+# =====================================================================
 # Foundation models — delegate to per-model modules
 # =====================================================================
 
 
+# -- Poseidon (ScOT) -------------------------------------------------
+
 def poseidonT(
-    rng: Optional[jax.Array] = None,
-    weight_path: Optional[str] = None,
-    verbose: bool = True,
-) -> FlaxModel:
-    """Poseidon-T (Tiny) foundation model (~20.8 M params).
-
-    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
-
-    Parameters
-    ----------
-    rng : jax.random.PRNGKey, optional
-        PRNG key.  Needed together with *weight_path* to load weights.
-    weight_path : str, optional
-        Path to ``.msgpack`` checkpoint.
-    verbose : bool, default True
-        Print model / loading info.
-
-    Returns
-    -------
-    ScOT or tuple[ScOT, dict]
-        Model (and loaded params when *weight_path* + *rng* are given).
-
-    References
-    ----------
-    Herde et al., "Poseidon: Efficient Foundation Models for PDEs", 2024.
-    https://arxiv.org/abs/2405.19101
-    """
+    num_channels=1,
+    num_out_channels=1,
+    embed_dim=48,
+    depths=(4, 4, 4, 4),
+    num_heads=(3, 6, 12, 24),
+    window_size=8,
+    drop_path_rate=0.0,
+    patch_size=1,
+    in_channels=1,
+    out_channels=1,
+    padding_mode="zeros",
+    cls_token_per_channel=True,
+    channel_slice_list_normalized_loss=None,
+    use_rope=True,
+    rope_theta=100.0,
+    rope_mixed=True,
+    use_channel_pe=True,
+    use_ch_info_tokens=True,
+    num_cls_tokens=0,
+    num_extra_output_tokens=0,
+    processor_type="swin",
+    mlp_ratio=4.0,
+):
+    """Poseidon-T (Tiny) ~20.8 M params."""
     from . import poseidon
-    return poseidon.T(rng=rng, weight_path=weight_path, verbose=verbose)
+    return poseidon.T(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
 def poseidonB(
-    rng: Optional[jax.Array] = None,
-    weight_path: Optional[str] = None,
-    verbose: bool = True,
-) -> FlaxModel:
-    """Poseidon-B (Base) foundation model (~157.7 M params).
-
-    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
-
-    Parameters
-    ----------
-    rng : jax.random.PRNGKey, optional
-        PRNG key.
-    weight_path : str, optional
-        Path to ``.msgpack`` checkpoint.
-    verbose : bool, default True
-        Print model / loading info.
-
-    Returns
-    -------
-    ScOT or tuple[ScOT, dict]
-
-    References
-    ----------
-    Herde et al., "Poseidon", 2024.  https://arxiv.org/abs/2405.19101
-    """
+    num_channels=1,
+    num_out_channels=1,
+    embed_dim=96,
+    depths=(8, 8, 8, 8),
+    num_heads=(3, 6, 12, 24),
+    window_size=8,
+    drop_path_rate=0.0,
+    patch_size=1,
+    in_channels=1,
+    out_channels=1,
+    padding_mode="zeros",
+    cls_token_per_channel=True,
+    channel_slice_list_normalized_loss=None,
+    use_rope=True,
+    rope_theta=100.0,
+    rope_mixed=True,
+    use_channel_pe=True,
+    use_ch_info_tokens=True,
+    num_cls_tokens=0,
+    num_extra_output_tokens=0,
+    processor_type="swin",
+    mlp_ratio=4.0,
+):
+    """Poseidon-B (Base) ~157.7 M params."""
     from . import poseidon
-    return poseidon.B(rng=rng, weight_path=weight_path, verbose=verbose)
+    return poseidon.B(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
 def poseidonL(
-    rng: Optional[jax.Array] = None,
-    weight_path: Optional[str] = None,
-    verbose: bool = True,
-) -> FlaxModel:
-    """Poseidon-L (Large) foundation model (~628.6 M params).
-
-    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
-
-    Parameters
-    ----------
-    rng : jax.random.PRNGKey, optional
-        PRNG key.
-    weight_path : str, optional
-        Path to ``.msgpack`` checkpoint.
-    verbose : bool, default True
-        Print model / loading info.
-
-    Returns
-    -------
-    ScOT or tuple[ScOT, dict]
-
-    References
-    ----------
-    Herde et al., "Poseidon", 2024.  https://arxiv.org/abs/2405.19101
-    """
+    num_channels=1,
+    num_out_channels=1,
+    embed_dim=192,
+    depths=(8, 8, 8, 8),
+    num_heads=(3, 6, 12, 24),
+    window_size=8,
+    drop_path_rate=0.0,
+    patch_size=1,
+    in_channels=1,
+    out_channels=1,
+    padding_mode="zeros",
+    cls_token_per_channel=True,
+    channel_slice_list_normalized_loss=None,
+    use_rope=True,
+    rope_theta=100.0,
+    rope_mixed=True,
+    use_channel_pe=True,
+    use_ch_info_tokens=True,
+    num_cls_tokens=0,
+    num_extra_output_tokens=0,
+    processor_type="swin",
+    mlp_ratio=4.0,
+):
+    """Poseidon-L (Large) ~628.6 M params."""
     from . import poseidon
-    return poseidon.L(rng=rng, weight_path=weight_path, verbose=verbose)
+    return poseidon.L(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
-def morph_Ti(**overrides) -> FlaxModel:
-    """MORPH-Ti (Tiny) — ~9.9 M params.
+# -- MORPH (ViT3DRegression) -----------------------------------------
 
-    ViT3DRegression: embed=256, depth=4, heads=4, mlp=1024.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``ViT3DRegression`` attribute (e.g. ``dropout``,
-        ``max_patches``).
-
-    References
-    ----------
-    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
-    """
+def morph_Ti(
+    embed_dim=256,
+    depth=4,
+    heads=4,
+    mlp_dim=1024,
+    channels=1,
+    dim_head=64,
+    dropout=0.0,
+    emb_dropout=0.0,
+    max_patches=256,
+    max_ar=4,
+    num_cls_tokens=0,
+    out_channels=1,
+    image_size=64,
+    patch_size=8,
+    num_frames=10,
+    output_frames=10,
+    temporal_patch_size=1,
+    positional_embedding="fourier",
+):
+    """MORPH-Ti (Tiny) ~9.9 M params."""
     from . import morph
-    return morph.Ti(**overrides)
+    return morph.Ti(**{k: v for k, v in locals().items() if k != "morph"})
 
 
-def morph_S(**overrides) -> FlaxModel:
-    """MORPH-S (Small) — ~32.8 M params.
-
-    ViT3DRegression: embed=512, depth=4, heads=8, mlp=2048.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``ViT3DRegression`` attribute.
-
-    References
-    ----------
-    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
-    """
+def morph_S(
+    embed_dim=512,
+    depth=4,
+    heads=8,
+    mlp_dim=2048,
+    channels=1,
+    dim_head=64,
+    dropout=0.0,
+    emb_dropout=0.0,
+    max_patches=256,
+    max_ar=4,
+    num_cls_tokens=0,
+    out_channels=1,
+    image_size=64,
+    patch_size=8,
+    num_frames=10,
+    output_frames=10,
+    temporal_patch_size=1,
+    positional_embedding="fourier",
+):
+    """MORPH-S (Small) ~32.8 M params."""
     from . import morph
-    return morph.S(**overrides)
+    return morph.S(**{k: v for k, v in locals().items() if k != "morph"})
 
 
-def morph_M(**overrides) -> FlaxModel:
-    """MORPH-M (Medium) — ~125.6 M params.
-
-    ViT3DRegression: embed=768, depth=8, heads=12, mlp=3072.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``ViT3DRegression`` attribute.
-
-    References
-    ----------
-    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
-    """
+def morph_M(
+    embed_dim=768,
+    depth=8,
+    heads=12,
+    mlp_dim=3072,
+    channels=1,
+    dim_head=64,
+    dropout=0.0,
+    emb_dropout=0.0,
+    max_patches=256,
+    max_ar=4,
+    num_cls_tokens=0,
+    out_channels=1,
+    image_size=64,
+    patch_size=8,
+    num_frames=10,
+    output_frames=10,
+    temporal_patch_size=1,
+    positional_embedding="fourier",
+):
+    """MORPH-M (Medium) ~125.6 M params."""
     from . import morph
-    return morph.M(**overrides)
+    return morph.M(**{k: v for k, v in locals().items() if k != "morph"})
 
 
-def morph_L(**overrides) -> FlaxModel:
-    """MORPH-L (Large) — ~483.3 M params.
-
-    ViT3DRegression: embed=1024, depth=16, heads=16, mlp=4096, max_ar=16.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``ViT3DRegression`` attribute.
-
-    References
-    ----------
-    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
-    """
+def morph_L(
+    embed_dim=1024,
+    depth=16,
+    heads=16,
+    mlp_dim=4096,
+    channels=1,
+    dim_head=64,
+    dropout=0.0,
+    emb_dropout=0.0,
+    max_patches=256,
+    max_ar=16,
+    num_cls_tokens=0,
+    out_channels=1,
+    image_size=64,
+    patch_size=8,
+    num_frames=10,
+    output_frames=10,
+    temporal_patch_size=1,
+    positional_embedding="fourier",
+):
+    """MORPH-L (Large) ~483.3 M params."""
     from . import morph
-    return morph.L(**overrides)
+    return morph.L(**{k: v for k, v in locals().items() if k != "morph"})
 
 
-def mpp_Ti(**overrides) -> FlaxModel:
-    """MPP AViT-Tiny — ~5.5 M params.
+# -- MPP (AViT) ------------------------------------------------------
 
-    AViT: embed=192, heads=3, blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` attribute.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
+def mpp_Ti(
+    embed_dim=192,
+    num_heads=3,
+    processor_blocks=12,
+    n_states=12,
+    patch_size=(2, 8, 8),
+    decoder_depth=2,
+    max_num_patches=512,
+):
+    """MPP AViT-Tiny ~5.5 M params."""
     from . import mpp
-    return mpp.Ti(**overrides)
+    return mpp.Ti(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
-def mpp_S(**overrides) -> FlaxModel:
-    """MPP AViT-Small — ~21 M params.
-
-    AViT: embed=384, heads=6, blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` attribute.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
+def mpp_S(
+    embed_dim=384,
+    num_heads=6,
+    processor_blocks=12,
+    n_states=12,
+    patch_size=(2, 8, 8),
+    decoder_depth=2,
+    max_num_patches=512,
+):
+    """MPP AViT-Small ~21 M params."""
     from . import mpp
-    return mpp.S(**overrides)
+    return mpp.S(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
-def mpp_B(**overrides) -> FlaxModel:
-    """MPP AViT-Base — ~83 M params.
-
-    AViT: embed=768, heads=12, blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` attribute.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
+def mpp_B(
+    embed_dim=768,
+    num_heads=12,
+    processor_blocks=12,
+    n_states=12,
+    patch_size=(2, 8, 8),
+    decoder_depth=2,
+    max_num_patches=512,
+):
+    """MPP AViT-Base ~83 M params."""
     from . import mpp
-    return mpp.B(**overrides)
+    return mpp.B(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
-def mpp_L(**overrides) -> FlaxModel:
-    """MPP AViT-Large — ~300 M params.
-
-    AViT: embed=1024, heads=16, blocks=24, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` attribute.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
+def mpp_L(
+    embed_dim=1024,
+    num_heads=16,
+    processor_blocks=24,
+    n_states=12,
+    patch_size=(2, 8, 8),
+    decoder_depth=2,
+    max_num_patches=512,
+):
+    """MPP AViT-Large ~300 M params."""
     from . import mpp
-    return mpp.L(**overrides)
+    return mpp.L(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
-def walrus(**kwargs) -> FlaxModel:
-    """Walrus foundation model (~1.29 B params).
+# -- Walrus (IsotropicModel) -----------------------------------------
 
-    ``IsotropicModel``: hidden=768, blocks=12, heads=12, n_states=4.
-
-    Parameters
-    ----------
-    **kwargs
-        Override any ``IsotropicModel`` attribute (see
-        ``foundax.walrus.base`` for the full list).
-
-    References
-    ----------
-    https://github.com/nubskr/walrus
-    """
+def walrus(
+    hidden_dim=768,
+    intermediate_dim=192,
+    n_states=4,
+    processor_blocks=12,
+    groups=16,
+    num_heads=12,
+    mlp_dim=0,
+    max_d=3,
+    causal_in_time=False,
+    drop_path=0.05,
+    input_field_drop=0.1,
+    bias_type="rel",
+    base_kernel_size=((8, 4), (8, 4), (8, 4)),
+    use_spacebag=True,
+    use_silu=True,
+    include_d=(2, 3),
+    encoder_groups=16,
+    jitter_patches=True,
+    learned_pad=True,
+    remat=True,
+):
+    """Walrus ~1.29 B params."""
     from . import walrus as _walrus
-    return _walrus.base(**kwargs)
+    return _walrus.base(**{k: v for k, v in locals().items() if k != "_walrus"})
 
 
-def bcat() -> FlaxModel:
-    """BCAT foundation model (Block Causal Transformer).
+# -- BCAT -------------------------------------------------------------
 
-    Default config: 12 layers, dim_emb=1024, 8 heads, SwiGLU, RMSNorm.
-
-    Takes no arguments — uses default ``BCATConfig``.
-
-    Forward call: ``model(data, times, input_len=10)``
-    - data: ``(bs, input_len+output_len, x_num, x_num, data_dim)``
-    - times: ``(bs, input_len+output_len, 1)``
-
-    References
-    ----------
-    https://arxiv.org/abs/2501.18972
-    """
+def bcat(
+    n_layers=12,
+    dim_emb=1024,
+    n_emb_channels=4,
+    n_head=8,
+    dim_ffn=None,
+    max_output_dim=4,
+    x_num=128,
+    norm_type="rmsnorm",
+    activation="swiglu",
+    output_activation="tanh",
+    dropout=0.0,
+    attention_dropout=0.0,
+    patch_num=16,
+    carry_last_frame=False,
+    time_embed="learnable",
+    num_registers=0,
+    compile_model=True,
+):
+    """BCAT foundation model (Block Causal Transformer)."""
     from . import bcat as _bcat
-    return _bcat.base()
+    return _bcat.base(**{k: v for k, v in locals().items() if k != "_bcat"})
 
 
-def pdeformer2_small(dtype=None) -> FlaxModel:
-    """PDEformer-2 Small (~27.7 M params).
+# -- PDEformer-2 ------------------------------------------------------
 
-    Graphormer(9 layers, embed=512) + PolyINR(hidden=128).
-
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX dtype.  Defaults to ``jnp.float32``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
+def pdeformer2_small(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=9,
+    embed_dim=512,
+    ffn_embed_dim=1024,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=128,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Small ~27.7 M params."""
     from . import pdeformer2
-    return pdeformer2.small(dtype=dtype)
+    return pdeformer2.small(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
-def pdeformer2_base(dtype=None) -> FlaxModel:
-    """PDEformer-2 Base.
-
-    Graphormer(12 layers, embed=768) + PolyINR(hidden=768).
-
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX dtype.  Defaults to ``jnp.float32``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
+def pdeformer2_base(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=12,
+    embed_dim=768,
+    ffn_embed_dim=1536,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=768,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Base."""
     from . import pdeformer2
-    return pdeformer2.base(dtype=dtype)
+    return pdeformer2.base(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
-def pdeformer2_fast(dtype=None) -> FlaxModel:
-    """PDEformer-2 Fast.
-
-    Graphormer(12 layers, embed=768) + PolyINR(hidden=256) — smaller
-    INR than Base for faster inference.
-
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX dtype.  Defaults to ``jnp.float32``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
+def pdeformer2_fast(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=12,
+    embed_dim=768,
+    ffn_embed_dim=1536,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=256,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Fast -- smaller INR than Base."""
     from . import pdeformer2
-    return pdeformer2.fast(dtype=dtype)
+    return pdeformer2.fast(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
-def dpot_Ti() -> FlaxModel:
-    """DPOTNet-Ti (Tiny).
+# -- DPOT (DPOTNet) ---------------------------------------------------
 
-    Config: embed=512, depth=4, n_blocks=4, img_size=128, patch_size=8.
-    """
+def dpot_Ti(
+    img_size=128,
+    patch_size=8,
+    embed_dim=512,
+    depth=4,
+    n_blocks=4,
+    out_layer_dim=32,
+    mlp_ratio=1.0,
+    n_cls=1,
+    n_head=None,
+    act="gelu",
+    dropout=0.0,
+    kernel_size=3,
+    padding=1,
+    padding_mode="zeros",
+    use_ln=True,
+    unified_pos=False,
+    use_codebook=False,
+):
+    """DPOTNet-Ti (Tiny)."""
     from . import dpot
-    return dpot.Ti()
+    return dpot.Ti(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
-def dpot_S() -> FlaxModel:
-    """DPOTNet-S (Small).
-
-    Config: embed=1024, depth=6, n_blocks=8, img_size=128, patch_size=8.
-    """
+def dpot_S(
+    img_size=128,
+    patch_size=8,
+    embed_dim=1024,
+    depth=6,
+    n_blocks=8,
+    out_layer_dim=32,
+    mlp_ratio=1.0,
+    n_cls=1,
+    n_head=None,
+    act="gelu",
+    dropout=0.0,
+    kernel_size=3,
+    padding=1,
+    padding_mode="zeros",
+    use_ln=True,
+    unified_pos=False,
+    use_codebook=False,
+):
+    """DPOTNet-S (Small)."""
     from . import dpot
-    return dpot.S()
+    return dpot.S(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
-def dpot_M() -> FlaxModel:
-    """DPOTNet-M (Medium).
-
-    Config: embed=1024, depth=12, n_blocks=8, img_size=128, patch_size=8.
-    """
+def dpot_M(
+    img_size=128,
+    patch_size=8,
+    embed_dim=1024,
+    depth=12,
+    n_blocks=8,
+    out_layer_dim=32,
+    mlp_ratio=4.0,
+    n_cls=1,
+    n_head=None,
+    act="gelu",
+    dropout=0.0,
+    kernel_size=3,
+    padding=1,
+    padding_mode="zeros",
+    use_ln=True,
+    unified_pos=False,
+    use_codebook=False,
+):
+    """DPOTNet-M (Medium)."""
     from . import dpot
-    return dpot.M()
+    return dpot.M(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
-def dpot_L() -> FlaxModel:
-    """DPOTNet-L (Large).
-
-    Config: embed=1536, depth=24, n_blocks=16, img_size=128, patch_size=8.
-    """
+def dpot_L(
+    img_size=128,
+    patch_size=8,
+    embed_dim=1536,
+    depth=24,
+    n_blocks=16,
+    out_layer_dim=32,
+    mlp_ratio=1.0,
+    n_cls=1,
+    n_head=None,
+    act="gelu",
+    dropout=0.0,
+    kernel_size=3,
+    padding=1,
+    padding_mode="zeros",
+    use_ln=True,
+    unified_pos=False,
+    use_codebook=False,
+):
+    """DPOTNet-L (Large)."""
     from . import dpot
-    return dpot.L()
+    return dpot.L(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
-def dpot_H() -> FlaxModel:
-    """DPOTNet-H (Huge).
-
-    Config: embed=2048, depth=27, n_blocks=8, img_size=128, patch_size=8.
-    """
+def dpot_H(
+    img_size=128,
+    patch_size=8,
+    embed_dim=2048,
+    depth=27,
+    n_blocks=8,
+    out_layer_dim=32,
+    mlp_ratio=1.0,
+    n_cls=1,
+    n_head=None,
+    act="gelu",
+    dropout=0.0,
+    kernel_size=3,
+    padding=1,
+    padding_mode="zeros",
+    use_ln=True,
+    unified_pos=False,
+    use_codebook=False,
+):
+    """DPOTNet-H (Huge)."""
     from . import dpot
-    return dpot.H()
+    return dpot.H(**{k: v for k, v in locals().items() if k != "dpot"})
 
+
+# -- PROSE -------------------------------------------------------------
 
 def prose_fd_1to1(
     config=None,
-    x_num: int = 128,
-    max_output_dim: int = 4,
-    input_len: int = 10,
-    output_len: int = 10,
-) -> FlaxModel:
-    """PROSE finite-difference 1-to-1 model.
-
-    Parameters
-    ----------
-    config : PROSE1to1Config, optional
-        Full config (internal defaults if ``None``).
-    x_num : int, default 128
-        Spatial grid size.
-    max_output_dim : int, default 4
-        Output dimensionality.
-    input_len : int, default 10
-        Input time-steps.
-    output_len : int, default 10
-        Output time-steps.
-
-    Returns
-    -------
-    tuple[PROSE1to1, dict]
-        ``(model, params)`` — already initialised.
-    """
+    x_num=128,
+    max_output_dim=4,
+    input_len=10,
+    output_len=10,
+):
+    """PROSE finite-difference 1-to-1. Returns ``(model, params)``."""
     from . import prose
-    return prose.fd_1to1(
-        config=config,
-        x_num=x_num,
-        max_output_dim=max_output_dim,
-        input_len=input_len,
-        output_len=output_len,
-    )
+    return prose.fd_1to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
 def prose_fd_2to1(
-    n_words: int,
-    x_num: int = 128,
-    max_output_dim: int = 4,
-    input_len: int = 10,
-    output_len: int = 10,
-    symbol_len: int = 48,
-) -> FlaxModel:
-    """PROSE finite-difference 2-to-1 model.
-
-    Parameters
-    ----------
-    n_words : int
-        Vocabulary size (**required**).
-    x_num : int, default 128
-        Spatial grid size.
-    max_output_dim : int, default 4
-        Output dimensionality.
-    input_len : int, default 10
-        Input time-steps.
-    output_len : int, default 10
-        Output time-steps.
-    symbol_len : int, default 48
-        Symbol sequence length.
-
-    Returns
-    -------
-    tuple[PROSE2to1, dict]
-        ``(model, params)`` — already initialised.
-    """
+    n_words,
+    x_num=128,
+    max_output_dim=4,
+    input_len=10,
+    output_len=10,
+    symbol_len=48,
+):
+    """PROSE finite-difference 2-to-1. Returns ``(model, params)``."""
     from . import prose
-    return prose.fd_2to1(
-        n_words=n_words,
-        x_num=x_num,
-        max_output_dim=max_output_dim,
-        input_len=input_len,
-        output_len=output_len,
-        symbol_len=symbol_len,
-    )
+    return prose.fd_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
 def prose_ode_2to1(
-    n_words: int,
-    pad_index: int,
-    max_output_dimension: int = 3,
-    input_len: int = 50,
-    output_len: int = 50,
-    text_len: int = 48,
+    n_words,
+    pad_index,
+    max_output_dimension=3,
+    input_len=50,
+    output_len=50,
+    text_len=48,
     cfg=None,
-) -> FlaxModel:
-    """PROSE ODE 2-to-1 model.
-
-    Parameters
-    ----------
-    n_words : int
-        Vocabulary size (**required**).
-    pad_index : int
-        Padding token index (**required**).
-    max_output_dimension : int, default 3
-        Max output dim.
-    input_len : int, default 50
-        Input sequence length.
-    output_len : int, default 50
-        Output sequence length.
-    text_len : int, default 48
-        Text / symbol sequence length.
-    cfg : ProseTextData2to1Config, optional
-        Full config.
-
-    Returns
-    -------
-    tuple[PROSEODE2to1, dict]
-        ``(model, params)`` — already initialised.
-    """
+):
+    """PROSE ODE 2-to-1. Returns ``(model, params)``."""
     from . import prose
-    return prose.ode_2to1(
-        n_words=n_words,
-        pad_index=pad_index,
-        max_output_dimension=max_output_dimension,
-        input_len=input_len,
-        output_len=output_len,
-        text_len=text_len,
-        cfg=cfg,
-    )
+    return prose.ode_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
 def prose_pde_2to1(
-    n_words: int,
-    pad_index: int,
-    max_output_dimension: int = 1,
-    x_patch_size: int = 1,
-    x_grid_size: int = 128,
-    input_len: int = 10,
-    output_len: int = 10,
-    text_len: int = 48,
+    n_words,
+    pad_index,
+    max_output_dimension=1,
+    x_patch_size=1,
+    x_grid_size=128,
+    input_len=10,
+    output_len=10,
+    text_len=48,
     cfg=None,
-) -> FlaxModel:
-    """PROSE PDE 2-to-1 model.
-
-    Parameters
-    ----------
-    n_words : int
-        Vocabulary size (**required**).
-    pad_index : int
-        Padding token index (**required**).
-    max_output_dimension : int, default 1
-        Max output dim.
-    x_patch_size : int, default 1
-        Spatial patch size.
-    x_grid_size : int, default 128
-        Spatial grid size.
-    input_len : int, default 10
-        Input sequence length.
-    output_len : int, default 10
-        Output sequence length.
-    text_len : int, default 48
-        Text / symbol sequence length.
-    cfg : ProseTextData2to1Config, optional
-        Full config.
-
-    Returns
-    -------
-    tuple[PROSEPDE2to1, dict]
-        ``(model, params)`` — already initialised.
-    """
+):
+    """PROSE PDE 2-to-1. Returns ``(model, params)``."""
     from . import prose
-    return prose.pde_2to1(
-        n_words=n_words,
-        pad_index=pad_index,
-        max_output_dimension=max_output_dimension,
-        x_patch_size=x_patch_size,
-        x_grid_size=x_grid_size,
-        input_len=input_len,
-        output_len=output_len,
-        text_len=text_len,
-        cfg=cfg,
-    )
+    return prose.pde_2to1(**{k: v for k, v in locals().items() if k != "prose"})

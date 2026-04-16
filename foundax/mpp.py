@@ -1,138 +1,87 @@
-"""MPP — Multiple Physics Pretraining for Physical Surrogate Models.
+"""MPP -- Multiple Physics Pretraining for Physical Surrogate Models.
 
-Lazy-loading factories for the vendored ``jax_mpp`` package.
-
-**Paper:** McCabe et al., *"Multiple Physics Pretraining for Physical
-Surrogate Models"* (NeurIPS 2024)
+**Paper:** McCabe et al., *"Multiple Physics Pretraining"* (NeurIPS 2024)
 https://openreview.net/forum?id=DKSI3bULiZ
-
-**Weights:** https://drive.google.com/drive/folders/1Qaqa-RnzUDOO8-Gi4zlf4BE53SfWqDwx
 
 Architecture: ``AViT`` (Adaptive Vision Transformer) with variable-
 resolution patching for multi-physics operator learning.
 
-Variants:
+Usage::
 
-=========  ======  =====  ======  ==========  =========
-Variant    embed   heads  blocks  n_states    Params
-=========  ======  =====  ======  ==========  =========
-Ti         192     3      12      12          ~5.5 M
-S          384     6      12      12          ~21 M
-B          768     12     12      12          ~83 M
-L          1024    16     24      12          ~300 M
-=========  ======  =====  ======  ==========  =========
-
-Lowercase names (``ti``, ``s``, ``b``, ``l``) are aliases.
+    model = foundax.mpp.Ti(n_states=6)
+    model = foundax.mpp(embed_dim=192, num_heads=3, processor_blocks=12)
 """
 
 import importlib
-from typing import Any
 
 from ._vendors import ensure_repo_on_path
+from . import _callable_module
 
 
-def Ti(**overrides: Any) -> Any:
-    """Create AViT-Tiny — ~5.5 M params.
-
-    Delegates to ``jax_mpp.avit_Ti``.
-
-    Config: embed_dim=192, num_heads=3, processor_blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` configuration parameter.
-
-    Returns
-    -------
-    AViT
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
+def _build(
+    patch_size=(16, 16),
+    embed_dim=768,
+    processor_blocks=8,
+    n_states=6,
+    drop_path=0.2,
+    bias_type="rel",
+    num_heads=12,
+):
     ensure_repo_on_path("jax_mpp")
-    return importlib.import_module("jax_mpp").avit_Ti(**overrides)
+    mod = importlib.import_module("jax_mpp")
+    return mod.AViT(**{k: v for k, v in locals().items() if k != "mod"})
 
 
-def S(**overrides: Any) -> Any:
-    """Create AViT-Small — ~21 M params.
-
-    Delegates to ``jax_mpp.avit_S``.
-
-    Config: embed_dim=384, num_heads=6, processor_blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` configuration parameter.
-
-    Returns
-    -------
-    AViT
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
-    ensure_repo_on_path("jax_mpp")
-    return importlib.import_module("jax_mpp").avit_S(**overrides)
+def Ti(
+    patch_size=(16, 16),
+    embed_dim=192,
+    processor_blocks=12,
+    n_states=12,
+    drop_path=0.2,
+    bias_type="rel",
+    num_heads=3,
+):
+    """AViT-Tiny ~5.5 M params. embed=192, heads=3, blocks=12."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
-def B(**overrides: Any) -> Any:
-    """Create AViT-Base — ~83 M params.
-
-    Delegates to ``jax_mpp.avit_B``.
-
-    Config: embed_dim=768, num_heads=12, processor_blocks=12, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` configuration parameter.
-
-    Returns
-    -------
-    AViT
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
-    ensure_repo_on_path("jax_mpp")
-    return importlib.import_module("jax_mpp").avit_B(**overrides)
+def S(
+    patch_size=(16, 16),
+    embed_dim=384,
+    processor_blocks=12,
+    n_states=12,
+    drop_path=0.2,
+    bias_type="rel",
+    num_heads=6,
+):
+    """AViT-Small ~21 M params. embed=384, heads=6, blocks=12."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
-def L(**overrides: Any) -> Any:
-    """Create AViT-Large — ~300 M params.
+def B(
+    patch_size=(16, 16),
+    embed_dim=768,
+    processor_blocks=12,
+    n_states=12,
+    drop_path=0.2,
+    bias_type="rel",
+    num_heads=12,
+):
+    """AViT-Base ~83 M params. embed=768, heads=12, blocks=12."""
+    return _build(**{k: v for k, v in locals().items()})
 
-    Delegates to ``jax_mpp.avit_L``.
 
-    Config: embed_dim=1024, num_heads=16, processor_blocks=24, n_states=12.
-
-    Parameters
-    ----------
-    **overrides
-        Override any ``AViT`` configuration parameter.
-
-    Returns
-    -------
-    AViT
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    McCabe et al., NeurIPS 2024.
-    https://openreview.net/forum?id=DKSI3bULiZ
-    """
-    ensure_repo_on_path("jax_mpp")
-    return importlib.import_module("jax_mpp").avit_L(**overrides)
+def L(
+    patch_size=(16, 16),
+    embed_dim=1024,
+    processor_blocks=24,
+    n_states=12,
+    drop_path=0.2,
+    bias_type="rel",
+    num_heads=16,
+):
+    """AViT-Large ~300 M params. embed=1024, heads=16, blocks=24."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
 ti = Ti
@@ -140,5 +89,6 @@ s = S
 b = B
 l = L
 
-
 __all__ = ["Ti", "S", "B", "L", "ti", "s", "b", "l"]
+
+_callable_module.install(__name__, _build)

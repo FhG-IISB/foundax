@@ -1,145 +1,174 @@
-"""PDEformer-2 — Foundation Model for Two-Dimensional PDEs.
+"""PDEformer-2 -- Foundation Model for Two-Dimensional PDEs.
 
-Lazy-loading factories for the vendored ``jax_pdeformer2`` package.
-
-**Paper:** Shi et al., *"PDEformer-2: A Foundation Model for
-Two-Dimensional PDEs"* (2025)
+**Paper:** Shi et al., *"PDEformer-2"* (2025)
 https://arxiv.org/abs/2502.14844
 
-**Code:** https://github.com/functoreality/pdeformer-2
-
 Architecture: Graphormer encoder + Implicit Neural Representation (INR)
-decoder with a hyper-network bridge.  Three predefined configs are
-provided (Small, Base, Fast) that differ mainly in Graphormer width
-and INR hidden dimension.
+decoder with a hyper-network bridge.
 
-Key config dimensions:
+Usage::
 
-=========  ===========  ===========  =========  ===========  =======
-Variant    graph_layers graph_embed  graph_ffn  inr_hidden   ~Params
-=========  ===========  ===========  =========  ===========  =======
-Small      9            512          1024       128          ~27.7 M
-Base       12           768          1536       768          larger
-Fast       12           768          1536       256          larger
-=========  ===========  ===========  =========  ===========  =======
-
-Base and Fast share the same Graphormer size; they differ in
-``inr.dim_hidden`` (768 vs 256), trading accuracy for speed.
+    model = foundax.pdeformer2.small(inr_dim_hidden=256)
+    model = foundax.pdeformer2(num_encoder_layers=12, embed_dim=768)
 """
 
 import importlib
-from typing import Any
 
 from ._vendors import ensure_repo_on_path
+from . import _callable_module
+
+try:
+    import jax.numpy as jnp
+    _f32 = jnp.float32
+except Exception:
+    _f32 = None
 
 
-def small(dtype: Any = None) -> Any:
-    """Create PDEformer-2 with the predefined **Small** config (~27.7 M params).
-
-    Delegates to ``jax_pdeformer2.create_pdeformer_from_config`` with
-    ``PDEFORMER_SMALL_CONFIG``.
-
-    Small config highlights::
-
-        graphormer:  layers=9, embed=512, ffn=1024, heads=32
-        inr:         type=poly_inr, layers=12, hidden=128, act=sin
-        hypernet:    hidden=512, layers=2
-        function_encoder: cnn2dv3, 4 branches, resolution=128
-
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX data type for model computations. Defaults to ``jnp.float32``.
-
-    Returns
-    -------
-    PDEformer
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
+def _build(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=12,
+    embed_dim=768,
+    ffn_embed_dim=1536,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=768,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
     ensure_repo_on_path("jax_pdeformer2")
     mod = importlib.import_module("jax_pdeformer2")
-    kw = {}
-    if dtype is not None:
-        kw["dtype"] = dtype
-    return mod.create_pdeformer_from_config(
-        {"model": mod.PDEFORMER_SMALL_CONFIG}, **kw
-    )
+    kw = {k: v for k, v in locals().items() if k != "mod"}
+    if kw["dtype"] is None:
+        import jax.numpy as _jnp
+        kw["dtype"] = _jnp.float32
+    return mod.PDEformer(**kw)
 
 
-def base(dtype: Any = None) -> Any:
-    """Create PDEformer-2 with the predefined **Base** config.
+def small(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=9,
+    embed_dim=512,
+    ffn_embed_dim=1024,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=128,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Small ~27.7 M params. Graphormer(9, 512) + INR(128)."""
+    return _build(**{k: v for k, v in locals().items()})
 
-    Delegates to ``jax_pdeformer2.create_pdeformer_from_config`` with
-    ``PDEFORMER_BASE_CONFIG``.
 
-    Base config highlights (overrides Small defaults)::
+def base(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=12,
+    embed_dim=768,
+    ffn_embed_dim=1536,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=768,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Base. Graphormer(12, 768) + INR(768)."""
+    return _build(**{k: v for k, v in locals().items()})
 
-        graphormer:  layers=12, embed=768, ffn=1536, heads=32
-        inr:         hidden=768, layers=12
-        hypernet:    hidden=512
 
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX data type for model computations. Defaults to ``jnp.float32``.
-
-    Returns
-    -------
-    PDEformer
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
-    ensure_repo_on_path("jax_pdeformer2")
-    mod = importlib.import_module("jax_pdeformer2")
-    kw = {}
-    if dtype is not None:
-        kw["dtype"] = dtype
-    return mod.create_pdeformer_from_config(
-        {"model": mod.PDEFORMER_BASE_CONFIG}, **kw
-    )
-
-
-def fast(dtype: Any = None) -> Any:
-    """Create PDEformer-2 with the predefined **Fast** config.
-
-    Delegates to ``jax_pdeformer2.create_pdeformer_from_config`` with
-    ``PDEFORMER_FAST_CONFIG``.
-
-    Fast config highlights (overrides Small defaults)::
-
-        graphormer:  layers=12, embed=768, ffn=1536, heads=32
-        inr:         hidden=256, layers=12   (smaller than Base → faster)
-        hypernet:    hidden=512
-
-    Parameters
-    ----------
-    dtype : jnp.dtype, optional
-        JAX data type for model computations. Defaults to ``jnp.float32``.
-
-    Returns
-    -------
-    PDEformer
-        Uninitialised Flax ``nn.Module``.
-
-    References
-    ----------
-    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
-    """
-    ensure_repo_on_path("jax_pdeformer2")
-    mod = importlib.import_module("jax_pdeformer2")
-    kw = {}
-    if dtype is not None:
-        kw["dtype"] = dtype
-    return mod.create_pdeformer_from_config(
-        {"model": mod.PDEFORMER_FAST_CONFIG}, **kw
-    )
+def fast(
+    num_node_type=128,
+    num_in_degree=32,
+    num_out_degree=32,
+    num_spatial=16,
+    num_encoder_layers=12,
+    embed_dim=768,
+    ffn_embed_dim=1536,
+    num_heads=32,
+    pre_layernorm=True,
+    scalar_dim_hidden=256,
+    scalar_num_layers=3,
+    func_enc_type="cnn2dv3",
+    func_enc_num_branches=4,
+    func_enc_resolution=128,
+    func_enc_input_txyz=False,
+    func_enc_keep_nchw=True,
+    inr_dim_hidden=256,
+    inr_num_layers=12,
+    enable_affine=False,
+    enable_shift=True,
+    enable_scale=True,
+    activation_fn="sin",
+    affine_act_fn="identity",
+    hyper_dim_hidden=512,
+    hyper_num_layers=2,
+    share_hypernet=False,
+    multi_inr=False,
+    separate_latent=False,
+    dtype=None,
+):
+    """PDEformer-2 Fast. Graphormer(12, 768) + INR(256) -- smaller INR than Base."""
+    return _build(**{k: v for k, v in locals().items()})
 
 
 __all__ = ["small", "base", "fast"]
+
+_callable_module.install(__name__, _build)
