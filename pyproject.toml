@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "foundax"
 version = "0.1.0"
-description = "One-stop JAX foundation model dispatch repository"
+description = "One-stop JAX foundation model repository"
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
