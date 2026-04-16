@@ -701,151 +701,556 @@ def pointnet(
 # =====================================================================
 
 
-def poseidonT(*args, **kwargs) -> FlaxModel:
-    """Poseidon-T foundation model."""
+def poseidonT(
+    rng: Optional[jax.Array] = None,
+    weight_path: Optional[str] = None,
+    verbose: bool = True,
+) -> FlaxModel:
+    """Poseidon-T (Tiny) foundation model (~20.8 M params).
+
+    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
+
+    Parameters
+    ----------
+    rng : jax.random.PRNGKey, optional
+        PRNG key.  Needed together with *weight_path* to load weights.
+    weight_path : str, optional
+        Path to ``.msgpack`` checkpoint.
+    verbose : bool, default True
+        Print model / loading info.
+
+    Returns
+    -------
+    ScOT or tuple[ScOT, dict]
+        Model (and loaded params when *weight_path* + *rng* are given).
+
+    References
+    ----------
+    Herde et al., "Poseidon: Efficient Foundation Models for PDEs", 2024.
+    https://arxiv.org/abs/2405.19101
+    """
     from . import poseidon
-    return poseidon.T(*args, **kwargs)
+    return poseidon.T(rng=rng, weight_path=weight_path, verbose=verbose)
 
 
-def poseidonB(*args, **kwargs) -> FlaxModel:
-    """Poseidon-B foundation model."""
+def poseidonB(
+    rng: Optional[jax.Array] = None,
+    weight_path: Optional[str] = None,
+    verbose: bool = True,
+) -> FlaxModel:
+    """Poseidon-B (Base) foundation model (~157.7 M params).
+
+    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
+
+    Parameters
+    ----------
+    rng : jax.random.PRNGKey, optional
+        PRNG key.
+    weight_path : str, optional
+        Path to ``.msgpack`` checkpoint.
+    verbose : bool, default True
+        Print model / loading info.
+
+    Returns
+    -------
+    ScOT or tuple[ScOT, dict]
+
+    References
+    ----------
+    Herde et al., "Poseidon", 2024.  https://arxiv.org/abs/2405.19101
+    """
     from . import poseidon
-    return poseidon.B(*args, **kwargs)
+    return poseidon.B(rng=rng, weight_path=weight_path, verbose=verbose)
 
 
-def poseidonL(*args, **kwargs) -> FlaxModel:
-    """Poseidon-L foundation model."""
+def poseidonL(
+    rng: Optional[jax.Array] = None,
+    weight_path: Optional[str] = None,
+    verbose: bool = True,
+) -> FlaxModel:
+    """Poseidon-L (Large) foundation model (~628.6 M params).
+
+    Scalable Operator Transformer (ScOT) with Swin-Transformer backbone.
+
+    Parameters
+    ----------
+    rng : jax.random.PRNGKey, optional
+        PRNG key.
+    weight_path : str, optional
+        Path to ``.msgpack`` checkpoint.
+    verbose : bool, default True
+        Print model / loading info.
+
+    Returns
+    -------
+    ScOT or tuple[ScOT, dict]
+
+    References
+    ----------
+    Herde et al., "Poseidon", 2024.  https://arxiv.org/abs/2405.19101
+    """
     from . import poseidon
-    return poseidon.L(*args, **kwargs)
+    return poseidon.L(rng=rng, weight_path=weight_path, verbose=verbose)
 
 
-def morph_Ti(*args, **kwargs) -> FlaxModel:
-    """MORPH-Ti foundation model."""
+def morph_Ti(**overrides) -> FlaxModel:
+    """MORPH-Ti (Tiny) — ~9.9 M params.
+
+    ViT3DRegression: embed=256, depth=4, heads=4, mlp=1024.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``ViT3DRegression`` attribute (e.g. ``dropout``,
+        ``max_patches``).
+
+    References
+    ----------
+    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
+    """
     from . import morph
-    return morph.Ti(*args, **kwargs)
+    return morph.Ti(**overrides)
 
 
-def morph_S(*args, **kwargs) -> FlaxModel:
-    """MORPH-S foundation model."""
+def morph_S(**overrides) -> FlaxModel:
+    """MORPH-S (Small) — ~32.8 M params.
+
+    ViT3DRegression: embed=512, depth=4, heads=8, mlp=2048.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``ViT3DRegression`` attribute.
+
+    References
+    ----------
+    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
+    """
     from . import morph
-    return morph.S(*args, **kwargs)
+    return morph.S(**overrides)
 
 
-def morph_M(*args, **kwargs) -> FlaxModel:
-    """MORPH-M foundation model."""
+def morph_M(**overrides) -> FlaxModel:
+    """MORPH-M (Medium) — ~125.6 M params.
+
+    ViT3DRegression: embed=768, depth=8, heads=12, mlp=3072.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``ViT3DRegression`` attribute.
+
+    References
+    ----------
+    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
+    """
     from . import morph
-    return morph.M(*args, **kwargs)
+    return morph.M(**overrides)
 
 
-def morph_L(*args, **kwargs) -> FlaxModel:
-    """MORPH-L foundation model."""
+def morph_L(**overrides) -> FlaxModel:
+    """MORPH-L (Large) — ~483.3 M params.
+
+    ViT3DRegression: embed=1024, depth=16, heads=16, mlp=4096, max_ar=16.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``ViT3DRegression`` attribute.
+
+    References
+    ----------
+    Rautela et al., "MORPH", 2025.  https://arxiv.org/abs/2509.21670
+    """
     from . import morph
-    return morph.L(*args, **kwargs)
+    return morph.L(**overrides)
 
 
-def mpp_Ti(*args, **kwargs) -> FlaxModel:
-    """MPP-Ti foundation model."""
+def mpp_Ti(**overrides) -> FlaxModel:
+    """MPP AViT-Tiny — ~5.5 M params.
+
+    AViT: embed=192, heads=3, blocks=12, n_states=12.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``AViT`` attribute.
+
+    References
+    ----------
+    McCabe et al., NeurIPS 2024.
+    https://openreview.net/forum?id=DKSI3bULiZ
+    """
     from . import mpp
-    return mpp.Ti(*args, **kwargs)
+    return mpp.Ti(**overrides)
 
 
-def mpp_S(*args, **kwargs) -> FlaxModel:
-    """MPP-S foundation model."""
+def mpp_S(**overrides) -> FlaxModel:
+    """MPP AViT-Small — ~21 M params.
+
+    AViT: embed=384, heads=6, blocks=12, n_states=12.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``AViT`` attribute.
+
+    References
+    ----------
+    McCabe et al., NeurIPS 2024.
+    https://openreview.net/forum?id=DKSI3bULiZ
+    """
     from . import mpp
-    return mpp.S(*args, **kwargs)
+    return mpp.S(**overrides)
 
 
-def mpp_B(*args, **kwargs) -> FlaxModel:
-    """MPP-B foundation model."""
+def mpp_B(**overrides) -> FlaxModel:
+    """MPP AViT-Base — ~83 M params.
+
+    AViT: embed=768, heads=12, blocks=12, n_states=12.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``AViT`` attribute.
+
+    References
+    ----------
+    McCabe et al., NeurIPS 2024.
+    https://openreview.net/forum?id=DKSI3bULiZ
+    """
     from . import mpp
-    return mpp.B(*args, **kwargs)
+    return mpp.B(**overrides)
 
 
-def mpp_L(*args, **kwargs) -> FlaxModel:
-    """MPP-L foundation model."""
+def mpp_L(**overrides) -> FlaxModel:
+    """MPP AViT-Large — ~300 M params.
+
+    AViT: embed=1024, heads=16, blocks=24, n_states=12.
+
+    Parameters
+    ----------
+    **overrides
+        Override any ``AViT`` attribute.
+
+    References
+    ----------
+    McCabe et al., NeurIPS 2024.
+    https://openreview.net/forum?id=DKSI3bULiZ
+    """
     from . import mpp
-    return mpp.L(*args, **kwargs)
+    return mpp.L(**overrides)
 
 
-def walrus(*args, **kwargs) -> FlaxModel:
-    """Walrus foundation model."""
+def walrus(**kwargs) -> FlaxModel:
+    """Walrus foundation model (~1.29 B params).
+
+    ``IsotropicModel``: hidden=768, blocks=12, heads=12, n_states=4.
+
+    Parameters
+    ----------
+    **kwargs
+        Override any ``IsotropicModel`` attribute (see
+        ``foundax.walrus.base`` for the full list).
+
+    References
+    ----------
+    https://github.com/nubskr/walrus
+    """
     from . import walrus as _walrus
-    return _walrus.base(*args, **kwargs)
+    return _walrus.base(**kwargs)
 
 
-def bcat(*args, **kwargs) -> FlaxModel:
-    """BCAT foundation model."""
+def bcat() -> FlaxModel:
+    """BCAT foundation model (Block Causal Transformer).
+
+    Default config: 12 layers, dim_emb=1024, 8 heads, SwiGLU, RMSNorm.
+
+    Takes no arguments — uses default ``BCATConfig``.
+
+    Forward call: ``model(data, times, input_len=10)``
+    - data: ``(bs, input_len+output_len, x_num, x_num, data_dim)``
+    - times: ``(bs, input_len+output_len, 1)``
+
+    References
+    ----------
+    https://arxiv.org/abs/2501.18972
+    """
     from . import bcat as _bcat
-    return _bcat.base(*args, **kwargs)
+    return _bcat.base()
 
 
-def pdeformer2_small(*args, **kwargs) -> FlaxModel:
-    """PDEformer2-small foundation model."""
+def pdeformer2_small(dtype=None) -> FlaxModel:
+    """PDEformer-2 Small (~27.7 M params).
+
+    Graphormer(9 layers, embed=512) + PolyINR(hidden=128).
+
+    Parameters
+    ----------
+    dtype : jnp.dtype, optional
+        JAX dtype.  Defaults to ``jnp.float32``.
+
+    References
+    ----------
+    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
+    """
     from . import pdeformer2
-    return pdeformer2.small(*args, **kwargs)
+    return pdeformer2.small(dtype=dtype)
 
 
-def pdeformer2_base(*args, **kwargs) -> FlaxModel:
-    """PDEformer2-base foundation model."""
+def pdeformer2_base(dtype=None) -> FlaxModel:
+    """PDEformer-2 Base.
+
+    Graphormer(12 layers, embed=768) + PolyINR(hidden=768).
+
+    Parameters
+    ----------
+    dtype : jnp.dtype, optional
+        JAX dtype.  Defaults to ``jnp.float32``.
+
+    References
+    ----------
+    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
+    """
     from . import pdeformer2
-    return pdeformer2.base(*args, **kwargs)
+    return pdeformer2.base(dtype=dtype)
 
 
-def pdeformer2_fast(*args, **kwargs) -> FlaxModel:
-    """PDEformer2-fast foundation model."""
+def pdeformer2_fast(dtype=None) -> FlaxModel:
+    """PDEformer-2 Fast.
+
+    Graphormer(12 layers, embed=768) + PolyINR(hidden=256) — smaller
+    INR than Base for faster inference.
+
+    Parameters
+    ----------
+    dtype : jnp.dtype, optional
+        JAX dtype.  Defaults to ``jnp.float32``.
+
+    References
+    ----------
+    Shi et al., "PDEformer-2", 2025.  https://arxiv.org/abs/2502.14844
+    """
     from . import pdeformer2
-    return pdeformer2.fast(*args, **kwargs)
+    return pdeformer2.fast(dtype=dtype)
 
 
-def dpot_Ti(*args, **kwargs) -> FlaxModel:
-    """DPOT-Ti foundation model."""
+def dpot_Ti() -> FlaxModel:
+    """DPOTNet-Ti (Tiny).
+
+    Config: embed=512, depth=4, n_blocks=4, img_size=128, patch_size=8.
+    """
     from . import dpot
-    return dpot.Ti(*args, **kwargs)
+    return dpot.Ti()
 
 
-def dpot_S(*args, **kwargs) -> FlaxModel:
-    """DPOT-S foundation model."""
+def dpot_S() -> FlaxModel:
+    """DPOTNet-S (Small).
+
+    Config: embed=1024, depth=6, n_blocks=8, img_size=128, patch_size=8.
+    """
     from . import dpot
-    return dpot.S(*args, **kwargs)
+    return dpot.S()
 
 
-def dpot_M(*args, **kwargs) -> FlaxModel:
-    """DPOT-M foundation model."""
+def dpot_M() -> FlaxModel:
+    """DPOTNet-M (Medium).
+
+    Config: embed=1024, depth=12, n_blocks=8, img_size=128, patch_size=8.
+    """
     from . import dpot
-    return dpot.M(*args, **kwargs)
+    return dpot.M()
 
 
-def dpot_L(*args, **kwargs) -> FlaxModel:
-    """DPOT-L foundation model."""
+def dpot_L() -> FlaxModel:
+    """DPOTNet-L (Large).
+
+    Config: embed=1536, depth=24, n_blocks=16, img_size=128, patch_size=8.
+    """
     from . import dpot
-    return dpot.L(*args, **kwargs)
+    return dpot.L()
 
 
-def dpot_H(*args, **kwargs) -> FlaxModel:
-    """DPOT-H foundation model."""
+def dpot_H() -> FlaxModel:
+    """DPOTNet-H (Huge).
+
+    Config: embed=2048, depth=27, n_blocks=8, img_size=128, patch_size=8.
+    """
     from . import dpot
-    return dpot.H(*args, **kwargs)
+    return dpot.H()
 
 
-def prose_fd_1to1(*args, **kwargs) -> FlaxModel:
-    """PROSE fd_1to1 foundation model."""
+def prose_fd_1to1(
+    config=None,
+    x_num: int = 128,
+    max_output_dim: int = 4,
+    input_len: int = 10,
+    output_len: int = 10,
+) -> FlaxModel:
+    """PROSE finite-difference 1-to-1 model.
+
+    Parameters
+    ----------
+    config : PROSE1to1Config, optional
+        Full config (internal defaults if ``None``).
+    x_num : int, default 128
+        Spatial grid size.
+    max_output_dim : int, default 4
+        Output dimensionality.
+    input_len : int, default 10
+        Input time-steps.
+    output_len : int, default 10
+        Output time-steps.
+
+    Returns
+    -------
+    tuple[PROSE1to1, dict]
+        ``(model, params)`` — already initialised.
+    """
     from . import prose
-    return prose.fd_1to1(*args, **kwargs)
+    return prose.fd_1to1(
+        config=config,
+        x_num=x_num,
+        max_output_dim=max_output_dim,
+        input_len=input_len,
+        output_len=output_len,
+    )
 
 
-def prose_fd_2to1(*args, **kwargs) -> FlaxModel:
-    """PROSE fd_2to1 foundation model."""
+def prose_fd_2to1(
+    n_words: int,
+    x_num: int = 128,
+    max_output_dim: int = 4,
+    input_len: int = 10,
+    output_len: int = 10,
+    symbol_len: int = 48,
+) -> FlaxModel:
+    """PROSE finite-difference 2-to-1 model.
+
+    Parameters
+    ----------
+    n_words : int
+        Vocabulary size (**required**).
+    x_num : int, default 128
+        Spatial grid size.
+    max_output_dim : int, default 4
+        Output dimensionality.
+    input_len : int, default 10
+        Input time-steps.
+    output_len : int, default 10
+        Output time-steps.
+    symbol_len : int, default 48
+        Symbol sequence length.
+
+    Returns
+    -------
+    tuple[PROSE2to1, dict]
+        ``(model, params)`` — already initialised.
+    """
     from . import prose
-    return prose.fd_2to1(*args, **kwargs)
+    return prose.fd_2to1(
+        n_words=n_words,
+        x_num=x_num,
+        max_output_dim=max_output_dim,
+        input_len=input_len,
+        output_len=output_len,
+        symbol_len=symbol_len,
+    )
 
 
-def prose_ode_2to1(*args, **kwargs) -> FlaxModel:
-    """PROSE ode_2to1 foundation model."""
+def prose_ode_2to1(
+    n_words: int,
+    pad_index: int,
+    max_output_dimension: int = 3,
+    input_len: int = 50,
+    output_len: int = 50,
+    text_len: int = 48,
+    cfg=None,
+) -> FlaxModel:
+    """PROSE ODE 2-to-1 model.
+
+    Parameters
+    ----------
+    n_words : int
+        Vocabulary size (**required**).
+    pad_index : int
+        Padding token index (**required**).
+    max_output_dimension : int, default 3
+        Max output dim.
+    input_len : int, default 50
+        Input sequence length.
+    output_len : int, default 50
+        Output sequence length.
+    text_len : int, default 48
+        Text / symbol sequence length.
+    cfg : ProseTextData2to1Config, optional
+        Full config.
+
+    Returns
+    -------
+    tuple[PROSEODE2to1, dict]
+        ``(model, params)`` — already initialised.
+    """
     from . import prose
-    return prose.ode_2to1(*args, **kwargs)
+    return prose.ode_2to1(
+        n_words=n_words,
+        pad_index=pad_index,
+        max_output_dimension=max_output_dimension,
+        input_len=input_len,
+        output_len=output_len,
+        text_len=text_len,
+        cfg=cfg,
+    )
 
 
-def prose_pde_2to1(*args, **kwargs) -> FlaxModel:
-    """PROSE pde_2to1 foundation model."""
+def prose_pde_2to1(
+    n_words: int,
+    pad_index: int,
+    max_output_dimension: int = 1,
+    x_patch_size: int = 1,
+    x_grid_size: int = 128,
+    input_len: int = 10,
+    output_len: int = 10,
+    text_len: int = 48,
+    cfg=None,
+) -> FlaxModel:
+    """PROSE PDE 2-to-1 model.
+
+    Parameters
+    ----------
+    n_words : int
+        Vocabulary size (**required**).
+    pad_index : int
+        Padding token index (**required**).
+    max_output_dimension : int, default 1
+        Max output dim.
+    x_patch_size : int, default 1
+        Spatial patch size.
+    x_grid_size : int, default 128
+        Spatial grid size.
+    input_len : int, default 10
+        Input sequence length.
+    output_len : int, default 10
+        Output sequence length.
+    text_len : int, default 48
+        Text / symbol sequence length.
+    cfg : ProseTextData2to1Config, optional
+        Full config.
+
+    Returns
+    -------
+    tuple[PROSEPDE2to1, dict]
+        ``(model, params)`` — already initialised.
+    """
     from . import prose
-    return prose.pde_2to1(*args, **kwargs)
+    return prose.pde_2to1(
+        n_words=n_words,
+        pad_index=pad_index,
+        max_output_dimension=max_output_dimension,
+        x_patch_size=x_patch_size,
+        x_grid_size=x_grid_size,
+        input_len=input_len,
+        output_len=output_len,
+        text_len=text_len,
+        cfg=cfg,
+    )

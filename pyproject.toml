@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foundax"
-version = "0.1.2"
+version = "0.1.3"
 description = "One-stop JAX foundation model repository"
 license = "MIT"
 readme = "README.md"
@@ -24,7 +24,8 @@ foundax-compare = "foundax.cli:compare_entry"
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = ["foundax*"]
+include = ["foundax*", "jax_bcat*", "jax_dpot*", "jax_morph*", "jax_mpp*", "jax_pdeformer2*", "jax_poseidon*", "jax_prose*", "jax_walrus*"]
+where = [".", "repos/jax_bcat", "repos/jax_dpot", "repos/jax_morph", "repos/jax_mpp", "repos/jax_pdeformer2", "repos/jax_poseidon", "repos/jax_prose", "repos/jax_walrus"]
 
 [dependency-groups]
 dev = [
