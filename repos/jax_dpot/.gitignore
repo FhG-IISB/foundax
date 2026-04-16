@@ -1,0 +1,9 @@
+ogrepo/
+
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+*.msgpack
+*.npz

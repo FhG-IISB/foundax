@@ -1,0 +1,78 @@
+from . import bcat, dpot, morph, mpp, pdeformer2, poseidon, prose, walrus
+from .model import FlaxModel
+from .nn import (
+    # non-foundation architectures
+    mlp,
+    fno2d,
+    unet2d,
+    transformer,
+    # foundation model shortcuts
+    poseidonT,
+    poseidonB,
+    poseidonL,
+    morph_Ti,
+    morph_S,
+    morph_M,
+    morph_L,
+    mpp_Ti,
+    mpp_S,
+    mpp_B,
+    mpp_L,
+    pdeformer2_small,
+    pdeformer2_base,
+    pdeformer2_fast,
+    dpot_Ti,
+    dpot_S,
+    dpot_M,
+    dpot_L,
+    dpot_H,
+    prose_fd_1to1,
+    prose_fd_2to1,
+    prose_ode_2to1,
+    prose_pde_2to1,
+)
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "__version__",
+    "FlaxModel",
+    # submodule namespaces
+    "poseidon",
+    "walrus",
+    "morph",
+    "mpp",
+    "bcat",
+    "pdeformer2",
+    "dpot",
+    "prose",
+    # architecture factories
+    "mlp",
+    "fno2d",
+    "unet2d",
+    "transformer",
+    # foundation model factories
+    "poseidonT",
+    "poseidonB",
+    "poseidonL",
+    "morph_Ti",
+    "morph_S",
+    "morph_M",
+    "morph_L",
+    "mpp_Ti",
+    "mpp_S",
+    "mpp_B",
+    "mpp_L",
+    "pdeformer2_small",
+    "pdeformer2_base",
+    "pdeformer2_fast",
+    "dpot_Ti",
+    "dpot_S",
+    "dpot_M",
+    "dpot_L",
+    "dpot_H",
+    "prose_fd_1to1",
+    "prose_fd_2to1",
+    "prose_ode_2to1",
+    "prose_pde_2to1",
+]

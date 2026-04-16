@@ -1,0 +1,3 @@
+[console_scripts]
+foundax-compare = foundax.cli:compare_entry
+foundax-convert = foundax.cli:convert_entry

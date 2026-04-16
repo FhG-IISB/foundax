@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jax_dpot"
+version = "0.1.0"
+description = "JAX/Flax translation of the DPOT foundation model"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Leon Armbruster" }]
+license = { text = "MIT" }
+license-files = ["LICENSE"]
+
+dependencies = [
+    "flax>=0.10",
+    "jax>=0.5",
+    "jaxlib>=0.5",
+    "numpy>=1.26",
+    "einops>=0.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+convert = ["torch>=2.4"]
+gpu = ["jax[cuda12]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["jax_dpot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = ["pytest>=7.0"]
