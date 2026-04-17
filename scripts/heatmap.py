@@ -89,10 +89,20 @@ def _compare_morph(
     from test_morph_eqx import transfer_all_params as flax_to_eqx
 
     cfg = dict(
-        patch_size=4, dim=32, depth=2, heads=2, heads_xa=2,
-        mlp_dim=64, max_components=2, conv_filter=8, max_ar=1,
-        max_patches=64, max_fields=2, model_size="Ti",
-        dropout=0.0, emb_dropout=0.0,
+        patch_size=4,
+        dim=32,
+        depth=2,
+        heads=2,
+        heads_xa=2,
+        mlp_dim=64,
+        max_components=2,
+        conv_filter=8,
+        max_ar=1,
+        max_patches=64,
+        max_fields=2,
+        model_size="Ti",
+        dropout=0.0,
+        emb_dropout=0.0,
     )
     S = spatial
 
@@ -167,14 +177,20 @@ def _compare_mpp(
     from test_mpp_eqx import transfer_all_params as flax_to_eqx
 
     cfg = dict(
-        patch_size=(16, 16), embed_dim=32, processor_blocks=2,
-        n_states=3, drop_path=0.0, bias_type="rel", num_heads=2,
+        patch_size=(16, 16),
+        embed_dim=32,
+        processor_blocks=2,
+        n_states=3,
+        drop_path=0.0,
+        bias_type="rel",
+        num_heads=2,
     )
     T, B, C, H, W = 2, 1, cfg["n_states"], resolution, resolution
 
     # PT model
     class Params:
         pass
+
     params = Params()
     params.embed_dim = cfg["embed_dim"]
     params.processor_blocks = cfg["processor_blocks"]
@@ -390,25 +406,53 @@ def _compare_bcat(
     from test_bcat_eqx import transfer_weights as flax_to_eqx
 
     cfg = dict(
-        n_layer=2, dim_emb=64, dim_ffn=128, n_head=4,
-        norm_first=True, norm_type="rms", activation="swiglu",
-        qk_norm=True, x_num=16, max_output_dim=2,
-        patch_num=4, patch_num_output=4, conv_dim=8,
-        time_embed="learnable", max_time_len=10, max_data_len=10, deep=False,
+        n_layer=2,
+        dim_emb=64,
+        dim_ffn=128,
+        n_head=4,
+        norm_first=True,
+        norm_type="rms",
+        activation="swiglu",
+        qk_norm=True,
+        x_num=16,
+        max_output_dim=2,
+        patch_num=4,
+        patch_num_output=4,
+        conv_dim=8,
+        time_embed="learnable",
+        max_time_len=10,
+        max_data_len=10,
+        deep=False,
     )
     x_num, data_dim = cfg["x_num"], 2
     bs, t_total, input_len = 1, 5, 3
 
     # PT model — needs OmegaConf config with embedder sub-section
     pt_cfg = dict(
-        n_layer=2, dim_emb=64, dim_ffn=128, n_head=4,
-        norm_first=True, norm="rms", activation="swiglu",
-        qk_norm=1, dropout=0, attn_dropout=0, rotary=0,
-        flex_attn=0, kv_cache=0,
-        patch_num=4, patch_num_output=4,
+        n_layer=2,
+        dim_emb=64,
+        dim_ffn=128,
+        n_head=4,
+        norm_first=True,
+        norm="rms",
+        activation="swiglu",
+        qk_norm=1,
+        dropout=0,
+        attn_dropout=0,
+        rotary=0,
+        flex_attn=0,
+        kv_cache=0,
+        patch_num=4,
+        patch_num_output=4,
         embedder=dict(
-            type="conv", dim=64, patch_num=4, patch_num_output=4,
-            time_embed="learnable", max_time_len=10, conv_dim=8, early_conv=0,
+            type="conv",
+            dim=64,
+            patch_num=4,
+            patch_num_output=4,
+            time_embed="learnable",
+            max_time_len=10,
+            conv_dim=8,
+            early_conv=0,
         ),
     )
     model_config = OmegaConf.create(pt_cfg)
@@ -447,7 +491,9 @@ def _compare_bcat(
         enc = pt_model.embedder.encode(d_in, t_in)
         data_len = enc.size(1)
         mask = pt_mask_fn(
-            pt_model.seq_len_per_step, t_total, use_float=True,
+            pt_model.seq_len_per_step,
+            t_total,
+            use_float=True,
         )[:data_len, :data_len]
         enc = pt_model.transformer(enc, mask)
         input_seq_len = (input_len - 1) * pt_model.seq_len_per_step
@@ -461,7 +507,9 @@ def _compare_bcat(
     enc_g = pt_model.embedder.encode(d_in_g, t_in)
     data_len_g = enc_g.size(1)
     mask_g = pt_mask_fn(
-        pt_model.seq_len_per_step, t_total, use_float=True,
+        pt_model.seq_len_per_step,
+        t_total,
+        use_float=True,
     )[:data_len_g, :data_len_g]
     enc_g = pt_model.transformer(enc_g, mask_g)
     y_pt_g = pt_model.embedder.decode(enc_g[:, input_seq_len:])
@@ -499,15 +547,22 @@ def _compare_walrus(
     _ds = types.ModuleType("the_well.data.datasets")
 
     class _BCEnum:
-        _m = {"PERIODIC": type("BC", (), {"value": 2})(),
-               "OPEN": type("BC", (), {"value": 0})()}
-        def __getitem__(self, k): return self._m[k]
+        _m = {
+            "PERIODIC": type("BC", (), {"value": 2})(),
+            "OPEN": type("BC", (), {"value": 0})(),
+        }
+
+        def __getitem__(self, k):
+            return self._m[k]
 
     _ds.BoundaryCondition = _BCEnum()
     _well.data = _data
     _data.datasets = _ds
-    for nm, mod in [("the_well", _well), ("the_well.data", _data),
-                     ("the_well.data.datasets", _ds)]:
+    for nm, mod in [
+        ("the_well", _well),
+        ("the_well.data", _data),
+        ("the_well.data.datasets", _ds),
+    ]:
         sys.modules.setdefault(nm, mod)
 
     _ensure_paths(
@@ -568,9 +623,7 @@ def _compare_walrus(
         processor=partial(
             SpaceTimeSplitBlock,
             space_mixing=partial(FullAttention, num_heads=HEADS, mlp_dim=None),
-            time_mixing=partial(
-                AxialTimeAttention, num_heads=HEADS, bias_type="rel"
-            ),
+            time_mixing=partial(AxialTimeAttention, num_heads=HEADS, bias_type="rel"),
             channel_mixing=partial(tnn.Identity),
             norm_layer=RMSGroupNorm,
         ),
@@ -596,11 +649,23 @@ def _compare_walrus(
 
     # -- Flax model (used for forward reference) --
     eqx_cfg = dict(
-        hidden_dim=HIDDEN, intermediate_dim=INTER, n_states=N_STATES,
-        processor_blocks=PROC, groups=GROUPS, num_heads=HEADS, mlp_dim=0,
-        max_d=3, causal_in_time=False, drop_path=0.0, bias_type="rel",
-        base_kernel_size=BKS, use_spacebag=True, use_silu=True,
-        include_d=INCLUDE_D, encoder_groups=GROUPS, learned_pad=True,
+        hidden_dim=HIDDEN,
+        intermediate_dim=INTER,
+        n_states=N_STATES,
+        processor_blocks=PROC,
+        groups=GROUPS,
+        num_heads=HEADS,
+        mlp_dim=0,
+        max_d=3,
+        causal_in_time=False,
+        drop_path=0.0,
+        bias_type="rel",
+        base_kernel_size=BKS,
+        use_spacebag=True,
+        use_silu=True,
+        include_d=INCLUDE_D,
+        encoder_groups=GROUPS,
+        learned_pad=True,
     )
     flax_model = FlaxModel(**eqx_cfg, jitter_patches=False)
     rng = jax.random.PRNGKey(42)
@@ -658,13 +723,19 @@ def _prose_pt_to_flax(pt_state, flax_params):
         elif k == "embedder.time_embed":
             _sp(params, ["embedder", "time_embed"], jnp.asarray(a))
         elif k == "embedder.conv_proj.0.weight":
-            _sp(params, ["embedder", "conv_proj_0", "kernel"],
-                jnp.asarray(a.transpose(2, 3, 1, 0)))
+            _sp(
+                params,
+                ["embedder", "conv_proj_0", "kernel"],
+                jnp.asarray(a.transpose(2, 3, 1, 0)),
+            )
         elif k == "embedder.conv_proj.0.bias":
             _sp(params, ["embedder", "conv_proj_0", "bias"], jnp.asarray(a))
         elif k == "embedder.conv_proj.2.weight":
-            _sp(params, ["embedder", "conv_proj_1", "kernel"],
-                jnp.asarray(a.transpose(2, 3, 1, 0)))
+            _sp(
+                params,
+                ["embedder", "conv_proj_1", "kernel"],
+                jnp.asarray(a.transpose(2, 3, 1, 0)),
+            )
         elif k == "embedder.conv_proj.2.bias":
             _sp(params, ["embedder", "conv_proj_1", "bias"], jnp.asarray(a))
         elif k == "embedder.post_proj.1.weight":
@@ -673,13 +744,19 @@ def _prose_pt_to_flax(pt_state, flax_params):
         elif k == "embedder.post_proj.1.bias":
             _sp(params, ["embedder", "deconv", "bias"], jnp.asarray(a))
         elif k == "embedder.post_proj.3.weight":
-            _sp(params, ["embedder", "post_conv_0", "kernel"],
-                jnp.asarray(a.transpose(2, 3, 1, 0)))
+            _sp(
+                params,
+                ["embedder", "post_conv_0", "kernel"],
+                jnp.asarray(a.transpose(2, 3, 1, 0)),
+            )
         elif k == "embedder.post_proj.3.bias":
             _sp(params, ["embedder", "post_conv_0", "bias"], jnp.asarray(a))
         elif k == "embedder.post_proj.5.weight":
-            _sp(params, ["embedder", "post_conv_1", "kernel"],
-                jnp.asarray(a.transpose(2, 3, 1, 0)))
+            _sp(
+                params,
+                ["embedder", "post_conv_1", "kernel"],
+                jnp.asarray(a.transpose(2, 3, 1, 0)),
+            )
         elif k == "embedder.post_proj.5.bias":
             _sp(params, ["embedder", "post_conv_1", "bias"], jnp.asarray(a))
 
@@ -691,17 +768,24 @@ def _prose_pt_to_flax(pt_state, flax_params):
             base = ["data_encoder", "layers_%d" % li]
             if rest.startswith("self_attn."):
                 r = rest.split(".")
-                _sp(params, base + ["self_attn", r[1],
-                    "kernel" if r[2] == "weight" else "bias"],
-                    jnp.asarray(a.T if r[2] == "weight" else a))
+                _sp(
+                    params,
+                    base
+                    + ["self_attn", r[1], "kernel" if r[2] == "weight" else "bias"],
+                    jnp.asarray(a.T if r[2] == "weight" else a),
+                )
             elif rest.startswith("linear1."):
-                _sp(params, base + ["linear1",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear1", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest.startswith("linear2."):
-                _sp(params, base + ["linear2",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear2", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest == "norm1.weight":
                 _sp(params, base + ["norm1", "scale"], jnp.asarray(a))
             elif rest == "norm2.weight":
@@ -717,29 +801,42 @@ def _prose_pt_to_flax(pt_state, flax_params):
             base = ["symbol_encoder", "transformer_encoder", "layers_%d" % li]
             if rest.startswith("self_attn."):
                 r = rest.split(".")
-                _sp(params, base + ["self_attn", r[1],
-                    "kernel" if r[2] == "weight" else "bias"],
-                    jnp.asarray(a.T if r[2] == "weight" else a))
+                _sp(
+                    params,
+                    base
+                    + ["self_attn", r[1], "kernel" if r[2] == "weight" else "bias"],
+                    jnp.asarray(a.T if r[2] == "weight" else a),
+                )
             elif rest.startswith("linear1."):
-                _sp(params, base + ["linear1",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear1", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest.startswith("linear2."):
-                _sp(params, base + ["linear2",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear2", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest == "norm1.weight":
                 _sp(params, base + ["norm1", "scale"], jnp.asarray(a))
             elif rest == "norm2.weight":
                 _sp(params, base + ["norm2", "scale"], jnp.asarray(a))
         elif k == "symbol_encoder.transformer_encoder.norm.weight":
-            _sp(params, ["symbol_encoder", "transformer_encoder", "norm", "scale"],
-                jnp.asarray(a))
+            _sp(
+                params,
+                ["symbol_encoder", "transformer_encoder", "norm", "scale"],
+                jnp.asarray(a),
+            )
         elif k == "symbol_encoder.positional_embedding.pe":
             _sp(params, ["symbol_encoder", "pe"], jnp.asarray(a))
         elif k == "symbol_encoder.word_embeddings.weight":
-            _sp(params, ["symbol_encoder", "word_embeddings", "embedding"],
-                jnp.asarray(a))
+            _sp(
+                params,
+                ["symbol_encoder", "word_embeddings", "embedding"],
+                jnp.asarray(a),
+            )
 
         # ---- fusion ----
         elif k == "fusion.type_embeddings.weight":
@@ -751,24 +848,34 @@ def _prose_pt_to_flax(pt_state, flax_params):
             base = ["fusion", "transformer_encoder", "layers_%d" % li]
             if rest.startswith("self_attn."):
                 r = rest.split(".")
-                _sp(params, base + ["self_attn", r[1],
-                    "kernel" if r[2] == "weight" else "bias"],
-                    jnp.asarray(a.T if r[2] == "weight" else a))
+                _sp(
+                    params,
+                    base
+                    + ["self_attn", r[1], "kernel" if r[2] == "weight" else "bias"],
+                    jnp.asarray(a.T if r[2] == "weight" else a),
+                )
             elif rest.startswith("linear1."):
-                _sp(params, base + ["linear1",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear1", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest.startswith("linear2."):
-                _sp(params, base + ["linear2",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear2", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest == "norm1.weight":
                 _sp(params, base + ["norm1", "scale"], jnp.asarray(a))
             elif rest == "norm2.weight":
                 _sp(params, base + ["norm2", "scale"], jnp.asarray(a))
         elif k == "fusion.transformer_encoder.norm.weight":
-            _sp(params, ["fusion", "transformer_encoder", "norm", "scale"],
-                jnp.asarray(a))
+            _sp(
+                params,
+                ["fusion", "transformer_encoder", "norm", "scale"],
+                jnp.asarray(a),
+            )
 
         # ---- data_decoder ----
         elif k == "data_decoder.time_embed":
@@ -782,17 +889,28 @@ def _prose_pt_to_flax(pt_state, flax_params):
             base = ["data_decoder", "layers_%d" % li]
             if rest.startswith("multihead_attn."):
                 r = rest.split(".")
-                _sp(params, base + ["multihead_attn", r[1],
-                    "kernel" if r[2] == "weight" else "bias"],
-                    jnp.asarray(a.T if r[2] == "weight" else a))
+                _sp(
+                    params,
+                    base
+                    + [
+                        "multihead_attn",
+                        r[1],
+                        "kernel" if r[2] == "weight" else "bias",
+                    ],
+                    jnp.asarray(a.T if r[2] == "weight" else a),
+                )
             elif rest.startswith("linear1."):
-                _sp(params, base + ["linear1",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear1", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest.startswith("linear2."):
-                _sp(params, base + ["linear2",
-                    "kernel" if rest.endswith("weight") else "bias"],
-                    jnp.asarray(a.T if rest.endswith("weight") else a))
+                _sp(
+                    params,
+                    base + ["linear2", "kernel" if rest.endswith("weight") else "bias"],
+                    jnp.asarray(a.T if rest.endswith("weight") else a),
+                )
             elif rest == "norm1.weight":
                 _sp(params, base + ["norm1", "scale"], jnp.asarray(a))
             elif rest == "norm2.weight":
@@ -832,45 +950,90 @@ def _compare_prose(
     INPUT_LEN, OUTPUT_LEN, SYM_LEN = 2, 2, 8
 
     # -- PT model --
-    pt_cfg = OmegaConf.create({
-        "name": "prose_2to1",
-        "dim_emb": DIM, "dim_ffn": FFN, "n_head": NHEAD,
-        "dropout": 0, "norm_first": True,
-        "patch_num": PATCH, "patch_num_output": PATCH_OUT,
-        "carry_last_frame": 0, "time_embed": "learnable",
-        "custom_encoder": 1, "custom_attn": 1, "rotary": 0, "norm": "rms",
-        "embedder": {
-            "type": "conv", "dim": DIM, "patch_num": PATCH,
-            "patch_num_output": PATCH_OUT, "time_embed": "learnable",
-            "initialize_small_output": 0, "conv_dim": 32,
-            "early_conv": 0, "deep": 0,
-        },
-        "data_encoder": {
-            "n_layer": 1, "positional_embedding": None,
-            "dim_emb": DIM, "dim_ffn": FFN, "n_head": NHEAD,
-            "dropout": 0, "norm_first": True,
-            "custom_encoder": 1, "custom_attn": 1, "rotary": 0, "norm": "rms",
-        },
-        "symbol_encoder": {
-            "n_layer": 1, "positional_embedding": "sinusoidal",
-            "dim_emb": DIM, "dim_ffn": FFN, "n_head": NHEAD,
-            "dropout": 0, "norm_first": True,
-            "custom_encoder": 1, "custom_attn": 1, "rotary": 0, "norm": "rms",
-        },
-        "fusion": {
-            "n_layer": 1, "type_embeddings": True,
-            "dim_emb": DIM, "dim_ffn": FFN, "n_head": NHEAD,
-            "dropout": 0, "norm_first": True,
-            "custom_encoder": 1, "custom_attn": 1, "rotary": 0, "norm": "rms",
-        },
-        "data_decoder": {
-            "n_layer": 1, "query_dim": 1, "self_attn": 0,
-            "dim_emb": DIM, "dim_ffn": FFN, "n_head": NHEAD,
-            "dropout": 0, "norm_first": True,
-            "patch_num_output": PATCH_OUT, "time_embed": "learnable",
-            "final_ln": 1, "custom_attn": 1, "rotary": 0, "norm": "rms",
-        },
-    })
+    pt_cfg = OmegaConf.create(
+        {
+            "name": "prose_2to1",
+            "dim_emb": DIM,
+            "dim_ffn": FFN,
+            "n_head": NHEAD,
+            "dropout": 0,
+            "norm_first": True,
+            "patch_num": PATCH,
+            "patch_num_output": PATCH_OUT,
+            "carry_last_frame": 0,
+            "time_embed": "learnable",
+            "custom_encoder": 1,
+            "custom_attn": 1,
+            "rotary": 0,
+            "norm": "rms",
+            "embedder": {
+                "type": "conv",
+                "dim": DIM,
+                "patch_num": PATCH,
+                "patch_num_output": PATCH_OUT,
+                "time_embed": "learnable",
+                "initialize_small_output": 0,
+                "conv_dim": 32,
+                "early_conv": 0,
+                "deep": 0,
+            },
+            "data_encoder": {
+                "n_layer": 1,
+                "positional_embedding": None,
+                "dim_emb": DIM,
+                "dim_ffn": FFN,
+                "n_head": NHEAD,
+                "dropout": 0,
+                "norm_first": True,
+                "custom_encoder": 1,
+                "custom_attn": 1,
+                "rotary": 0,
+                "norm": "rms",
+            },
+            "symbol_encoder": {
+                "n_layer": 1,
+                "positional_embedding": "sinusoidal",
+                "dim_emb": DIM,
+                "dim_ffn": FFN,
+                "n_head": NHEAD,
+                "dropout": 0,
+                "norm_first": True,
+                "custom_encoder": 1,
+                "custom_attn": 1,
+                "rotary": 0,
+                "norm": "rms",
+            },
+            "fusion": {
+                "n_layer": 1,
+                "type_embeddings": True,
+                "dim_emb": DIM,
+                "dim_ffn": FFN,
+                "n_head": NHEAD,
+                "dropout": 0,
+                "norm_first": True,
+                "custom_encoder": 1,
+                "custom_attn": 1,
+                "rotary": 0,
+                "norm": "rms",
+            },
+            "data_decoder": {
+                "n_layer": 1,
+                "query_dim": 1,
+                "self_attn": 0,
+                "dim_emb": DIM,
+                "dim_ffn": FFN,
+                "n_head": NHEAD,
+                "dropout": 0,
+                "norm_first": True,
+                "patch_num_output": PATCH_OUT,
+                "time_embed": "learnable",
+                "final_ln": 1,
+                "custom_attn": 1,
+                "rotary": 0,
+                "norm": "rms",
+            },
+        }
+    )
     id2word = {0: "<BOS>", 1: "<EOS>", 2: "<PAD>", 3: "<PLACEHOLDER>"}
     for i in range(4, N_WORDS):
         id2word[i] = str(i)
@@ -882,10 +1045,15 @@ def _compare_prose(
 
     # -- Flax model (init → overwrite with PT weights) --
     flax_cfg = Prose2to1Config(
-        dim_emb=DIM, dim_ffn=FFN, n_head=NHEAD,
-        patch_num=PATCH, patch_num_output=PATCH_OUT,
-        data_encoder_layers=1, symbol_encoder_layers=1,
-        fusion_layers=1, data_decoder_layers=1,
+        dim_emb=DIM,
+        dim_ffn=FFN,
+        n_head=NHEAD,
+        patch_num=PATCH,
+        patch_num_output=PATCH_OUT,
+        data_encoder_layers=1,
+        symbol_encoder_layers=1,
+        fusion_layers=1,
+        data_decoder_layers=1,
     )
     flax_model = FlaxPROSE(
         n_words=N_WORDS, x_num=X_NUM, max_output_dim=DATA_DIM, cfg=flax_cfg
@@ -904,11 +1072,18 @@ def _compare_prose(
 
     # -- Equinox model --
     eqx_model = EqxPROSE(
-        n_words=N_WORDS, x_num=X_NUM, max_output_dim=DATA_DIM,
-        dim_emb=DIM, dim_ffn=FFN, n_head=NHEAD,
-        patch_num=PATCH, patch_num_output=PATCH_OUT,
-        data_encoder_layers=1, symbol_encoder_layers=1,
-        fusion_layers=1, data_decoder_layers=1,
+        n_words=N_WORDS,
+        x_num=X_NUM,
+        max_output_dim=DATA_DIM,
+        dim_emb=DIM,
+        dim_ffn=FFN,
+        n_head=NHEAD,
+        patch_num=PATCH,
+        patch_num_output=PATCH_OUT,
+        data_encoder_layers=1,
+        symbol_encoder_layers=1,
+        fusion_layers=1,
+        data_decoder_layers=1,
         key=jax.random.PRNGKey(1),
     )
     eqx_model = flax_to_eqx(flax_vars, eqx_model)
@@ -978,11 +1153,23 @@ def _compare_dpot(
     from test_dpot_eqx import transfer_all_params as flax_to_eqx
 
     kwargs = dict(
-        img_size=32, patch_size=8, mixing_type="afno",
-        in_channels=2, out_channels=2, in_timesteps=3, out_timesteps=1,
-        n_blocks=4, embed_dim=32, out_layer_dim=16, depth=2,
-        modes=8, mlp_ratio=1.0, n_cls=4,
-        normalize=False, act="gelu", time_agg="exp_mlp",
+        img_size=32,
+        patch_size=8,
+        mixing_type="afno",
+        in_channels=2,
+        out_channels=2,
+        in_timesteps=3,
+        out_timesteps=1,
+        n_blocks=4,
+        embed_dim=32,
+        out_layer_dim=16,
+        depth=2,
+        modes=8,
+        mlp_ratio=1.0,
+        n_cls=4,
+        normalize=False,
+        act="gelu",
+        time_agg="exp_mlp",
     )
 
     # -- PT model --
@@ -1095,20 +1282,33 @@ def _compare_pdeformer2(
     # -- Config matching the MS helper --
     test_cfg = {
         "graphormer": {
-            "num_node_type": 8, "num_in_degree": 4, "num_out_degree": 4,
-            "num_spatial": 4, "num_encoder_layers": 2, "embed_dim": 32,
-            "ffn_embed_dim": 64, "num_heads": 4, "pre_layernorm": True,
+            "num_node_type": 8,
+            "num_in_degree": 4,
+            "num_out_degree": 4,
+            "num_spatial": 4,
+            "num_encoder_layers": 2,
+            "embed_dim": 32,
+            "ffn_embed_dim": 64,
+            "num_heads": 4,
+            "pre_layernorm": True,
         },
         "scalar_encoder": {"dim_hidden": 16, "num_layers": 2},
         "function_encoder": {
-            "type": "cnn2dv3", "num_branches": 4, "resolution": 128,
-            "conv2d_input_txyz": False, "cnn_keep_nchw": True,
+            "type": "cnn2dv3",
+            "num_branches": 4,
+            "resolution": 128,
+            "conv2d_input_txyz": False,
+            "cnn_keep_nchw": True,
         },
         "inr": {
-            "type": "poly_inr", "num_layers": 3, "dim_hidden": 16,
+            "type": "poly_inr",
+            "num_layers": 3,
+            "dim_hidden": 16,
             "poly_inr": {
-                "enable_affine": False, "enable_shift": True,
-                "enable_scale": True, "activation_fn": "sin",
+                "enable_affine": False,
+                "enable_shift": True,
+                "enable_scale": True,
+                "activation_fn": "sin",
                 "affine_act_fn": "identity",
             },
         },
@@ -1125,8 +1325,14 @@ def _compare_pdeformer2(
 
     # -- Reconstruct inputs from saved numpy arrays --
     input_keys = [
-        "node_type", "node_scalar", "node_function",
-        "in_degree", "out_degree", "attn_bias", "spatial_pos", "coordinate",
+        "node_type",
+        "node_scalar",
+        "node_function",
+        "in_degree",
+        "out_degree",
+        "attn_bias",
+        "spatial_pos",
+        "coordinate",
     ]
     inputs = {k: jnp.array(io[k]) for k in input_keys}
 
@@ -1205,10 +1411,14 @@ def _cleanup_ogrepo_modules() -> None:
     ``src``, ``datasets``) that would clash if left in ``sys.modules``/``sys.path``.
     """
     stale = [
-        k for k in sys.modules
-        if k == "models" or k.startswith("models.")
-        or k == "src" or k.startswith("src.")
-        or k == "datasets" or k.startswith("datasets.")
+        k
+        for k in sys.modules
+        if k == "models"
+        or k.startswith("models.")
+        or k == "src"
+        or k.startswith("src.")
+        or k == "datasets"
+        or k.startswith("datasets.")
     ]
     for k in stale:
         del sys.modules[k]
@@ -1291,10 +1501,26 @@ def plot_heatmap(
     eps32 = float(np.finfo(np.float32).eps)  # ≈1.19e-7
     ax.axvline(eps32, color="#bbbbbb", linewidth=0.8, linestyle="--", zorder=1)
     ax.axhline(eps32, color="#bbbbbb", linewidth=0.8, linestyle="--", zorder=1)
-    ax.text(eps32 * 1.35, lo * 2.5, "f32 ε", fontsize=7.5, color="#888888",
-            ha="left", va="bottom", rotation=0)
-    ax.text(lo * 2.5, eps32 * 1.35, "f32 ε", fontsize=7.5, color="#888888",
-            ha="left", va="bottom", rotation=0)
+    ax.text(
+        eps32 * 1.35,
+        lo * 2.5,
+        "f32 ε",
+        fontsize=7.5,
+        color="#888888",
+        ha="left",
+        va="bottom",
+        rotation=0,
+    )
+    ax.text(
+        lo * 2.5,
+        eps32 * 1.35,
+        "f32 ε",
+        fontsize=7.5,
+        color="#888888",
+        ha="left",
+        va="bottom",
+        rotation=0,
+    )
 
     # Scatter points
     colors = {
@@ -1306,26 +1532,45 @@ def plot_heatmap(
         mask = [k == kind_key for k in kinds]
         fv = fwd_vals[mask]
         gv = grad_vals[mask]
-        ax.scatter(fv, gv, s=60, color=colors.get(kind_key, "#333333"),
-                   edgecolors="white", linewidths=0.6, zorder=4,
-                   label=f"vs {suffix_map.get(kind_key, kind_key)}")
+        ax.scatter(
+            fv,
+            gv,
+            s=60,
+            color=colors.get(kind_key, "#333333"),
+            edgecolors="white",
+            linewidths=0.6,
+            zorder=4,
+            label=f"vs {suffix_map.get(kind_key, kind_key)}",
+        )
 
     # Labels with white outline for readability
     outline = [pe.withStroke(linewidth=2.5, foreground="white")]
     # Use adjustText if available, otherwise fall back to fixed offsets
     try:
         from adjustText import adjust_text
+
         texts = []
         for i, nm in enumerate(names):
-            texts.append(ax.text(
-                fwd_vals[i], grad_vals[i], nm,
-                fontsize=8.5, color="#333333",
-                path_effects=outline, zorder=5,
-            ))
-        adjust_text(texts, x=fwd_vals, y=grad_vals, ax=ax,
-                    force_text=(0.4, 0.4), force_points=(0.3, 0.3),
-                    arrowprops=dict(arrowstyle="-", color="#aaaaaa",
-                                    linewidth=0.5))
+            texts.append(
+                ax.text(
+                    fwd_vals[i],
+                    grad_vals[i],
+                    nm,
+                    fontsize=8.5,
+                    color="#333333",
+                    path_effects=outline,
+                    zorder=5,
+                )
+            )
+        adjust_text(
+            texts,
+            x=fwd_vals,
+            y=grad_vals,
+            ax=ax,
+            force_text=(0.4, 0.4),
+            force_points=(0.3, 0.3),
+            arrowprops=dict(arrowstyle="-", color="#aaaaaa", linewidth=0.5),
+        )
     except ImportError:
         for i, nm in enumerate(names):
             ax.annotate(
@@ -1349,7 +1594,9 @@ def plot_heatmap(
     ax.set_ylabel("Gradient max |diff|", fontsize=10)
     ax.set_title(
         "Equinox Translation Accuracy — Original ↔ Equinox",
-        fontsize=12, fontweight="bold", pad=10,
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
     )
 
     ax.legend(fontsize=9, loc="upper left", framealpha=0.9)
@@ -1373,28 +1620,39 @@ def main() -> None:
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
-        "--run", action="store_true",
+        "--run",
+        action="store_true",
         help="Run comparisons live (uses random init)",
     )
     mode.add_argument(
-        "--results", type=Path,
+        "--results",
+        type=Path,
         help="Load pre-computed results from JSON",
     )
     parser.add_argument(
-        "--models", nargs="+", choices=ALL_MODELS, default=ALL_MODELS,
+        "--models",
+        nargs="+",
+        choices=ALL_MODELS,
+        default=ALL_MODELS,
         help="Models to include (default: all)",
     )
     parser.add_argument(
-        "--projects-root", type=Path,
+        "--projects-root",
+        type=Path,
         default=Path(__file__).resolve().parents[1] / "repos",
         help="Path to vendored jax_* repos (default: foundax/repos)",
     )
     parser.add_argument(
-        "--output", "-o", type=str, default="heatmap.png",
+        "--output",
+        "-o",
+        type=str,
+        default="heatmap.png",
         help="Output image path (default: heatmap.png)",
     )
     parser.add_argument(
-        "--save-results", type=Path, default=None,
+        "--save-results",
+        type=Path,
+        default=None,
         help="Save results to JSON for later reuse",
     )
     args = parser.parse_args()

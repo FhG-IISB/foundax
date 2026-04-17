@@ -1,7 +1,7 @@
 """Unified factory facade for all foundax models.
 
 Non-foundation factories return a raw ``equinox.Module``.
-Foundation-model factories return a :class:`~foundax.model.FlaxModel`.
+Foundation-model factories return an :class:`equinox.Module`.
 
 Usage::
 
@@ -30,8 +30,6 @@ if TYPE_CHECKING:
 import jax
 import jax.numpy as jnp
 import equinox as eqx
-
-from .model import FlaxModel
 
 
 # ── helpers ──────────────────────────────────────────────────

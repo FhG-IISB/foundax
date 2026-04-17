@@ -1,5 +1,4 @@
 from . import bcat, dpot, morph, mpp, pdeformer2, poseidon, prose, walrus
-from .model import FlaxModel
 from .nn import (
     # non-foundation architectures
     linear,
@@ -52,7 +51,6 @@ __version__ = "0.1.0"
 
 __all__ = [
     "__version__",
-    "FlaxModel",
     # submodule namespaces
     "poseidon",
     "walrus",

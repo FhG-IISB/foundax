@@ -804,9 +804,7 @@ class AViT(eqx.Module):
         state_labels = jnp.asarray(state_labels)
 
         # 1. Normalise (stop_gradient matches PyTorch's torch.no_grad())
-        data_mean = jax.lax.stop_gradient(
-            jnp.mean(x, axis=(0, 3, 4), keepdims=True)
-        )
+        data_mean = jax.lax.stop_gradient(jnp.mean(x, axis=(0, 3, 4), keepdims=True))
         data_std = jax.lax.stop_gradient(
             jnp.std(x, axis=(0, 3, 4), keepdims=True, ddof=1) + 1e-7
         )
