@@ -1,0 +1,19 @@
+site_name: foundax
+site_description: Documentation for the Equinox model surface in foundax
+repo_url: https://github.com/FhG-IISB/foundax
+repo_name: FhG-IISB/foundax
+
+theme:
+  name: mkdocs
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Core Models: core-models.md
+  - Foundation Models: equinox-architectures.md
+  - Model Examples: model-examples.md
+  - GitHub Pages: github-pages.md
+
+markdown_extensions:
+  - tables
+  - fenced_code

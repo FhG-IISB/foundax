@@ -13,6 +13,12 @@ from .prose_fd import PROSE1to1
 from .prose_fd_2to1 import PROSE2to1
 from .prose_ode_pde_2to1 import PROSEODE2to1, PROSEPDE2to1, ProseTextData2to1Config
 from .load import prose_fd_1to1, prose_fd_2to1, prose_ode_2to1, prose_pde_2to1
+from .model_eqx import (
+    PROSE1to1 as PROSE1to1Eqx,
+    PROSE2to1 as PROSE2to1Eqx,
+    PROSEODE2to1 as PROSEODE2to1Eqx,
+    PROSEPDE2to1 as PROSEPDE2to1Eqx,
+)
 
 __all__ = [
     "__version__",
@@ -27,4 +33,8 @@ __all__ = [
     "prose_fd_2to1",
     "prose_ode_2to1",
     "prose_pde_2to1",
+    "PROSE1to1Eqx",
+    "PROSE2to1Eqx",
+    "PROSEODE2to1Eqx",
+    "PROSEPDE2to1Eqx",
 ]

@@ -26,10 +26,16 @@ def _build(
     drop_path=0.2,
     bias_type="rel",
     num_heads=12,
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_mpp")
-    mod = importlib.import_module("jax_mpp")
-    return mod.AViT(**{k: v for k, v in locals().items() if k != "mod"})
+    mod = importlib.import_module("jax_mpp.avit_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    kw = {k: v for k, v in locals().items() if k not in ("mod", "jax")}
+    return mod.AViT(**kw)
 
 
 def Ti(

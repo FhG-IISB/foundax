@@ -4,66 +4,116 @@
   <img src="assets/logo.png" alt="foundax logo" width="400">
 </p>
 
-A unified JAX model zoo for neural operators, PINNs, and foundation models.
+Unified JAX model zoo for operator learning, PDE surrogates, and Equinox foundation-model wrappers.
 
 ```
-pip install foundax
+uv pip install foundax
 ```
 
-## Usage
+## Overview
+
+`foundax` provides two main model groups:
+
+- Core Equinox architectures in `foundax/architectures/` (FNO, UNet, DeepONet, GNOT family, and others)
+- Equinox wrappers for larger vendored model families (Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, PROSE)
+
+## Quick Start
 
 ```python
 import foundax as fx
 
-# Neural operator architectures (returns initialized FlaxModel)
+# Core models
 model = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 model = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
 model = fx.unet2d(in_channels=1, out_channels=1)
-model = fx.transformer(num_tokens=1000, d_model=128, num_heads=8)
+model = fx.deeponet(branch_type="mlp", trunk_type="mlp")
 
-# Poseidon — (B, 128, 128, C) → (B, 128, 128, C)
-model = fx.poseidon.T()   # T/B/L variants
-model = fx.poseidon.B()
-model = fx.poseidon.L()
-
-# MORPH — (B, t, F, C, D, H, W) → (B, F, C, D, H, W)
-model = fx.morph.Ti()    # Ti/S/M/L variants
-model = fx.morph.S()
-model = fx.morph.M()
-model = fx.morph.L()
-
-# MPP — (T, B, C, H, W) → (B, C, H, W)
-model = fx.mpp.Ti(n_states=12)  # Ti/S/B/L variants
-model = fx.mpp.S(n_states=12)
-model = fx.mpp.B(n_states=12)
-model = fx.mpp.L(n_states=12)
-
-# Walrus — (B, T, H, W, C) → (B, T, H, W, C_out)
+# Foundation wrappers (namespace style)
+model = fx.poseidon.T()   # T/B/L
+model = fx.morph.S()      # Ti/S/M/L
+model = fx.mpp.B(n_states=12)  # Ti/S/B/L
 model = fx.walrus.base()
-
-# BCAT — (B, T_in+T_out, 128, 128, C) → (B, T_out, 128, 128, C)
 model = fx.bcat.base()
-
-# PDEformer-2 — graph inputs → (n_graph, n_points, 1)
-model = fx.pdeformer2.small()  # small/base/fast variants
-model = fx.pdeformer2.base()
-model = fx.pdeformer2.fast()
-
-# DPOT — (B, 128, 128, T, C) → (B, 128, 128, T_out, C)
-model = fx.dpot.Ti()    # Ti/S/M/L/H variants
-model = fx.dpot.S()
-model = fx.dpot.M()
-model = fx.dpot.L()
-model = fx.dpot.H()
-
-# PROSE — various sequence-to-sequence configurations
-model, variables = fx.prose.fd_1to1()                          # (B, T_in, 128, 128, C) → (B, T_out, 128, 128, C)
-model, variables = fx.prose.fd_2to1(n_words=64)                # (B, T_in, 128, 128, C) + symbols → predictions
-model, variables = fx.prose.ode_2to1(n_words=64, pad_index=0)  # (T, 1, C) + text → (T_out, C)
-model, variables = fx.prose.pde_2to1(n_words=64, pad_index=0)  # (T, 1, C) + text → spatial field
+model = fx.pdeformer2.small()  # small/base/fast
+model = fx.dpot.Ti()      # Ti/S/M/L/H
+model, variables = fx.prose.fd_1to1()
 ```
 
-## Integration with [jNO](https://github.com/FhG-IISB/jNO)
+## Foundation Families
+
+### Poseidon
+
+```python
+import foundax as fx
+model = fx.poseidon.T()
+```
+
+### MORPH
+
+```python
+import foundax as fx
+model = fx.morph.Ti()
+```
+
+### MPP
+
+```python
+import foundax as fx
+model = fx.mpp.Ti(n_states=12)
+```
+
+### Walrus
+
+```python
+import foundax as fx
+model = fx.walrus.base()
+```
+
+### BCAT
+
+```python
+import foundax as fx
+model = fx.bcat.base()
+```
+
+### PDEformer-2
+
+```python
+import foundax as fx
+model = fx.pdeformer2.small()
+```
+
+### DPOT
+
+```python
+import foundax as fx
+model = fx.dpot.Ti()
+```
+
+### PROSE
+
+```python
+import foundax as fx
+model, variables = fx.prose.fd_1to1()
+```
+
+## Documentation
+
+Repository documentation lives in `docs/` and is built with MkDocs.
+
+### Local preview
+
+```bash
+uvx --from mkdocs mkdocs serve
+```
+
+### Build
+
+```bash
+uvx --from mkdocs mkdocs build
+```
+
+## Integration With jNO
 
 ```python
 import foundax as fx
@@ -73,10 +123,21 @@ net = jno.nn.wrap(fx.mlp(in_features=2, output_dim=1))
 net.optimizer(optax.adam, lr=1e-3)
 ```
 
+## Numerical Comparison To Original Models
+
+<p align="center">
+  <img src="assets/heatmap.png" alt="model comparison heatmap" width="400">
+</p>
+
+## Notes
+
+- Top-level convenience aliases are still available (for example `fx.poseidonT()`), but namespace-style access is recommended for readability.
+- Foundation-model wrappers are documented in detail in `docs/equinox-architectures.md`.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
 
-Foundation models are subject to their original licenses.
+Foundation models remain subject to their original licenses.
 See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for details.
-Note that some pretrained weights (e.g. Poseidon) are released under non-commercial licenses.
+Some pretrained weights (for example Poseidon) are released under non-commercial terms.

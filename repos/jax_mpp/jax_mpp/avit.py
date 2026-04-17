@@ -79,8 +79,13 @@ class AViT(nn.Module):
 
         # ---- 1. Normalise (per sample, across time + space) ----
         # ddof=1 matches PyTorch torch.std_mean default (Bessel correction)
-        data_mean = jnp.mean(x, axis=(0, 3, 4), keepdims=True)  # (1, B, C, 1, 1)
-        data_std = jnp.std(x, axis=(0, 3, 4), keepdims=True, ddof=1) + 1e-7
+        # stop_gradient matches PyTorch's torch.no_grad() around std_mean
+        data_mean = jax.lax.stop_gradient(
+            jnp.mean(x, axis=(0, 3, 4), keepdims=True)
+        )  # (1, B, C, 1, 1)
+        data_std = jax.lax.stop_gradient(
+            jnp.std(x, axis=(0, 3, 4), keepdims=True, ddof=1) + 1e-7
+        )
         x = (x - data_mean) / data_std
 
         # ---- 2. Sparse channel projection ----

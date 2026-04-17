@@ -37,10 +37,16 @@ def _build(
     lora_alpha=None,
     lora_p=0.0,
     model_size="Ti",
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_morph")
-    mod = importlib.import_module("jax_morph")
-    return mod.ViT3DRegression(**{k: v for k, v in locals().items() if k != "mod"})
+    mod = importlib.import_module("jax_morph.model_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    kw = {k: v for k, v in locals().items() if k not in ("mod", "jax")}
+    return mod.ViT3DRegression(**kw)
 
 
 def Ti(

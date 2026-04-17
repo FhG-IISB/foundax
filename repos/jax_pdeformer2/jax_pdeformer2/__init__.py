@@ -62,6 +62,7 @@ from .function_encoder import (
     get_function_encoder,
 )
 from .basic_block import MLP, Sine, Scale, Clamp
+from .model_eqx import PDEformer as PDEformerEqx
 from .utils import (
     load_pdeformer_weights,
     create_dummy_inputs,
@@ -90,6 +91,8 @@ __all__ = [
     # Function encoder
     "Conv2dFuncEncoderV3",
     "get_function_encoder",
+    # Equinox
+    "PDEformerEqx",
     # Basic blocks
     "MLP",
     "Sine",

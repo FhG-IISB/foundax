@@ -34,6 +34,7 @@ from .load import (
     merge_pretrained_params,
 )
 from .scot import ScOT, ScOTConfig
+from . import scot_eqx
 
 __all__ = [
     "__version__",
@@ -45,4 +46,5 @@ __all__ = [
     "merge_pretrained_params",
     "ScOT",
     "ScOTConfig",
+    "scot_eqx",
 ]

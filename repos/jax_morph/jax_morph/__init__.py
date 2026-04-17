@@ -25,6 +25,7 @@ except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
 from jax_morph.model import ViT3DRegression
+from jax_morph import model_eqx as eqx_morph
 from jax_morph.convert_weights import (
     load_pytorch_state_dict,
     convert_pytorch_to_jax_params,

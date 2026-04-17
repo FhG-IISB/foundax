@@ -49,7 +49,10 @@ def _build(
     output_attentions=False,
     output_hidden_states=False,
     use_return_dict=True,
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_poseidon")
     mod = importlib.import_module("jax_poseidon")
     config = mod.ScOTConfig(
@@ -83,7 +86,10 @@ def _build(
         output_hidden_states=output_hidden_states,
         use_return_dict=use_return_dict,
     )
-    return mod.ScOT(config=config, use_conditioning=use_conditioning)
+    eqx_mod = importlib.import_module("jax_poseidon.scot_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    return eqx_mod.ScOT(config=config, use_conditioning=use_conditioning, key=key)
 
 
 def T(

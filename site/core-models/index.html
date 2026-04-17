@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Core Models - foundax</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">foundax</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">Core Models</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../equinox-architectures/" class="nav-link">Foundation Models</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../model-examples/" class="nav-link">Model Examples</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../github-pages/" class="nav-link">GitHub Pages</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../getting-started/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../equinox-architectures/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/FhG-IISB/foundax/edit/master/docs/core-models.md" class="nav-link">Edit on FhG-IISB/foundax
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#core-models" class="nav-link">Core Models</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#summary" class="nav-link">Summary</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#linear-and-mlp" class="nav-link">Linear And MLP</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#fourier-neural-operators" class="nav-link">Fourier Neural Operators</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#unet" class="nav-link">UNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#transformer" class="nav-link">Transformer</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#deeponet" class="nav-link">DeepONet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#cno" class="nav-link">CNO</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#mgno" class="nav-link">MgNO</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#geometry-aware-models" class="nav-link">Geometry-Aware Models</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#gnot-family" class="nav-link">GNOT Family</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#factory-conventions" class="nav-link">Factory conventions</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="core-models">Core Models</h1>
+<p>This page covers the <strong>direct Equinox architectures</strong> implemented inside <code>foundax/architectures/</code> and exposed through <code>foundax.nn</code>.</p>
+<p>These models are the lighter-weight part of the repository: they are intended for direct experimentation, baseline comparisons, and downstream integration without depending on the vendored foundation-model packages.</p>
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Constructors</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear / MLP</td>
+<td><code>linear</code>, <code>mlp</code></td>
+<td>Simple regression and coordinate networks</td>
+</tr>
+<tr>
+<td>Fourier Neural Operators</td>
+<td><code>fno1d</code>, <code>fno2d</code>, <code>fno3d</code></td>
+<td>Structured-grid operator learning</td>
+</tr>
+<tr>
+<td>UNet</td>
+<td><code>unet1d</code>, <code>unet2d</code>, <code>unet3d</code></td>
+<td>Encoder-decoder baselines on regular grids</td>
+</tr>
+<tr>
+<td>Generic Transformer</td>
+<td><code>transformer</code></td>
+<td>Sequence-to-sequence baselines</td>
+</tr>
+<tr>
+<td>DeepONet</td>
+<td><code>deeponet</code></td>
+<td>Operator learning with branch/trunk factorization</td>
+</tr>
+<tr>
+<td>CNO</td>
+<td><code>cno2d</code></td>
+<td>Continuous neural operator on image-like fields</td>
+</tr>
+<tr>
+<td>MgNO</td>
+<td><code>mgno1d</code>, <code>mgno2d</code></td>
+<td>Multigrid-inspired operator learning</td>
+</tr>
+<tr>
+<td>Geometry-aware operators</td>
+<td><code>geofno</code>, <code>pcno</code>, <code>pit</code>, <code>pointnet</code></td>
+<td>Irregular meshes, coordinates, point clouds</td>
+</tr>
+<tr>
+<td>GNOT family</td>
+<td><code>cgptno</code>, <code>gnot</code>, <code>moegptno</code></td>
+<td>Transformer-based operator learning on irregular domains</td>
+</tr>
+</tbody>
+</table>
+<h2 id="linear-and-mlp">Linear And MLP</h2>
+<h3 id="linear"><code>linear</code></h3>
+<p>Thin wrapper around a batched linear layer. Useful for simple heads, projections, and small regression models.</p>
+<h3 id="mlp"><code>mlp</code></h3>
+<p>Standard multilayer perceptron with configurable depth, hidden width, activation, normalization, and dropout.</p>
+<p>Use it when:</p>
+<ul>
+<li>your input is low-dimensional coordinates or features</li>
+<li>you want a simple baseline before moving to neural operators</li>
+<li>you need a small shared subnetwork inside a larger pipeline</li>
+</ul>
+<h2 id="fourier-neural-operators">Fourier Neural Operators</h2>
+<p>Constructors:</p>
+<ul>
+<li><code>fno1d</code></li>
+<li><code>fno2d</code></li>
+<li><code>fno3d</code></li>
+</ul>
+<p>These are spectral neural operators that alternate learned Fourier-domain mixing with local projections. They are the most direct choice in <code>foundax</code> for regular-grid PDE surrogate learning.</p>
+<p>Implementation notes:</p>
+<ul>
+<li><code>fno1d</code> uses stacked spectral convolution layers for 1D signals</li>
+<li><code>fno2d</code> and <code>fno3d</code> extend the same idea to 2D and 3D fields</li>
+<li>the implementations support configurable mode truncation, hidden width, normalization, and repeated spectral blocks</li>
+</ul>
+<p>Use them when:</p>
+<ul>
+<li>your inputs live on fixed Cartesian grids</li>
+<li>you want strong operator-learning baselines with moderate implementation complexity</li>
+<li>Fourier mixing is a better fit than a pure convolutional encoder-decoder</li>
+</ul>
+<h2 id="unet">UNet</h2>
+<p>Constructors:</p>
+<ul>
+<li><code>unet1d</code></li>
+<li><code>unet2d</code></li>
+<li><code>unet3d</code></li>
+</ul>
+<p>The UNet family in <code>foundax</code> provides standard encoder-decoder architectures with skip connections for structured inputs. These are useful as robust baselines for dense prediction over 1D, 2D, or 3D fields.</p>
+<p>Use them when:</p>
+<ul>
+<li>locality matters more than global spectral mixing</li>
+<li>you want an interpretable baseline for image-like or volume-like PDE states</li>
+<li>you need a familiar encoder-decoder architecture that is easy to adapt</li>
+</ul>
+<h2 id="transformer">Transformer</h2>
+<h3 id="transformer_1"><code>transformer</code></h3>
+<p>General encoder-decoder transformer factory. This is a generic sequence model rather than a PDE-specific architecture.</p>
+<p>Use it when:</p>
+<ul>
+<li>you want a standard attention-based baseline</li>
+<li>your data is already tokenized or sequence-structured</li>
+<li>you need a reusable transformer backbone inside another experimental setup</li>
+</ul>
+<h2 id="deeponet">DeepONet</h2>
+<h3 id="deeponet_1"><code>deeponet</code></h3>
+<p>Implements a flexible Deep Operator Network with configurable branch, trunk, and combination strategies.</p>
+<p>Supported branch/trunk choices include MLP-style, residual, convolutional, and transformer-style components. This makes it one of the most configurable operator-learning models in the repository.</p>
+<p>Use it when:</p>
+<ul>
+<li>your task is naturally described as evaluating an operator at query coordinates</li>
+<li>you want explicit branch/trunk decomposition</li>
+<li>you need a strong operator-learning baseline that is less tied to a single grid resolution</li>
+</ul>
+<h2 id="cno">CNO</h2>
+<h3 id="cno2d"><code>cno2d</code></h3>
+<p>Continuous Neural Operator for 2D fields. This model is an alternative to FNO and UNet for image-like PDE data and uses a hierarchical convolutional design.</p>
+<p>Use it when:</p>
+<ul>
+<li>you want a convolution-heavy operator model rather than spectral mixing</li>
+<li>you are working with 2D grid data</li>
+<li>you want a stronger learned multiscale image-to-image operator baseline</li>
+</ul>
+<h2 id="mgno">MgNO</h2>
+<p>Constructors:</p>
+<ul>
+<li><code>mgno1d</code></li>
+<li><code>mgno2d</code></li>
+</ul>
+<p>Multigrid Neural Operator models use restriction, prolongation, and iterative correction ideas inspired by multigrid solvers.</p>
+<p>Use them when:</p>
+<ul>
+<li>you want solver-inspired inductive bias</li>
+<li>you care about hierarchical scale interactions</li>
+<li>you want an alternative to FNO on structured grids</li>
+</ul>
+<h2 id="geometry-aware-models">Geometry-Aware Models</h2>
+<h3 id="geofno"><code>geofno</code></h3>
+<p>Geometry-aware FNO variant for non-uniform spatial layouts.</p>
+<h3 id="pcno"><code>pcno</code></h3>
+<p>Point-cloud neural operator variant for irregular coordinate sets.</p>
+<h3 id="pit"><code>pit</code></h3>
+<p>Position-induced transformer-style operator model for coordinate-aware learning.</p>
+<h3 id="pointnet"><code>pointnet</code></h3>
+<p>PointNet-style model for unordered point sets.</p>
+<p>Use this group when:</p>
+<ul>
+<li>your domain is not a simple fixed Cartesian grid</li>
+<li>point coordinates or geometry carry important information</li>
+<li>mesh or point-cloud structure is central to the task</li>
+</ul>
+<h2 id="gnot-family">GNOT Family</h2>
+<p>Constructors:</p>
+<ul>
+<li><code>cgptno</code></li>
+<li><code>gnot</code></li>
+<li><code>moegptno</code></li>
+</ul>
+<p>These models implement the General Neural Operator Transformer family. They are intended for operator learning on arbitrary geometries and irregular sampling patterns, with transformer-style cross-attention and optional mixture-of-experts routing.</p>
+<p>Use them when:</p>
+<ul>
+<li>you need attention-based operator learning on irregular domains</li>
+<li>you have multiple input branches or multiple coupled fields</li>
+<li>you want a more expressive transformer-based architecture than DeepONet or FNO</li>
+</ul>
+<p>Reference:</p>
+<ul>
+<li>GNOT paper: https://arxiv.org/abs/2302.14376</li>
+</ul>
+<h2 id="factory-conventions">Factory conventions</h2>
+<p>All core factories are exposed through <code>foundax.nn</code> and re-exported at package level:</p>
+<pre><code class="language-python">import foundax as fx
+
+model = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
+model = fx.deeponet(branch_type=&quot;mlp&quot;, trunk_type=&quot;mlp&quot;)
+model = fx.gnot(branch_sizes=[64], trunk_size=2)
+</code></pre>
+<p>The exact forward signature depends on the model family, so it is best to inspect the constructor in <code>foundax/nn.py</code> together with the implementation module in <code>foundax/architectures/</code> when integrating a new model.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

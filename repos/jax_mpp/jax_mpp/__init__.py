@@ -44,6 +44,7 @@ except PackageNotFoundError:
 
 # Main model
 from jax_mpp.avit import AViT
+from jax_mpp import avit_eqx as eqx_mpp
 
 # Sub-modules (for advanced / component-level usage)
 from jax_mpp.mixed_modules import SpaceTimeBlock

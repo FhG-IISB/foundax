@@ -8,6 +8,7 @@ except PackageNotFoundError:
 from .configs import DPOT_CONFIGS, dpot_h, dpot_l, dpot_m, dpot_s, dpot_ti
 from .convert_weights import convert_pytorch_to_jax_params, load_pytorch_state_dict
 from .model import DPOTNet
+from . import model_eqx
 from .model_3d import DPOTNet3D
 from .model_res import CDPOTNet
 from .utils import resize_pos_embed

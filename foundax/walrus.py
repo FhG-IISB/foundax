@@ -29,20 +29,22 @@ def _build(
     max_d=3,
     causal_in_time=False,
     drop_path=0.05,
-    input_field_drop=0.1,
     bias_type="rel",
     base_kernel_size=((8, 4), (8, 4), (8, 4)),
     use_spacebag=True,
     use_silu=True,
     include_d=(2, 3),
     encoder_groups=16,
-    jitter_patches=True,
     learned_pad=True,
-    remat=True,
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_walrus")
-    mod = importlib.import_module("jax_walrus")
-    kw = {k: v for k, v in locals().items() if k != "mod"}
+    mod = importlib.import_module("jax_walrus.model_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    kw = {k: v for k, v in locals().items() if k not in ("mod", "jax")}
     return mod.IsotropicModel(**kw)
 
 
@@ -57,16 +59,15 @@ def base(
     max_d=3,
     causal_in_time=False,
     drop_path=0.05,
-    input_field_drop=0.1,
     bias_type="rel",
     base_kernel_size=((8, 4), (8, 4), (8, 4)),
     use_spacebag=True,
     use_silu=True,
     include_d=(2, 3),
     encoder_groups=16,
-    jitter_patches=True,
     learned_pad=True,
-    remat=True,
+    *,
+    key=None,
 ):
     """Walrus base ~1.29 B params. IsotropicModel with default config."""
     return _build(**{k: v for k, v in locals().items()})

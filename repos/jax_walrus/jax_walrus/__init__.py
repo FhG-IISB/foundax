@@ -25,5 +25,7 @@ except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
 from jax_walrus.model import IsotropicModel
+from jax_walrus.model_eqx import IsotropicModel as IsotropicModelEqx
+from jax_walrus.model_eqx import transfer_weights
 
-__all__ = ["__version__", "IsotropicModel"]
+__all__ = ["__version__", "IsotropicModel", "IsotropicModelEqx", "transfer_weights"]

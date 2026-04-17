@@ -36,8 +36,6 @@ def _build(
     pre_layernorm=True,
     scalar_dim_hidden=256,
     scalar_num_layers=3,
-    func_enc_type="cnn2dv3",
-    func_enc_num_branches=4,
     func_enc_resolution=128,
     func_enc_input_txyz=False,
     func_enc_keep_nchw=True,
@@ -53,14 +51,15 @@ def _build(
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
-    dtype=None,
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_pdeformer2")
-    mod = importlib.import_module("jax_pdeformer2")
-    kw = {k: v for k, v in locals().items() if k != "mod"}
-    if kw["dtype"] is None:
-        import jax.numpy as _jnp
-        kw["dtype"] = _jnp.float32
+    mod = importlib.import_module("jax_pdeformer2.model_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    kw = {k: v for k, v in locals().items() if k not in ("mod", "jax")}
     return mod.PDEformer(**kw)
 
 
@@ -76,8 +75,6 @@ def small(
     pre_layernorm=True,
     scalar_dim_hidden=256,
     scalar_num_layers=3,
-    func_enc_type="cnn2dv3",
-    func_enc_num_branches=4,
     func_enc_resolution=128,
     func_enc_input_txyz=False,
     func_enc_keep_nchw=True,
@@ -93,7 +90,6 @@ def small(
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
-    dtype=None,
 ):
     """PDEformer-2 Small ~27.7 M params. Graphormer(9, 512) + INR(128)."""
     return _build(**{k: v for k, v in locals().items()})
@@ -111,8 +107,6 @@ def base(
     pre_layernorm=True,
     scalar_dim_hidden=256,
     scalar_num_layers=3,
-    func_enc_type="cnn2dv3",
-    func_enc_num_branches=4,
     func_enc_resolution=128,
     func_enc_input_txyz=False,
     func_enc_keep_nchw=True,
@@ -128,7 +122,6 @@ def base(
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
-    dtype=None,
 ):
     """PDEformer-2 Base. Graphormer(12, 768) + INR(768)."""
     return _build(**{k: v for k, v in locals().items()})
@@ -146,8 +139,6 @@ def fast(
     pre_layernorm=True,
     scalar_dim_hidden=256,
     scalar_num_layers=3,
-    func_enc_type="cnn2dv3",
-    func_enc_num_branches=4,
     func_enc_resolution=128,
     func_enc_input_txyz=False,
     func_enc_keep_nchw=True,
@@ -163,7 +154,6 @@ def fast(
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
-    dtype=None,
 ):
     """PDEformer-2 Fast. Graphormer(12, 768) + INR(256) -- smaller INR than Base."""
     return _build(**{k: v for k, v in locals().items()})

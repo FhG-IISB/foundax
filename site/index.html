@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Documentation for the Equinox model surface in foundax">
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>foundax</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/font-awesome.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">foundax</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem active">
+                                <a href="." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="core-models/" class="nav-link">Core Models</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="equinox-architectures/" class="nav-link">Foundation Models</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="model-examples/" class="nav-link">Model Examples</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="github-pages/" class="nav-link">GitHub Pages</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" class="nav-link disabled">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="getting-started/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/FhG-IISB/foundax/edit/master/docs/index.md" class="nav-link">Edit on FhG-IISB/foundax
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#foundax" class="nav-link">foundax</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#scope" class="nav-link">Scope</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#quick-start" class="nav-link">Quick start</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#model-layout" class="nav-link">Model layout</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#where-to-read-next" class="nav-link">Where to read next</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="foundax">foundax</h1>
+<p><code>foundax</code> is a JAX model repository that combines:</p>
+<ul>
+<li><strong>direct Equinox implementations</strong> of neural-operator and PDE-learning architectures</li>
+<li><strong>Equinox wrappers</strong> for larger vendored model families such as Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, and PROSE</li>
+</ul>
+<p>This site is written as repository documentation rather than only API notes. It explains package layout, model families, and practical Equinox usage.</p>
+<h2 id="scope">Scope</h2>
+<p>The docs here cover:</p>
+<ul>
+<li>the Equinox model factories exposed from <code>foundax</code></li>
+<li>the repository’s core model categories</li>
+<li>the foundation-model wrappers and their upstream references</li>
+<li>practical examples for both core and foundation models</li>
+<li>GitHub Pages hosting for this repository</li>
+</ul>
+<p>The docs intentionally do <strong>not</strong> focus on the Flax-specific foundation-model paths.</p>
+<h2 id="quick-start">Quick start</h2>
+<pre><code class="language-python">import foundax as fx
+
+# Core models
+mlp = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
+fno = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
+unet = fx.unet2d(in_channels=1, out_channels=1)
+
+# Foundation-model namespaces
+poseidon = fx.poseidon.T()
+morph = fx.morph.Ti()
+mpp = fx.mpp.Ti(n_states=12)
+</code></pre>
+<h2 id="model-layout">Model layout</h2>
+<h3 id="core-equinox-architectures">Core Equinox architectures</h3>
+<p>These live in <code>foundax/architectures/</code> and are exposed through <code>foundax.nn</code>:</p>
+<ul>
+<li>MLP and linear models</li>
+<li>Fourier Neural Operators</li>
+<li>UNets</li>
+<li>DeepONet</li>
+<li>CNO and MgNO</li>
+<li>geometry-aware and point-based models</li>
+<li>GNOT-family transformer operators</li>
+</ul>
+<h3 id="equinox-foundation-model-wrappers">Equinox foundation-model wrappers</h3>
+<p>These live behind namespace modules such as:</p>
+<ul>
+<li><code>foundax.poseidon</code></li>
+<li><code>foundax.morph</code></li>
+<li><code>foundax.mpp</code></li>
+<li><code>foundax.walrus</code></li>
+<li><code>foundax.bcat</code></li>
+<li><code>foundax.pdeformer2</code></li>
+<li><code>foundax.dpot</code></li>
+<li><code>foundax.prose</code></li>
+</ul>
+<p>The wrapper modules are thin public entry points over vendored JAX implementations in <code>repos/</code>.</p>
+<h2 id="where-to-read-next">Where to read next</h2>
+<ul>
+<li><strong>Getting Started</strong> for installation and package structure</li>
+<li><strong>Core Models</strong> for the direct Equinox architectures</li>
+<li><strong>Foundation Models</strong> for the larger wrapper families, variants, and upstream links</li>
+<li><strong>Model Examples</strong> for concise end-to-end constructor and forward-call snippets</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/jquery-3.6.0.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.5.3
+Build Date UTC : 2026-04-17 12:06:09.318268+00:00
+-->

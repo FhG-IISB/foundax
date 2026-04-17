@@ -33,10 +33,16 @@ def _build(
     normalize=False,
     act="gelu",
     time_agg="exp_mlp",
+    *,
+    key=None,
 ):
+    import jax
     ensure_repo_on_path("jax_dpot")
-    mod = importlib.import_module("jax_dpot")
-    return mod.DPOTNet(**{k: v for k, v in locals().items() if k != "mod"})
+    mod = importlib.import_module("jax_dpot.model_eqx")
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    kw = {k: v for k, v in locals().items() if k not in ("mod", "jax")}
+    return mod.DPOTNet(**kw)
 
 
 def Ti(

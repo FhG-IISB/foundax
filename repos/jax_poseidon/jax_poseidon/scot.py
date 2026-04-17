@@ -365,7 +365,6 @@ class ScOTPatchEmbeddings(nn.Module):
     ) -> Tuple[jnp.ndarray, Tuple[int, int]]:
         # pixel_values: (B, H, W, C) in JAX convention
 
-
         batch_size, height, width, num_channels = pixel_values.shape
 
         # Pad if needed
@@ -606,7 +605,7 @@ class Swinv2Attention(nn.Module):
         )
         key = key / jnp.maximum(jnp.linalg.norm(key, axis=-1, keepdims=True), 1e-6)
 
-        logit_scale = jnp.exp(jnp.clip(self.logit_scale, a_max=jnp.log(100.0)))
+        logit_scale = jnp.exp(jnp.clip(self.logit_scale))
         attn_weights = jnp.einsum("bhqd,bhkd->bhqk", query, key) * logit_scale
 
         # Add relative position bias
@@ -1635,7 +1634,7 @@ class ScOT(nn.Module):
         return_dict: Optional[bool] = None,
         deterministic: bool = True,
     ) -> Union[Tuple, ScOTOutput]:
-        
+
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )

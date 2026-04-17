@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Foundation Models - foundax</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">foundax</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../core-models/" class="nav-link">Core Models</a>
+                            </li>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">Foundation Models</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../model-examples/" class="nav-link">Model Examples</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../github-pages/" class="nav-link">GitHub Pages</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../core-models/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../model-examples/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/FhG-IISB/foundax/edit/master/docs/equinox-architectures.md" class="nav-link">Edit on FhG-IISB/foundax
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#foundation-models" class="nav-link">Foundation Models</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#api-pattern" class="nav-link">API pattern</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#poseidon" class="nav-link">Poseidon</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#morph" class="nav-link">MORPH</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#mpp" class="nav-link">MPP</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#walrus" class="nav-link">Walrus</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#bcat" class="nav-link">BCAT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pdeformer-2" class="nav-link">PDEformer-2</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#dpot" class="nav-link">DPOT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#prose" class="nav-link">PROSE</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#notes-on-package-surface" class="nav-link">Notes On Package Surface</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="foundation-models">Foundation Models</h1>
+<p>This page documents the <strong>Equinox foundation-model wrappers</strong> exposed by <code>foundax</code>.</p>
+<p>These wrappers are the large-model side of the repository. Each namespace provides a small public API over a vendored JAX implementation under <code>repos/</code>, while keeping the package-level import surface consistent.</p>
+<h2 id="api-pattern">API pattern</h2>
+<p>The preferred entry points are the namespace modules:</p>
+<pre><code class="language-python">import foundax as fx
+
+poseidon = fx.poseidon.T()
+morph = fx.morph.S()
+mpp = fx.mpp.B(n_states=12)
+walrus = fx.walrus.base()
+</code></pre>
+<p>The package also exposes top-level aliases such as <code>fx.poseidonT()</code> or <code>fx.prose_fd_1to1()</code>. Those are convenience shortcuts, but the namespace style is what this documentation uses.</p>
+<h2 id="poseidon">Poseidon</h2>
+<p>Namespace: <code>fx.poseidon</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>T</code></li>
+<li><code>B</code></li>
+<li><code>L</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>Poseidon wraps <strong>ScOT</strong>, a Swin-style hierarchical operator transformer</li>
+<li>the encoder-decoder structure uses multiscale windowed attention and skip connections</li>
+<li>the implementation is designed for PDE operator learning on image-like grids</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>2D grid-based PDE surrogates</li>
+<li>large operator models where multiscale transformer processing is preferable to a smaller FNO or UNet baseline</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/poseidon.py</code></li>
+<li>Vendored implementation: <code>repos/jax_poseidon</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://arxiv.org/abs/2405.19101</li>
+<li>Original repository: https://github.com/camlab-ethz/poseidon</li>
+</ul>
+<h2 id="morph">MORPH</h2>
+<p>Namespace: <code>fx.morph</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>Ti</code></li>
+<li><code>S</code></li>
+<li><code>M</code></li>
+<li><code>L</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>MORPH uses a <strong>ViT3D-style regression architecture</strong> over PDE data</li>
+<li>the model is intended for arbitrary modality and multi-physics settings</li>
+<li>the wrapper constructs the Equinox <code>ViT3DRegression</code> path from the vendored package</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>volumetric or time-aware PDE data</li>
+<li>settings where a large transformer over patchified 3D structure is a better fit than 2D operator models</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/morph.py</code></li>
+<li>Vendored implementation: <code>repos/jax_morph</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://arxiv.org/abs/2509.21670</li>
+<li>Original repository: https://github.com/lanl/MORPH</li>
+</ul>
+<h2 id="mpp">MPP</h2>
+<p>Namespace: <code>fx.mpp</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>Ti</code></li>
+<li><code>S</code></li>
+<li><code>B</code></li>
+<li><code>L</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>MPP wraps <strong>AViT</strong>, an axial vision transformer used for multiple-physics pretraining</li>
+<li>the model mixes temporal and spatial attention blocks over structured simulation data</li>
+<li>it is built for multi-physics surrogate learning rather than a single PDE family</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>structured spatio-temporal simulation data</li>
+<li>experiments that need a large transformer-based surrogate model with pretraining-oriented design</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/mpp.py</code></li>
+<li>Vendored implementation: <code>repos/jax_mpp</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://openreview.net/forum?id=DKSI3bULiZ</li>
+<li>Original repository: https://github.com/PolymathicAI/multiple_physics_pretraining</li>
+</ul>
+<h2 id="walrus">Walrus</h2>
+<p>Namespace: <code>fx.walrus</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>base</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>Walrus uses an <strong>isotropic encoder-processor-decoder</strong> layout with large space-time attention blocks</li>
+<li>the wrapped model is designed for large-scale PDE or atmosphere-style state evolution tasks</li>
+<li>the implementation includes structured handling of variable dimensionality and boundary conditions</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>large spatio-temporal surrogate models</li>
+<li>experiments where the model scale and processor depth are more important than using a smaller baseline</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/walrus.py</code></li>
+<li>Vendored implementation: <code>repos/jax_walrus</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Original Walrus repository: https://github.com/nubskr/walrus</li>
+<li>Aurora paper cited in the vendored README: https://arxiv.org/abs/2405.13063</li>
+</ul>
+<h2 id="bcat">BCAT</h2>
+<p>Namespace: <code>fx.bcat</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>base</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>BCAT is a <strong>block-causal transformer</strong> for autoregressive spatio-temporal PDE prediction</li>
+<li>the model uses patched inputs, causal structure in time, and transformer blocks designed for rollout-style forecasting</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>temporal forecasting on regular grids</li>
+<li>fluid or PDE sequence modeling where causal rollout is central</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/bcat.py</code></li>
+<li>Vendored implementation: <code>repos/jax_bcat</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://arxiv.org/abs/2501.18972</li>
+</ul>
+<h2 id="pdeformer-2">PDEformer-2</h2>
+<p>Namespace: <code>fx.pdeformer2</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>small</code></li>
+<li><code>base</code></li>
+<li><code>fast</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>PDEformer-2 combines a <strong>Graphormer encoder</strong> with an <strong>implicit neural representation</strong> decoder driven by a hypernetwork</li>
+<li>the model represents PDE problems as graph-structured inputs and predicts solution values at query coordinates</li>
+<li>this is the most graph-centric model family in the repository</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>PDE problems described through graph or DAG structure</li>
+<li>query-based solution evaluation rather than only dense image-to-image prediction</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/pdeformer2.py</code></li>
+<li>Vendored implementation: <code>repos/jax_pdeformer2</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://arxiv.org/abs/2502.14844</li>
+<li>Original repository: https://github.com/functoreality/pdeformer-2</li>
+</ul>
+<h2 id="dpot">DPOT</h2>
+<p>Namespace: <code>fx.dpot</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>Ti</code></li>
+<li><code>S</code></li>
+<li><code>M</code></li>
+<li><code>L</code></li>
+<li><code>H</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>DPOT wraps <strong>DPOTNet</strong>, a transformer-style operator model with AFNO or Fourier-style mixing</li>
+<li>the model is built for autoregressive PDE pretraining and large-scale surrogate modeling on regular grids</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>large regular-grid PDE sequence modeling</li>
+<li>experiments where AFNO-style token mixing is a better fit than a pure CNN or standard transformer baseline</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/dpot.py</code></li>
+<li>Vendored implementation: <code>repos/jax_dpot</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Paper: https://arxiv.org/abs/2403.03542</li>
+<li>Original repository: https://github.com/hzk17/DPOT</li>
+</ul>
+<h2 id="prose">PROSE</h2>
+<p>Namespace: <code>fx.prose</code></p>
+<p>Available variants:</p>
+<ul>
+<li><code>fd_1to1</code></li>
+<li><code>fd_2to1</code></li>
+<li><code>ode_2to1</code></li>
+<li><code>pde_2to1</code></li>
+</ul>
+<p>Architecture summary:</p>
+<ul>
+<li>PROSE is a <strong>transformer-based sequence model family</strong> for finite-difference, ODE, and PDE tasks</li>
+<li>unlike the other wrappers, this family spans multiple task formulations rather than just scaled variants of one architecture</li>
+<li>the Equinox implementations in the vendored package cover both pure data-to-data and text/data fusion settings</li>
+</ul>
+<p>What to use it for:</p>
+<ul>
+<li>sequence-to-sequence operator learning</li>
+<li>problems with symbolic or text-conditioned inputs</li>
+<li>ODE and PDE tasks that are more naturally expressed as token or sequence prediction than as a single image-to-image mapping</li>
+</ul>
+<p>Repository mapping:</p>
+<ul>
+<li>Public wrapper: <code>foundax/prose.py</code></li>
+<li>Vendored implementation: <code>repos/jax_prose</code></li>
+</ul>
+<p>References:</p>
+<ul>
+<li>Vendored JAX repository: <code>repos/jax_prose</code></li>
+</ul>
+<h2 id="notes-on-package-surface">Notes On Package Surface</h2>
+<p>The top-level <code>foundax.nn</code> module also exposes convenience aliases for these wrappers, for example:</p>
+<ul>
+<li><code>poseidonT</code>, <code>poseidonB</code>, <code>poseidonL</code></li>
+<li><code>morph_Ti</code>, <code>morph_S</code>, <code>morph_M</code>, <code>morph_L</code></li>
+<li><code>mpp_Ti</code>, <code>mpp_S</code>, <code>mpp_B</code>, <code>mpp_L</code></li>
+<li><code>pdeformer2_small</code>, <code>pdeformer2_base</code>, <code>pdeformer2_fast</code></li>
+<li><code>dpot_Ti</code>, <code>dpot_S</code>, <code>dpot_M</code>, <code>dpot_L</code>, <code>dpot_H</code></li>
+<li><code>prose_fd_1to1</code>, <code>prose_fd_2to1</code>, <code>prose_ode_2to1</code>, <code>prose_pde_2to1</code></li>
+</ul>
+<p>Those aliases simply forward to the namespace modules documented above.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1263,13 +1263,13 @@ def dpot_H(
 # -- PROSE -------------------------------------------------------------
 
 def prose_fd_1to1(
-    config=None,
     x_num=128,
     max_output_dim=4,
-    input_len=10,
     output_len=10,
+    *,
+    key=None,
 ):
-    """PROSE finite-difference 1-to-1. Returns ``(model, params)``."""
+    """PROSE finite-difference 1-to-1. Returns ``eqx.Module``."""
     from . import prose
     return prose.fd_1to1(**{k: v for k, v in locals().items() if k != "prose"})
 
@@ -1278,11 +1278,10 @@ def prose_fd_2to1(
     n_words,
     x_num=128,
     max_output_dim=4,
-    input_len=10,
-    output_len=10,
-    symbol_len=48,
+    *,
+    key=None,
 ):
-    """PROSE finite-difference 2-to-1. Returns ``(model, params)``."""
+    """PROSE finite-difference 2-to-1. Returns ``eqx.Module``."""
     from . import prose
     return prose.fd_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
@@ -1291,12 +1290,10 @@ def prose_ode_2to1(
     n_words,
     pad_index,
     max_output_dimension=3,
-    input_len=50,
-    output_len=50,
-    text_len=48,
-    cfg=None,
+    *,
+    key=None,
 ):
-    """PROSE ODE 2-to-1. Returns ``(model, params)``."""
+    """PROSE ODE 2-to-1. Returns ``eqx.Module``."""
     from . import prose
     return prose.ode_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
@@ -1307,11 +1304,9 @@ def prose_pde_2to1(
     max_output_dimension=1,
     x_patch_size=1,
     x_grid_size=128,
-    input_len=10,
-    output_len=10,
-    text_len=48,
-    cfg=None,
+    *,
+    key=None,
 ):
-    """PROSE PDE 2-to-1. Returns ``(model, params)``."""
+    """PROSE PDE 2-to-1. Returns ``eqx.Module``."""
     from . import prose
     return prose.pde_2to1(**{k: v for k, v in locals().items() if k != "prose"})
