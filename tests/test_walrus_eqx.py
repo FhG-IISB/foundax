@@ -40,7 +40,11 @@ _CFG = dict(
 class TestWalrusEqx:
     @pytest.fixture(autouse=True)
     def setup(self):
-        eqx_cfg = {k: v for k, v in _CFG.items() if k not in ("jitter_patches", "remat", "input_field_drop")}
+        eqx_cfg = {
+            k: v
+            for k, v in _CFG.items()
+            if k not in ("jitter_patches", "remat", "input_field_drop")
+        }
         self.model = EqxModel(**eqx_cfg, key=jax.random.PRNGKey(0))
 
     def test_forward_2d(self):
@@ -70,7 +74,9 @@ class TestWalrusEqx:
         bcs = [[0, 0], [0, 0]]
         out1 = np.array(self.model(x, state_labels, bcs, deterministic=True))
         out2 = np.array(self.model(x, state_labels, bcs, deterministic=True))
-        assert np.allclose(out1, out2, atol=0), "Non-deterministic in deterministic mode"
+        assert np.allclose(
+            out1, out2, atol=0
+        ), "Non-deterministic in deterministic mode"
 
 
 if __name__ == "__main__":

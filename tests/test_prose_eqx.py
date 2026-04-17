@@ -8,6 +8,7 @@ import equinox as eqx
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_prose"))
 
 from jax_prose.model_eqx import (
@@ -61,21 +62,27 @@ class TestPROSE1to1:
         assert isinstance(model, EqxPROSE1to1)
 
     def test_forward_runs(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(1), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(1), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(2), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(3), (1, 2, 1))
         out = model(data, tin, tout, deterministic=True)
         assert jnp.all(jnp.isfinite(out))
 
     def test_output_shape(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(4), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(4), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(5), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(6), (1, 2, 1))
         out = model(data, tin, tout, deterministic=True)
         assert out.shape[0] == 1
 
     def test_gradients(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(7), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(7), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(8), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(9), (1, 2, 1))
 
@@ -111,7 +118,9 @@ class TestPROSE2to1:
         assert isinstance(model, EqxPROSE2to1)
 
     def test_forward_runs(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(1), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(1), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(2), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(3), (1, 2, 1))
         sym = jax.random.randint(jax.random.PRNGKey(4), (1, 8), 0, _N_WORDS)
@@ -120,7 +129,9 @@ class TestPROSE2to1:
         assert jnp.all(jnp.isfinite(out))
 
     def test_output_shape(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(5), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(5), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(6), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(7), (1, 2, 1))
         sym = jax.random.randint(jax.random.PRNGKey(8), (1, 8), 0, _N_WORDS)
@@ -129,7 +140,9 @@ class TestPROSE2to1:
         assert out.shape[0] == 1
 
     def test_gradients(self, model):
-        data = jax.random.normal(jax.random.PRNGKey(9), (1, 2, _X_NUM, _X_NUM, _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(9), (1, 2, _X_NUM, _X_NUM, _DATA_DIM)
+        )
         tin = jax.random.uniform(jax.random.PRNGKey(10), (1, 2, 1))
         tout = jax.random.uniform(jax.random.PRNGKey(11), (1, 2, 1))
         sym = jax.random.randint(jax.random.PRNGKey(12), (1, 8), 0, _N_WORDS)

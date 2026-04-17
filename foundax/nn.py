@@ -724,6 +724,7 @@ def pointnet(
 
 # -- Poseidon (ScOT) -------------------------------------------------
 
+
 def poseidonT(
     num_channels=1,
     num_out_channels=1,
@@ -750,6 +751,7 @@ def poseidonT(
 ):
     """Poseidon-T (Tiny) ~20.8 M params."""
     from . import poseidon
+
     return poseidon.T(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
@@ -779,6 +781,7 @@ def poseidonB(
 ):
     """Poseidon-B (Base) ~157.7 M params."""
     from . import poseidon
+
     return poseidon.B(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
@@ -808,10 +811,12 @@ def poseidonL(
 ):
     """Poseidon-L (Large) ~628.6 M params."""
     from . import poseidon
+
     return poseidon.L(**{k: v for k, v in locals().items() if k != "poseidon"})
 
 
 # -- MORPH (ViT3DRegression) -----------------------------------------
+
 
 def morph_Ti(
     embed_dim=256,
@@ -835,6 +840,7 @@ def morph_Ti(
 ):
     """MORPH-Ti (Tiny) ~9.9 M params."""
     from . import morph
+
     return morph.Ti(**{k: v for k, v in locals().items() if k != "morph"})
 
 
@@ -860,6 +866,7 @@ def morph_S(
 ):
     """MORPH-S (Small) ~32.8 M params."""
     from . import morph
+
     return morph.S(**{k: v for k, v in locals().items() if k != "morph"})
 
 
@@ -885,6 +892,7 @@ def morph_M(
 ):
     """MORPH-M (Medium) ~125.6 M params."""
     from . import morph
+
     return morph.M(**{k: v for k, v in locals().items() if k != "morph"})
 
 
@@ -910,10 +918,12 @@ def morph_L(
 ):
     """MORPH-L (Large) ~483.3 M params."""
     from . import morph
+
     return morph.L(**{k: v for k, v in locals().items() if k != "morph"})
 
 
 # -- MPP (AViT) ------------------------------------------------------
+
 
 def mpp_Ti(
     embed_dim=192,
@@ -926,6 +936,7 @@ def mpp_Ti(
 ):
     """MPP AViT-Tiny ~5.5 M params."""
     from . import mpp
+
     return mpp.Ti(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
@@ -940,6 +951,7 @@ def mpp_S(
 ):
     """MPP AViT-Small ~21 M params."""
     from . import mpp
+
     return mpp.S(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
@@ -954,6 +966,7 @@ def mpp_B(
 ):
     """MPP AViT-Base ~83 M params."""
     from . import mpp
+
     return mpp.B(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
@@ -968,10 +981,12 @@ def mpp_L(
 ):
     """MPP AViT-Large ~300 M params."""
     from . import mpp
+
     return mpp.L(**{k: v for k, v in locals().items() if k != "mpp"})
 
 
 # -- Walrus (IsotropicModel) -----------------------------------------
+
 
 def walrus(
     hidden_dim=768,
@@ -997,10 +1012,12 @@ def walrus(
 ):
     """Walrus ~1.29 B params."""
     from . import walrus as _walrus
+
     return _walrus.base(**{k: v for k, v in locals().items() if k != "_walrus"})
 
 
 # -- BCAT -------------------------------------------------------------
+
 
 def bcat(
     n_layers=12,
@@ -1023,10 +1040,12 @@ def bcat(
 ):
     """BCAT foundation model (Block Causal Transformer)."""
     from . import bcat as _bcat
+
     return _bcat.base(**{k: v for k, v in locals().items() if k != "_bcat"})
 
 
 # -- PDEformer-2 ------------------------------------------------------
+
 
 def pdeformer2_small(
     num_node_type=128,
@@ -1061,6 +1080,7 @@ def pdeformer2_small(
 ):
     """PDEformer-2 Small ~27.7 M params."""
     from . import pdeformer2
+
     return pdeformer2.small(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
@@ -1097,6 +1117,7 @@ def pdeformer2_base(
 ):
     """PDEformer-2 Base."""
     from . import pdeformer2
+
     return pdeformer2.base(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
@@ -1133,10 +1154,12 @@ def pdeformer2_fast(
 ):
     """PDEformer-2 Fast -- smaller INR than Base."""
     from . import pdeformer2
+
     return pdeformer2.fast(**{k: v for k, v in locals().items() if k != "pdeformer2"})
 
 
 # -- DPOT (DPOTNet) ---------------------------------------------------
+
 
 def dpot_Ti(
     img_size=128,
@@ -1159,6 +1182,7 @@ def dpot_Ti(
 ):
     """DPOTNet-Ti (Tiny)."""
     from . import dpot
+
     return dpot.Ti(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
@@ -1183,6 +1207,7 @@ def dpot_S(
 ):
     """DPOTNet-S (Small)."""
     from . import dpot
+
     return dpot.S(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
@@ -1207,6 +1232,7 @@ def dpot_M(
 ):
     """DPOTNet-M (Medium)."""
     from . import dpot
+
     return dpot.M(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
@@ -1231,6 +1257,7 @@ def dpot_L(
 ):
     """DPOTNet-L (Large)."""
     from . import dpot
+
     return dpot.L(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
@@ -1255,10 +1282,12 @@ def dpot_H(
 ):
     """DPOTNet-H (Huge)."""
     from . import dpot
+
     return dpot.H(**{k: v for k, v in locals().items() if k != "dpot"})
 
 
 # -- PROSE -------------------------------------------------------------
+
 
 def prose_fd_1to1(
     x_num=128,
@@ -1269,6 +1298,7 @@ def prose_fd_1to1(
 ):
     """PROSE finite-difference 1-to-1. Returns ``eqx.Module``."""
     from . import prose
+
     return prose.fd_1to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
@@ -1281,6 +1311,7 @@ def prose_fd_2to1(
 ):
     """PROSE finite-difference 2-to-1. Returns ``eqx.Module``."""
     from . import prose
+
     return prose.fd_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
@@ -1293,6 +1324,7 @@ def prose_ode_2to1(
 ):
     """PROSE ODE 2-to-1. Returns ``eqx.Module``."""
     from . import prose
+
     return prose.ode_2to1(**{k: v for k, v in locals().items() if k != "prose"})
 
 
@@ -1307,4 +1339,5 @@ def prose_pde_2to1(
 ):
     """PROSE PDE 2-to-1. Returns ``eqx.Module``."""
     from . import prose
+
     return prose.pde_2to1(**{k: v for k, v in locals().items() if k != "prose"})

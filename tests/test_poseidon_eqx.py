@@ -57,8 +57,6 @@ def _make_config(**overrides):
 # =====================================================================
 
 
-
-
 class TestPoseidonEquivalence:
     """Tests for Equinox ScOT with time conditioning."""
 
@@ -92,7 +90,10 @@ class TestPoseidonEquivalence:
         t = jnp.array([0.1, 0.2])
         out = model(pixel_values=x, time=t, deterministic=True, return_dict=False)
         assert out[0].shape == (
-            B, config.image_size, config.image_size, config.num_out_channels
+            B,
+            config.image_size,
+            config.image_size,
+            config.num_out_channels,
         )
 
     def test_zero_input(self, config, model):
@@ -128,9 +129,7 @@ class TestPoseidonNoConditioning:
 
     @pytest.fixture
     def model(self, config):
-        return EqxScOT(
-            config=config, use_conditioning=False, key=jax.random.PRNGKey(0)
-        )
+        return EqxScOT(config=config, use_conditioning=False, key=jax.random.PRNGKey(0))
 
     def test_eqx_init(self, model):
         assert isinstance(model, EqxScOT)
@@ -147,7 +146,10 @@ class TestPoseidonNoConditioning:
         x = jnp.ones((1, config.image_size, config.image_size, config.num_channels))
         out = model(pixel_values=x, deterministic=True, return_dict=False)
         assert out[0].shape == (
-            1, config.image_size, config.image_size, config.num_out_channels
+            1,
+            config.image_size,
+            config.image_size,
+            config.num_out_channels,
         )
 
     def test_gradients_no_cond(self, config, model):

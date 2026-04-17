@@ -47,7 +47,9 @@ def model():
 @pytest.fixture
 def inputs():
     bs = 1
-    data = jax.random.normal(jax.random.PRNGKey(1), (bs, _T_TOTAL, _CFG["x_num"], _CFG["x_num"], _DATA_DIM))
+    data = jax.random.normal(
+        jax.random.PRNGKey(1), (bs, _T_TOTAL, _CFG["x_num"], _CFG["x_num"], _DATA_DIM)
+    )
     times = jax.random.uniform(jax.random.PRNGKey(2), (bs, _T_TOTAL, 1))
     return data, times
 
@@ -81,7 +83,10 @@ class TestBCATEqx:
     def test_forward_equivalence_continuous_time(self, model):
         """Continuous time values produce finite output."""
         bs = 1
-        data = jax.random.normal(jax.random.PRNGKey(3), (bs, _T_TOTAL, _CFG["x_num"], _CFG["x_num"], _DATA_DIM))
+        data = jax.random.normal(
+            jax.random.PRNGKey(3),
+            (bs, _T_TOTAL, _CFG["x_num"], _CFG["x_num"], _DATA_DIM),
+        )
         times = jnp.linspace(0.0, 1.0, _T_TOTAL).reshape(1, _T_TOTAL, 1)
         out = model(data, times, input_len=_INPUT_LEN)
         assert jnp.all(jnp.isfinite(out))

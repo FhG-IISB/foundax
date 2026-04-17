@@ -9,7 +9,9 @@ import pytest
 
 import sys, os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_pdeformer2"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_pdeformer2")
+)
 
 from jax_pdeformer2.model_eqx import PDEformer as EqxPDEformer
 
@@ -104,13 +106,21 @@ def _make_inputs(key):
     keys = jax.random.split(key, 8)
     n_graph = 1
     return dict(
-        node_type=jax.random.randint(keys[0], (n_graph, N_NODE, 1), 1, 8, dtype=jnp.int32),
+        node_type=jax.random.randint(
+            keys[0], (n_graph, N_NODE, 1), 1, 8, dtype=jnp.int32
+        ),
         node_scalar=jax.random.normal(keys[1], (n_graph, NUM_SCALAR, 1)),
-        node_function=jax.random.normal(keys[2], (n_graph, NUM_FUNCTION, NUM_POINTS_FUNC, 5)),
+        node_function=jax.random.normal(
+            keys[2], (n_graph, NUM_FUNCTION, NUM_POINTS_FUNC, 5)
+        ),
         in_degree=jax.random.randint(keys[3], (n_graph, N_NODE), 0, 4, dtype=jnp.int32),
-        out_degree=jax.random.randint(keys[4], (n_graph, N_NODE), 0, 4, dtype=jnp.int32),
+        out_degree=jax.random.randint(
+            keys[4], (n_graph, N_NODE), 0, 4, dtype=jnp.int32
+        ),
         attn_bias=jax.random.normal(keys[5], (n_graph, N_NODE, N_NODE)),
-        spatial_pos=jax.random.randint(keys[6], (n_graph, N_NODE, N_NODE), 0, 4, dtype=jnp.int32),
+        spatial_pos=jax.random.randint(
+            keys[6], (n_graph, N_NODE, N_NODE), 0, 4, dtype=jnp.int32
+        ),
         coordinate=jax.random.uniform(keys[7], (n_graph, NUM_POINTS, 4)),
     )
 
