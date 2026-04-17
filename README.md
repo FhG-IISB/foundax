@@ -39,80 +39,6 @@ model = fx.dpot.Ti()      # Ti/S/M/L/H
 model, variables = fx.prose.fd_1to1()
 ```
 
-## Foundation Families
-
-### Poseidon
-
-```python
-import foundax as fx
-model = fx.poseidon.T()
-```
-
-### MORPH
-
-```python
-import foundax as fx
-model = fx.morph.Ti()
-```
-
-### MPP
-
-```python
-import foundax as fx
-model = fx.mpp.Ti(n_states=12)
-```
-
-### Walrus
-
-```python
-import foundax as fx
-model = fx.walrus.base()
-```
-
-### BCAT
-
-```python
-import foundax as fx
-model = fx.bcat.base()
-```
-
-### PDEformer-2
-
-```python
-import foundax as fx
-model = fx.pdeformer2.small()
-```
-
-### DPOT
-
-```python
-import foundax as fx
-model = fx.dpot.Ti()
-```
-
-### PROSE
-
-```python
-import foundax as fx
-model, variables = fx.prose.fd_1to1()
-```
-
-## Documentation
-
-Repository documentation lives in `docs/` and is built with MkDocs.
-
-### Local preview
-
-```bash
-uvx --from mkdocs mkdocs serve
-```
-
-### Build
-
-```bash
-uvx --from mkdocs mkdocs build
-```
-
 ## Integration With jNO
 
 ```python
@@ -122,12 +48,6 @@ import jno
 net = jno.nn.wrap(fx.mlp(in_features=2, output_dim=1))
 net.optimizer(optax.adam, lr=1e-3)
 ```
-
-## Numerical Comparison To Original Models
-
-<p align="center">
-  <img src="assets/heatmap.png" alt="model comparison heatmap" width="400">
-</p>
 
 ## Notes
 
