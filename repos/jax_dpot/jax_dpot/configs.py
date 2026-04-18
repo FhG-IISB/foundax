@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .model import DPOTNet
-
 
 @dataclass(frozen=True)
 class DPOTConfig:
@@ -123,46 +121,3 @@ DPOT_CONFIGS = {
         time_agg="exp_mlp",
     ),
 }
-
-
-def _make_dpot(name: str) -> DPOTNet:
-    cfg = DPOT_CONFIGS[name]
-    return DPOTNet(
-        img_size=cfg.img_size,
-        patch_size=cfg.patch_size,
-        mixing_type=cfg.mixing_type,
-        in_channels=cfg.in_channels,
-        out_channels=cfg.out_channels,
-        in_timesteps=cfg.in_timesteps,
-        out_timesteps=cfg.out_timesteps,
-        n_blocks=cfg.n_blocks,
-        embed_dim=cfg.embed_dim,
-        out_layer_dim=cfg.out_layer_dim,
-        depth=cfg.depth,
-        modes=cfg.modes,
-        mlp_ratio=cfg.mlp_ratio,
-        n_cls=cfg.n_cls,
-        normalize=cfg.normalize,
-        act=cfg.act,
-        time_agg=cfg.time_agg,
-    )
-
-
-def dpot_ti() -> DPOTNet:
-    return _make_dpot("Ti")
-
-
-def dpot_s() -> DPOTNet:
-    return _make_dpot("S")
-
-
-def dpot_m() -> DPOTNet:
-    return _make_dpot("M")
-
-
-def dpot_l() -> DPOTNet:
-    return _make_dpot("L")
-
-
-def dpot_h() -> DPOTNet:
-    return _make_dpot("H")

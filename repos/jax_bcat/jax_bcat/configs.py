@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .model import BCAT
-
 
 @dataclass(frozen=True)
 class BCATConfig:
@@ -47,26 +45,3 @@ BCAT_CONFIGS = {
         deep=False,
     ),
 }
-
-
-def bcat_default() -> BCAT:
-    cfg = BCAT_CONFIGS["default"]
-    return BCAT(
-        n_layer=cfg.n_layer,
-        dim_emb=cfg.dim_emb,
-        dim_ffn=cfg.dim_ffn,
-        n_head=cfg.n_head,
-        norm_first=cfg.norm_first,
-        norm_type=cfg.norm_type,
-        activation=cfg.activation,
-        qk_norm=cfg.qk_norm,
-        x_num=cfg.x_num,
-        max_output_dim=cfg.max_output_dim,
-        patch_num=cfg.patch_num,
-        patch_num_output=cfg.patch_num_output,
-        conv_dim=cfg.conv_dim,
-        time_embed=cfg.time_embed,
-        max_time_len=cfg.max_time_len,
-        max_data_len=cfg.max_data_len,
-        deep=cfg.deep,
-    )

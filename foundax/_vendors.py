@@ -19,10 +19,12 @@ def ensure_repo_on_path(repo_name):
     # packages in site-packages, so they should already be importable.
     try:
         importlib.import_module(repo_name)
-    except ImportError:
-        raise ImportError(
-            "Vendored package '{}' is not installed and the local "
-            "repository was not found at {}".format(repo_name, repo_path)
-        ) from None
+    except ModuleNotFoundError as exc:
+        if exc.name == repo_name:
+            raise ImportError(
+                "Vendored package '{}' is not installed and the local "
+                "repository was not found at {}".format(repo_name, repo_path)
+            ) from None
+        raise  # propagate missing dependency errors with their real traceback
 
     return None

@@ -1,20 +1,9 @@
 """
-jax_morph: JAX/Flax translation of the MORPH PDE foundation model.
-
-A 1-to-1 translation of the MORPH model architecture from PyTorch to JAX/Flax,
-maintaining exact weight compatibility for pretrained checkpoint conversion.
+jax_morph: JAX/Equinox implementation of the MORPH PDE foundation model.
 
 Reference:
     Rautela et al., "MORPH: PDE Foundation Models with Arbitrary Data Modality" (2025)
     https://arxiv.org/abs/2509.21670
-
-.. note::
-    This package is designed to be used with jNO
-    (https://github.com/FhG-IISB/jNO).
-
-.. warning::
-    This is a research-level repository. It may contain bugs and is subject
-    to continuous change without notice.
 """
 
 from importlib.metadata import version, PackageNotFoundError
@@ -24,32 +13,17 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
-from jax_morph.model import ViT3DRegression
-from jax_morph import model_eqx as eqx_morph
-from jax_morph.convert_weights import (
-    load_pytorch_state_dict,
-    convert_pytorch_to_jax_params,
-)
+from jax_morph.model_eqx import ViT3DRegression
 from jax_morph.configs import (
     MORPH_CONFIGS,
     CHECKPOINT_NAMES,
     HF_REPO_ID,
-    morph_Ti,
-    morph_S,
-    morph_M,
-    morph_L,
 )
 
 __all__ = [
     "__version__",
     "ViT3DRegression",
-    "load_pytorch_state_dict",
-    "convert_pytorch_to_jax_params",
     "MORPH_CONFIGS",
     "CHECKPOINT_NAMES",
     "HF_REPO_ID",
-    "morph_Ti",
-    "morph_S",
-    "morph_M",
-    "morph_L",
 ]
