@@ -7,11 +7,31 @@ Mirrors the Flax modules in ``basic_block.py``, ``function_encoder.py``,
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Callable, Optional
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+
+
+# ---------------------------------------------------------------------------
+# Activation helpers for INR defaults
+# ---------------------------------------------------------------------------
+
+
+def _identity(x):
+    """Identity activation (no-op)."""
+    return x
+
+
+def _lrelu_clip(x):
+    """Leaky ReLU with clipping to [-256, 256]."""
+    return jnp.clip(jax.nn.leaky_relu(x, negative_slope=0.2), -256.0, 256.0)
+
+
+def _sin_sqrt2(x):
+    """Sine activation scaled by sqrt(2), used for affine modulation."""
+    return jnp.sin(x) * math.sqrt(2.0)
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +316,7 @@ class MultiheadAttention(eqx.Module):
 class GraphormerEncoderLayer(eqx.Module):
     embed_dim: int = eqx.field(static=True)
     pre_layernorm: bool = eqx.field(static=True)
-    activation_fn: str = eqx.field(static=True)
+    activation_fn: Callable = eqx.field(static=True)
 
     multihead_attn: MultiheadAttention
     fc1: eqx.nn.Linear
@@ -310,7 +330,7 @@ class GraphormerEncoderLayer(eqx.Module):
         ffn_embed_dim: int = 3072,
         num_heads: int = 8,
         pre_layernorm: bool = False,
-        activation_fn: str = "gelu",
+        activation_fn: Callable = jax.nn.gelu,
         *,
         key,
     ):
@@ -349,10 +369,7 @@ class GraphormerEncoderLayer(eqx.Module):
         if self.pre_layernorm:
             x = self._apply_norm(self.ffn_layer_norm, x)
         x = _apply_linear(self.fc1, x)
-        if self.activation_fn.lower() == "gelu":
-            x = jax.nn.gelu(x, approximate=False)
-        else:
-            x = jax.nn.relu(x)
+        x = self.activation_fn(x)
         x = _apply_linear(self.fc2, x)
         x = residual + x
         if not self.pre_layernorm:
@@ -383,7 +400,7 @@ class GraphormerEncoder(eqx.Module):
         num_heads: int = 32,
         encoder_normalize_before: bool = False,
         pre_layernorm: bool = False,
-        activation_fn: str = "gelu",
+        activation_fn: Callable = jax.nn.gelu,
         *,
         key,
     ):
@@ -470,8 +487,8 @@ class PolyINR(eqx.Module):
     dim_out: int = eqx.field(static=True)
     dim_hidden: int = eqx.field(static=True)
     num_layers: int = eqx.field(static=True)
-    activation_fn: str = eqx.field(static=True)
-    affine_act_fn: str = eqx.field(static=True)
+    activation_fn: Callable = eqx.field(static=True)
+    affine_act_fn: Callable = eqx.field(static=True)
 
     affines: list  # list of eqx.nn.Linear
     dense_layers: list  # list of eqx.nn.Linear
@@ -483,8 +500,8 @@ class PolyINR(eqx.Module):
         dim_out: int,
         dim_hidden: int,
         num_layers: int,
-        activation_fn: str = "lrelu",
-        affine_act_fn: str = "identity",
+        activation_fn: Callable = _lrelu_clip,
+        affine_act_fn: Callable = _identity,
         *,
         key,
     ):
@@ -530,15 +547,7 @@ class PolyINR(eqx.Module):
 
             affine = _apply_linear(self.affines[layer_idx], x)
 
-            if self.affine_act_fn.lower() in ("none", "identity"):
-                tmp = affine
-            elif self.affine_act_fn.lower() in ("lrelu", "leakyrelu"):
-                tmp = jax.nn.leaky_relu(affine, negative_slope=0.2)
-                tmp = jnp.clip(tmp, -256.0, 256.0)
-            elif self.affine_act_fn.lower() in ("sin", "sine"):
-                tmp = jnp.sin(affine) * math.sqrt(2.0)
-            else:
-                tmp = affine
+            tmp = self.affine_act_fn(affine)
 
             if affine_modulations is not None:
                 tmp2 = jnp.matmul(x_pad, affine_modulations[layer_idx])
@@ -548,11 +557,7 @@ class PolyINR(eqx.Module):
             hidden_state = _apply_linear(self.dense_layers[layer_idx], hidden_state)
             hidden_state = scale * hidden_state + shift
 
-            if self.activation_fn.lower() in ("lrelu", "leakyrelu"):
-                hidden_state = jax.nn.leaky_relu(hidden_state, negative_slope=0.2)
-                hidden_state = jnp.clip(hidden_state, -256.0, 256.0)
-            elif self.activation_fn.lower() in ("sin", "sine"):
-                hidden_state = jnp.sin(hidden_state)
+            hidden_state = self.activation_fn(hidden_state)
 
         return _apply_linear(self.last_layer, hidden_state)
 
@@ -585,8 +590,8 @@ class PolyINRWithHypernet(eqx.Module):
         enable_affine: bool = False,
         enable_shift: bool = True,
         enable_scale: bool = True,
-        activation_fn: str = "lrelu",
-        affine_act_fn: str = "identity",
+        activation_fn: Callable = _lrelu_clip,
+        affine_act_fn: Callable = _identity,
         *,
         key,
     ):
@@ -875,8 +880,8 @@ class PDEformer(eqx.Module):
         enable_affine: bool = False,
         enable_shift: bool = True,
         enable_scale: bool = True,
-        activation_fn: str = "sin",
-        affine_act_fn: str = "identity",
+        activation_fn: Callable = jnp.sin,
+        affine_act_fn: Callable = _identity,
         # Hypernet
         hyper_dim_hidden: int = 512,
         hyper_num_layers: int = 2,

@@ -5,7 +5,7 @@ Mirrors ``model.py`` but uses ``equinox.Module`` instead of ``flax.linen``.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional
 
 import equinox as eqx
 import jax
@@ -75,36 +75,36 @@ class FFN(eqx.Module):
     fc1: eqx.nn.Linear
     fc2: eqx.nn.Linear
     fc_gate: Optional[eqx.nn.Linear]
-    activation: str = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+    gated: bool = eqx.field(static=True)
 
-    def __init__(self, dim: int, hidden_dim: int, activation: str = "gelu", *, key):
+    def __init__(
+        self,
+        dim: int,
+        hidden_dim: int,
+        activation: Callable = jax.nn.silu,
+        gated: bool = True,
+        *,
+        key,
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.fc1 = eqx.nn.Linear(dim, hidden_dim, use_bias=True, key=k1)
         self.fc2 = eqx.nn.Linear(hidden_dim, dim, use_bias=True, key=k2)
-        if activation in ("swiglu", "geglu"):
+        if gated:
             self.fc_gate = eqx.nn.Linear(dim, hidden_dim, use_bias=True, key=k3)
         else:
             self.fc_gate = None
         self.activation = activation
+        self.gated = gated
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         h = _apply_linear(self.fc1, x)
 
-        if self.fc_gate is not None:
+        if self.gated:
             gates = _apply_linear(self.fc_gate, x)
-            if self.activation == "swiglu":
-                h = _swiglu(h, gates)
-            else:
-                h = _geglu(h, gates)
+            h = self.activation(h) * gates
         else:
-            if self.activation == "gelu":
-                h = _gelu(h)
-            elif self.activation == "silu":
-                h = _silu(h)
-            elif self.activation == "relu":
-                h = jax.nn.relu(h)
-            else:
-                raise ValueError(f"Unknown activation: {self.activation}")
+            h = self.activation(h)
 
         return _apply_linear(self.fc2, h)
 
@@ -206,7 +206,8 @@ class TransformerEncoderLayer(eqx.Module):
         d_model: int,
         nhead: int,
         dim_feedforward: int,
-        activation: str = "gelu",
+        activation: Callable = jax.nn.silu,
+        gated: bool = True,
         norm_first: bool = True,
         qk_norm: bool = False,
         norm_type: str = "rms",
@@ -218,7 +219,11 @@ class TransformerEncoderLayer(eqx.Module):
             embed_dim=d_model, num_heads=nhead, qk_norm=qk_norm, key=k1
         )
         self.ffn = FFN(
-            dim=d_model, hidden_dim=dim_feedforward, activation=activation, key=k2
+            dim=d_model,
+            hidden_dim=dim_feedforward,
+            activation=activation,
+            gated=gated,
+            key=k2,
         )
         self.norm_first = norm_first
 
@@ -262,7 +267,8 @@ class TransformerEncoder(eqx.Module):
         d_model: int,
         nhead: int,
         dim_feedforward: int,
-        activation: str = "gelu",
+        activation: Callable = jax.nn.silu,
+        gated: bool = True,
         norm_first: bool = True,
         qk_norm: bool = False,
         norm_type: str = "rms",
@@ -277,6 +283,7 @@ class TransformerEncoder(eqx.Module):
                 nhead=nhead,
                 dim_feedforward=dim_feedforward,
                 activation=activation,
+                gated=gated,
                 norm_first=norm_first,
                 qk_norm=qk_norm,
                 norm_type=norm_type,
@@ -513,7 +520,8 @@ class BCAT(eqx.Module):
     n_head: int = eqx.field(static=True)
     norm_first: bool = eqx.field(static=True)
     norm_type: str = eqx.field(static=True)
-    activation: str = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+    gated: bool = eqx.field(static=True)
     qk_norm: bool = eqx.field(static=True)
     x_num: int = eqx.field(static=True)
     max_output_dim: int = eqx.field(static=True)
@@ -536,7 +544,8 @@ class BCAT(eqx.Module):
         n_head: int = 8,
         norm_first: bool = True,
         norm_type: str = "rms",
-        activation: str = "swiglu",
+        activation: Callable = jax.nn.silu,
+        gated: bool = True,
         qk_norm: bool = True,
         x_num: int = 128,
         max_output_dim: int = 4,
@@ -558,6 +567,7 @@ class BCAT(eqx.Module):
         self.norm_first = norm_first
         self.norm_type = norm_type
         self.activation = activation
+        self.gated = gated
         self.qk_norm = qk_norm
         self.x_num = x_num
         self.max_output_dim = max_output_dim
@@ -587,6 +597,7 @@ class BCAT(eqx.Module):
             nhead=n_head,
             dim_feedforward=dim_ffn,
             activation=activation,
+            gated=gated,
             norm_first=norm_first,
             qk_norm=qk_norm,
             norm_type=norm_type,

@@ -13,27 +13,6 @@ import jax.numpy as jnp
 
 
 # ---------------------------------------------------------------------------
-# Activation helper
-# ---------------------------------------------------------------------------
-
-
-def _activation(name: str) -> Callable[[jnp.ndarray], jnp.ndarray]:
-    table = {
-        "gelu": lambda x: jax.nn.gelu(x, approximate=False),
-        "tanh": jnp.tanh,
-        "sigmoid": jax.nn.sigmoid,
-        "relu": jax.nn.relu,
-        "leaky_relu": lambda x: jax.nn.leaky_relu(x, negative_slope=0.1),
-        "softplus": jax.nn.softplus,
-        "ELU": jax.nn.elu,
-        "silu": jax.nn.silu,
-    }
-    if name not in table:
-        raise ValueError(f"Unsupported activation: {name}")
-    return table[name]
-
-
-# ---------------------------------------------------------------------------
 # AFNO2D – Adaptive Fourier Neural Operator (2D)
 # ---------------------------------------------------------------------------
 
@@ -44,7 +23,7 @@ class AFNO2D(eqx.Module):
     channel_first: bool = eqx.field(static=True)
     modes: int = eqx.field(static=True)
     hidden_size_factor: int = eqx.field(static=True)
-    act: str = eqx.field(static=True)
+    act: Callable = eqx.field(static=True)
 
     w1: jnp.ndarray
     b1: jnp.ndarray
@@ -58,7 +37,7 @@ class AFNO2D(eqx.Module):
         channel_first: bool = False,
         modes: int = 32,
         hidden_size_factor: int = 1,
-        act: str = "gelu",
+        act: Callable = jax.nn.gelu,
         *,
         key: jax.Array,
     ):
@@ -108,13 +87,12 @@ class AFNO2D(eqx.Module):
         xr = jnp.real(x_fft[:, :kept_modes_h, :kept_modes_w])
         xi = jnp.imag(x_fft[:, :kept_modes_h, :kept_modes_w])
 
-        act = _activation(self.act)
-        o1r = act(
+        o1r = self.act(
             jnp.einsum("...bi,bio->...bo", xr, self.w1[0])
             - jnp.einsum("...bi,bio->...bo", xi, self.w1[1])
             + self.b1[0]
         )
-        o1i = act(
+        o1i = self.act(
             jnp.einsum("...bi,bio->...bo", xi, self.w1[0])
             + jnp.einsum("...bi,bio->...bo", xr, self.w1[1])
             + self.b1[1]
@@ -152,7 +130,7 @@ class Block(eqx.Module):
     mixing_type: str = eqx.field(static=True)
     double_skip: bool = eqx.field(static=True)
     width: int = eqx.field(static=True)
-    act: str = eqx.field(static=True)
+    act: Callable = eqx.field(static=True)
 
     norm1: eqx.nn.GroupNorm
     afno: AFNO2D
@@ -169,7 +147,7 @@ class Block(eqx.Module):
         mlp_ratio: float = 1.0,
         channel_first: bool = False,
         modes: int = 32,
-        act: str = "gelu",
+        act: Callable = jax.nn.gelu,
         *,
         key: jax.Array,
     ):
@@ -219,10 +197,9 @@ class Block(eqx.Module):
 
         x = jax.vmap(lambda v: self.norm2(v.transpose(2, 0, 1)).transpose(1, 2, 0))(x)
 
-        act = _activation(self.act)
         # Dense applied pointwise (B, H, W, C) → vmap over B, H, W
         x = jax.vmap(jax.vmap(jax.vmap(self.mlp_dense_1)))(x)
-        x = act(x)
+        x = self.act(x)
         x = jax.vmap(jax.vmap(jax.vmap(self.mlp_dense_2)))(x)
         x = x + residual
         return x
@@ -237,7 +214,7 @@ class PatchEmbed(eqx.Module):
     img_size: int = eqx.field(static=True)
     patch_size: int = eqx.field(static=True)
     out_dim: int = eqx.field(static=True)
-    act: str = eqx.field(static=True)
+    act: Callable = eqx.field(static=True)
 
     conv_patch: eqx.nn.Conv2d
     conv_1x1: eqx.nn.Conv2d
@@ -249,7 +226,7 @@ class PatchEmbed(eqx.Module):
         in_chans: int,
         embed_dim: int,
         out_dim: int,
-        act: str = "gelu",
+        act: Callable = jax.nn.gelu,
         *,
         key: jax.Array,
     ):
@@ -287,7 +264,7 @@ class PatchEmbed(eqx.Module):
         # x: (B, H, W, C) → NCHW for eqx.nn.Conv2d
         x = x.transpose(0, 3, 1, 2)  # (B, C, H, W)
         x = jax.vmap(self.conv_patch)(x)  # (B, embed_dim, pH, pW)
-        x = _activation(self.act)(x)
+        x = self.act(x)
         x = jax.vmap(self.conv_1x1)(x)  # (B, out_dim, pH, pW)
         x = x.transpose(0, 2, 3, 1)  # (B, pH, pW, out_dim)
         return x
@@ -366,7 +343,7 @@ class DPOTNet(eqx.Module):
     mlp_ratio: float = eqx.field(static=True)
     n_cls: int = eqx.field(static=True)
     normalize: bool = eqx.field(static=True)
-    act: str = eqx.field(static=True)
+    act: Callable = eqx.field(static=True)
     time_agg: str = eqx.field(static=True)
 
     # Sub-modules
@@ -402,7 +379,7 @@ class DPOTNet(eqx.Module):
         mlp_ratio: float = 1.0,
         n_cls: int = 12,
         normalize: bool = False,
-        act: str = "gelu",
+        act: Callable = jax.nn.gelu,
         time_agg: str = "exp_mlp",
         *,
         key: jax.Array,
@@ -558,19 +535,18 @@ class DPOTNet(eqx.Module):
 
         # Classification head
         cls_token = jnp.mean(x, axis=(1, 2))
-        act = _activation(self.act)
         cls_pred = jax.vmap(self.cls_dense_1)(cls_token)
-        cls_pred = act(cls_pred)
+        cls_pred = self.act(cls_pred)
         cls_pred = jax.vmap(self.cls_dense_2)(cls_pred)
-        cls_pred = act(cls_pred)
+        cls_pred = self.act(cls_pred)
         cls_pred = jax.vmap(self.cls_dense_3)(cls_pred)
 
         # Output head: NHWC → NCHW for conv, then back
         x = x.transpose(0, 3, 1, 2)  # (B, C, H, W)
         x = jax.vmap(self.out_deconv)(x)  # (B, out_layer_dim, H', W')
-        x = _activation(self.act)(x)
+        x = self.act(x)
         x = jax.vmap(self.out_conv_1)(x)
-        x = _activation(self.act)(x)
+        x = self.act(x)
         x = jax.vmap(self.out_conv_2)(x)
         x = x.transpose(0, 2, 3, 1)  # (B, H, W, C_out*T_out)
 

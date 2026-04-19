@@ -9,7 +9,7 @@ Arxiv paper: https://arxiv.org/abs/2405.19101
 import jax
 import jax.numpy as jnp
 import equinox as eqx
-from typing import Optional, Tuple, List, Any, Union, Sequence
+from typing import Callable, Optional, Tuple, List, Any, Union, Sequence
 from dataclasses import dataclass
 import math
 import numpy as np
@@ -34,7 +34,7 @@ class ScOTConfig:
     hidden_dropout_prob: float = 0.0
     attention_probs_dropout_prob: float = 0.0
     drop_path_rate: float = 0.1
-    hidden_act: str = "gelu"
+    hidden_act: Callable = jax.nn.gelu
     use_absolute_embeddings: bool = False
     initializer_range: float = 0.02
     layer_norm_eps: float = 1e-5
@@ -307,6 +307,7 @@ class ConvNeXtBlock(eqx.Module):
     dim: int = eqx.field(static=True)
     drop_path_rate: float = eqx.field(static=True)
     layer_scale_init_value: float = eqx.field(static=True)
+    act: Callable = eqx.field(static=True)
 
     dwconv: Conv2dNHWC
     norm: Union[ConditionalLayerNorm, LayerNormWithTime]
@@ -328,6 +329,7 @@ class ConvNeXtBlock(eqx.Module):
         self.dim = dim
         self.drop_path_rate = drop_path
         self.layer_scale_init_value = layer_scale_init_value
+        self.act = config.hidden_act
 
         keys = jax.random.split(key, 4)
 
@@ -371,7 +373,7 @@ class ConvNeXtBlock(eqx.Module):
 
         # Pointwise convs as linear layers (applied to last dim)
         x = jax.vmap(jax.vmap(jax.vmap(self.pwconv1)))(x)
-        x = jax.nn.gelu(x)
+        x = self.act(x)
         x = jax.vmap(jax.vmap(jax.vmap(self.pwconv2)))(x)
 
         # Layer scale
@@ -820,13 +822,15 @@ class Swinv2Attention(eqx.Module):
 
 class Swinv2Intermediate(eqx.Module):
     dense: eqx.nn.Linear
+    act: Callable = eqx.field(static=True)
 
     def __init__(self, config: ScOTConfig, dim: int, *, key: jax.Array):
         self.dense = eqx.nn.Linear(dim, int(dim * config.mlp_ratio), key=key)
+        self.act = config.hidden_act
 
     def __call__(self, hidden_states: jnp.ndarray) -> jnp.ndarray:
         hidden_states = jax.vmap(jax.vmap(self.dense))(hidden_states)
-        return jax.nn.gelu(hidden_states)
+        return self.act(hidden_states)
 
 
 class Swinv2Output(eqx.Module):
