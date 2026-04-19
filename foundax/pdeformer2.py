@@ -13,15 +13,22 @@ Usage::
 """
 
 import importlib
+from typing import Callable
 
 from ._vendors import ensure_repo_on_path
 from . import _callable_module
 
 try:
     import jax.numpy as jnp
+
     _f32 = jnp.float32
 except Exception:
     _f32 = None
+
+
+def _identity(x):
+    """Identity activation (no-op)."""
+    return x
 
 
 def _build(
@@ -44,8 +51,8 @@ def _build(
     enable_affine=False,
     enable_shift=True,
     enable_scale=True,
-    activation_fn="sin",
-    affine_act_fn="identity",
+    activation_fn: Callable = jnp.sin,
+    affine_act_fn: Callable = _identity,
     hyper_dim_hidden=512,
     hyper_num_layers=2,
     share_hypernet=False,
@@ -55,6 +62,7 @@ def _build(
     key=None,
 ):
     import jax
+
     ensure_repo_on_path("jax_pdeformer2")
     mod = importlib.import_module("jax_pdeformer2.model_eqx")
     if key is None:
@@ -83,15 +91,72 @@ def small(
     enable_affine=False,
     enable_shift=True,
     enable_scale=True,
-    activation_fn="sin",
-    affine_act_fn="identity",
+    activation_fn: Callable = jnp.sin,
+    affine_act_fn: Callable = _identity,
     hyper_dim_hidden=512,
     hyper_num_layers=2,
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
 ):
-    """PDEformer-2 Small ~27.7 M params. Graphormer(9, 512) + INR(128)."""
+    """PDEformer-2 Small ~27.7 M params.
+
+    Graphormer encoder + Implicit Neural Representation (INR) decoder
+    with a hyper-network bridge for two-dimensional PDE solving.
+
+    Reference:
+        Shi et al., *PDEformer-2: A Foundation Model for Two-
+        Dimensional PDEs* (2025). https://arxiv.org/abs/2502.14844
+
+    Example::
+
+        model = foundax.pdeformer2.small(inr_dim_hidden=256)
+
+    Shape:
+        - Input: graph-structured (``node_type``, ``node_scalar``,
+          ``node_function``, ``degrees``, ``attn_bias``,
+          ``spatial_pos``, ``coordinate``).
+        - Output: ``(n_graph, num_points, 1)``
+
+    See Also:
+        :func:`base`, :func:`fast`
+
+    Args:
+        num_node_type: Number of node-type categories in the PDE graph.
+        num_in_degree: Number of in-degree bins for degree encoding.
+        num_out_degree: Number of out-degree bins for degree encoding.
+        num_spatial: Spatial embedding dimension.
+        num_encoder_layers: Number of Graphormer encoder layers.
+        embed_dim: Graphormer embedding dimension.
+        ffn_embed_dim: Feedforward hidden dimension inside Graphormer.
+        num_heads: Number of attention heads.
+        pre_layernorm: Apply LayerNorm before attention (pre-norm).
+        scalar_dim_hidden: Hidden dimension of the scalar encoder MLP.
+        scalar_num_layers: Number of scalar encoder MLP layers.
+        func_enc_resolution: Input resolution for the function encoder.
+        func_enc_input_txyz: Include time in function-encoder input
+            channels.
+        func_enc_keep_nchw: Keep NCHW layout after function encoding.
+        inr_dim_hidden: INR MLP hidden dimension.
+        inr_num_layers: INR MLP depth.
+        enable_affine: Enable full affine transformation in INR.
+        enable_shift: Enable additive shift modulation in INR.
+        enable_scale: Enable multiplicative scale modulation in INR.
+        activation_fn: INR activation callable (e.g. ``jnp.sin``,
+            ``jax.nn.relu``).
+        affine_act_fn: Hypernet output activation callable
+            (e.g. ``_identity``).
+        hyper_dim_hidden: Hyper-network hidden dimension.
+        hyper_num_layers: Hyper-network depth.
+        share_hypernet: Share a single hyper-network across all INR
+            layers.
+        multi_inr: Use a second INR head for multi-output prediction.
+        separate_latent: Use a separate latent vector for the second
+            INR head.
+
+    Returns:
+        An ``equinox.Module`` (PDEformer).
+    """
     return _build(**{k: v for k, v in locals().items()})
 
 
@@ -115,15 +180,72 @@ def base(
     enable_affine=False,
     enable_shift=True,
     enable_scale=True,
-    activation_fn="sin",
-    affine_act_fn="identity",
+    activation_fn: Callable = jnp.sin,
+    affine_act_fn: Callable = _identity,
     hyper_dim_hidden=512,
     hyper_num_layers=2,
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
 ):
-    """PDEformer-2 Base. Graphormer(12, 768) + INR(768)."""
+    """PDEformer-2 Base.
+
+    Graphormer encoder + Implicit Neural Representation (INR) decoder
+    with a hyper-network bridge for two-dimensional PDE solving.
+
+    Reference:
+        Shi et al., *PDEformer-2: A Foundation Model for Two-
+        Dimensional PDEs* (2025). https://arxiv.org/abs/2502.14844
+
+    Example::
+
+        model = foundax.pdeformer2.base()
+
+    Shape:
+        - Input: graph-structured (``node_type``, ``node_scalar``,
+          ``node_function``, ``degrees``, ``attn_bias``,
+          ``spatial_pos``, ``coordinate``).
+        - Output: ``(n_graph, num_points, 1)``
+
+    See Also:
+        :func:`small`, :func:`fast`
+
+    Args:
+        num_node_type: Number of node-type categories in the PDE graph.
+        num_in_degree: Number of in-degree bins for degree encoding.
+        num_out_degree: Number of out-degree bins for degree encoding.
+        num_spatial: Spatial embedding dimension.
+        num_encoder_layers: Number of Graphormer encoder layers.
+        embed_dim: Graphormer embedding dimension.
+        ffn_embed_dim: Feedforward hidden dimension inside Graphormer.
+        num_heads: Number of attention heads.
+        pre_layernorm: Apply LayerNorm before attention (pre-norm).
+        scalar_dim_hidden: Hidden dimension of the scalar encoder MLP.
+        scalar_num_layers: Number of scalar encoder MLP layers.
+        func_enc_resolution: Input resolution for the function encoder.
+        func_enc_input_txyz: Include time in function-encoder input
+            channels.
+        func_enc_keep_nchw: Keep NCHW layout after function encoding.
+        inr_dim_hidden: INR MLP hidden dimension.
+        inr_num_layers: INR MLP depth.
+        enable_affine: Enable full affine transformation in INR.
+        enable_shift: Enable additive shift modulation in INR.
+        enable_scale: Enable multiplicative scale modulation in INR.
+        activation_fn: INR activation callable (e.g. ``jnp.sin``,
+            ``jax.nn.relu``).
+        affine_act_fn: Hypernet output activation callable
+            (e.g. ``_identity``).
+        hyper_dim_hidden: Hyper-network hidden dimension.
+        hyper_num_layers: Hyper-network depth.
+        share_hypernet: Share a single hyper-network across all INR
+            layers.
+        multi_inr: Use a second INR head for multi-output prediction.
+        separate_latent: Use a separate latent vector for the second
+            INR head.
+
+    Returns:
+        An ``equinox.Module`` (PDEformer).
+    """
     return _build(**{k: v for k, v in locals().items()})
 
 
@@ -147,15 +269,73 @@ def fast(
     enable_affine=False,
     enable_shift=True,
     enable_scale=True,
-    activation_fn="sin",
-    affine_act_fn="identity",
+    activation_fn: Callable = jnp.sin,
+    affine_act_fn: Callable = _identity,
     hyper_dim_hidden=512,
     hyper_num_layers=2,
     share_hypernet=False,
     multi_inr=False,
     separate_latent=False,
 ):
-    """PDEformer-2 Fast. Graphormer(12, 768) + INR(256) -- smaller INR than Base."""
+    """PDEformer-2 Fast -- smaller INR than Base.
+
+    Graphormer encoder + Implicit Neural Representation (INR) decoder
+    with a hyper-network bridge for two-dimensional PDE solving.
+    Uses a narrower INR (256 vs 768) for faster inference.
+
+    Reference:
+        Shi et al., *PDEformer-2: A Foundation Model for Two-
+        Dimensional PDEs* (2025). https://arxiv.org/abs/2502.14844
+
+    Example::
+
+        model = foundax.pdeformer2.fast()
+
+    Shape:
+        - Input: graph-structured (``node_type``, ``node_scalar``,
+          ``node_function``, ``degrees``, ``attn_bias``,
+          ``spatial_pos``, ``coordinate``).
+        - Output: ``(n_graph, num_points, 1)``
+
+    See Also:
+        :func:`small`, :func:`base`
+
+    Args:
+        num_node_type: Number of node-type categories in the PDE graph.
+        num_in_degree: Number of in-degree bins for degree encoding.
+        num_out_degree: Number of out-degree bins for degree encoding.
+        num_spatial: Spatial embedding dimension.
+        num_encoder_layers: Number of Graphormer encoder layers.
+        embed_dim: Graphormer embedding dimension.
+        ffn_embed_dim: Feedforward hidden dimension inside Graphormer.
+        num_heads: Number of attention heads.
+        pre_layernorm: Apply LayerNorm before attention (pre-norm).
+        scalar_dim_hidden: Hidden dimension of the scalar encoder MLP.
+        scalar_num_layers: Number of scalar encoder MLP layers.
+        func_enc_resolution: Input resolution for the function encoder.
+        func_enc_input_txyz: Include time in function-encoder input
+            channels.
+        func_enc_keep_nchw: Keep NCHW layout after function encoding.
+        inr_dim_hidden: INR MLP hidden dimension.
+        inr_num_layers: INR MLP depth.
+        enable_affine: Enable full affine transformation in INR.
+        enable_shift: Enable additive shift modulation in INR.
+        enable_scale: Enable multiplicative scale modulation in INR.
+        activation_fn: INR activation callable (e.g. ``jnp.sin``,
+            ``jax.nn.relu``).
+        affine_act_fn: Hypernet output activation callable
+            (e.g. ``_identity``).
+        hyper_dim_hidden: Hyper-network hidden dimension.
+        hyper_num_layers: Hyper-network depth.
+        share_hypernet: Share a single hyper-network across all INR
+            layers.
+        multi_inr: Use a second INR head for multi-output prediction.
+        separate_latent: Use a separate latent vector for the second
+            INR head.
+
+    Returns:
+        An ``equinox.Module`` (PDEformer).
+    """
     return _build(**{k: v for k, v in locals().items()})
 
 
