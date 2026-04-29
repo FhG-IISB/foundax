@@ -7,7 +7,6 @@ foundax/_vendors.py
 foundax/bcat.py
 foundax/cli.py
 foundax/dpot.py
-foundax/model.py
 foundax/morph.py
 foundax/mpp.py
 foundax/nn.py

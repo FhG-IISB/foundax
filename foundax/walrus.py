@@ -20,15 +20,15 @@ from . import _callable_module
 
 
 def _build(
-    hidden_dim=768,
-    intermediate_dim=192,
+    hidden_dim=1408,
+    intermediate_dim=352,
     n_states=4,
-    processor_blocks=12,
+    processor_blocks=40,
     groups=16,
-    num_heads=12,
+    num_heads=16,
     mlp_dim=0,
     max_d=3,
-    causal_in_time=False,
+    causal_in_time=True,
     drop_path=0.05,
     bias_type="rel",
     base_kernel_size=((8, 4), (8, 4), (8, 4)),
@@ -51,15 +51,15 @@ def _build(
 
 
 def base(
-    hidden_dim=768,
-    intermediate_dim=192,
+    hidden_dim=1408,
+    intermediate_dim=352,
     n_states=4,
-    processor_blocks=12,
+    processor_blocks=40,
     groups=16,
-    num_heads=12,
+    num_heads=16,
     mlp_dim=0,
     max_d=3,
-    causal_in_time=False,
+    causal_in_time=True,
     drop_path=0.05,
     bias_type="rel",
     base_kernel_size=((8, 4), (8, 4), (8, 4)),
