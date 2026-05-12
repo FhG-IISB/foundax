@@ -44,9 +44,26 @@ model, variables = fx.prose.fd_1to1()
 ```python
 import foundax as fx
 import jno
+import optax
 
-net = jno.nn.wrap(fx.mlp(in_features=2, output_dim=1))
-net.optimizer(optax.adam, lr=1e-3)
+net = jno.nn.wrap(fx.poseidon.T(num_channels=5, num_out_channels=1))
+net.optimizer(
+    optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adamw(
+            learning_rate=optax.schedules.warmup_cosine_decay_schedule(
+                init_value=1e-7,
+                peak_value=1e-3,
+                warmup_steps=500,
+                decay_steps=10000,
+                end_value=1e-6,
+            ),
+            weight_decay=1e-4,
+        ),
+    )
+)
+net.initialize('./poseidonT.eqx')
+net.mask(param_mask).lora(rank=4)
 ```
 
 ## Notes
