@@ -1,0 +1,60 @@
+:root {
+  --foundax-brand-1: #006d77;
+  --foundax-brand-2: #83c5be;
+  --foundax-brand-3: #ffddd2;
+  --foundax-accent: #ee9b00;
+}
+
+.md-typeset h1 {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.3rem;
+}
+
+.md-typeset h2 {
+  border-bottom: 2px solid color-mix(in srgb, var(--foundax-brand-2) 45%, transparent);
+  padding-bottom: 0.2rem;
+}
+
+.hero-actions {
+  margin: 1rem 0 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.hero-actions .md-button {
+  border-radius: 999px;
+}
+
+.hero-actions .md-button--primary {
+  background: linear-gradient(135deg, var(--foundax-brand-1), #0b8793);
+  border: 0;
+}
+
+.md-typeset table:not([class]) th {
+  background: color-mix(in srgb, var(--foundax-brand-2) 22%, white);
+}
+
+.md-typeset table:not([class]) tr:hover {
+  background: color-mix(in srgb, var(--foundax-brand-3) 55%, white);
+}
+
+.md-header {
+  background: linear-gradient(90deg, #02434a, #006d77);
+}
+
+.md-typeset .admonition.warning {
+  border-left: 4px solid var(--foundax-accent);
+}
+
+@media (max-width: 700px) {
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-actions .md-button {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -1,8 +1,10 @@
 # Model Examples
 
-This page provides short, practical examples for the Equinox-facing API.
+This page provides concise constructor and forward-pass examples for the Equinox-facing Foundax API.
 
-## Core model examples
+## Core Model Examples
+
+These are direct architecture constructors from `foundax.nn`.
 
 ```python
 import jax
@@ -25,7 +27,9 @@ img = jnp.ones((128, 128, 1))
 out = unet(img)
 ```
 
-## Foundation wrapper examples
+## Foundation Wrapper Examples
+
+These are namespace-style entry points for larger wrapper families.
 
 ### Poseidon
 
@@ -157,3 +161,4 @@ pred = model.apply(variables, x, t_in, t_out, deterministic=True)
 
 - Input signatures differ between families; check the constructor docstring in the wrapper module when integrating a model.
 - For production training code, pair these constructors with your optimizer and training loop directly in JAX/Equinox.
+- For family-level selection guidance, see [Core Models](core-models.md) and [Foundation Models](equinox-architectures.md).

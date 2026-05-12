@@ -1,72 +1,79 @@
-# foundax
+# foundax Documentation
 
-`foundax` is a JAX model repository that combines:
+Build and reuse neural-operator models in JAX with an Equinox-first API surface, from lightweight core architectures to large foundation-model wrappers.
 
-- **direct Equinox implementations** of neural-operator and PDE-learning architectures
-- **Equinox wrappers** for larger vendored model families such as Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, and PROSE
+<div class="hero-actions" markdown>
+[Getting Started](getting-started.md){ .md-button .md-button--primary }
+[Core Models](core-models.md){ .md-button }
+[Foundation Models](equinox-architectures.md){ .md-button }
+[Model Examples](model-examples.md){ .md-button }
+</div>
 
-This site is written as repository documentation rather than only API notes. It explains package layout, model families, and practical Equinox usage.
+<div class="grid cards" markdown>
 
-## Scope
+- __New to foundax?__
 
-The docs here cover:
+	Start with installation, package layout, and usage conventions.
 
-- the Equinox model factories exposed from `foundax`
-- the repository’s core model categories
-- the foundation-model wrappers and their upstream references
-- practical examples for both core and foundation models
-- GitHub Pages hosting for this repository
+	[Open getting started](getting-started.md)
 
-The docs intentionally do **not** focus on the Flax-specific foundation-model paths.
+- __Need architecture guidance?__
 
-## Quick start
+	Browse the direct Equinox model families and where they fit.
+
+	[Open core models](core-models.md)
+
+- __Using large wrappers?__
+
+	See foundation-model namespaces, variants, and upstream references.
+
+	[Open foundation models](equinox-architectures.md)
+
+</div>
+
+## Start Here
+
+If you are new to foundax, follow this path:
+
+1. [Getting Started](getting-started.md): install and understand the package surface.
+2. [Core Models](core-models.md): choose a direct Equinox architecture baseline.
+3. [Foundation Models](equinox-architectures.md): choose a large wrapper family and variant.
+4. [Model Examples](model-examples.md): copy minimal runnable constructor and forward-pass snippets.
+
+## Model Surface
+
+| Guide | Focus |
+|---|---|
+| [Core Models](core-models.md) | Direct Equinox architectures in `foundax/architectures` and exposed via `foundax.nn` |
+| [Foundation Models](equinox-architectures.md) | Namespace wrappers for Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, and PROSE |
+| [Model Examples](model-examples.md) | Minimal end-to-end examples for both core and foundation-model constructors |
+| [GitHub Pages](github-pages.md) | Local preview, build, and deployment setup |
+
+## Quick Usage
 
 ```python
 import foundax as fx
 
-# Core models
+# Core architectures
 mlp = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 fno = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
-unet = fx.unet2d(in_channels=1, out_channels=1)
 
-# Foundation-model namespaces
+# Foundation wrappers (preferred namespace style)
 poseidon = fx.poseidon.T()
-morph = fx.morph.Ti()
-mpp = fx.mpp.Ti(n_states=12)
+morph = fx.morph.S()
 ```
 
-## Model layout
+## Integration With jNO
 
-### Core Equinox architectures
+```python
+import foundax as fx
+import jno
+import optax
 
-These live in `foundax/architectures/` and are exposed through `foundax.nn`:
+net = jno.nn.wrap(fx.fno2d(in_features=1, hidden_channels=32, n_modes=16))
+net.optimizer(optax.adam, lr=1e-3)
+```
 
-- MLP and linear models
-- Fourier Neural Operators
-- UNets
-- DeepONet
-- CNO and MgNO
-- geometry-aware and point-based models
-- GNOT-family transformer operators
-
-### Equinox foundation-model wrappers
-
-These live behind namespace modules such as:
-
-- `foundax.poseidon`
-- `foundax.morph`
-- `foundax.mpp`
-- `foundax.walrus`
-- `foundax.bcat`
-- `foundax.pdeformer2`
-- `foundax.dpot`
-- `foundax.prose`
-
-The wrapper modules are thin public entry points over vendored JAX implementations in `repos/`.
-
-## Where to read next
-
-- **Getting Started** for installation and package structure
-- **Core Models** for the direct Equinox architectures
-- **Foundation Models** for the larger wrapper families, variants, and upstream links
-- **Model Examples** for concise end-to-end constructor and forward-call snippets
+!!! warning
+		The documentation intentionally focuses on the Equinox-facing model surface.
+		Flax-specific paths from vendored repositories are not covered here.

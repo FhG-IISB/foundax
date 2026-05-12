@@ -34,7 +34,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Build site
-        run: uvx --from mkdocs mkdocs build
+        run: uvx --with mkdocs-material --with pymdown-extensions mkdocs build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

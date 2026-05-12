@@ -1,19 +1,65 @@
-site_name: foundax
-site_description: Documentation for the Equinox model surface in foundax
+site_name: foundax Documentation
+site_description: Unified Equinox-first model surface for operator learning and PDE foundation models
+site_url: https://fhg-iisb.github.io/foundax/
 repo_url: https://github.com/FhG-IISB/foundax
 repo_name: FhG-IISB/foundax
 
-theme:
-  name: mkdocs
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
 
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Core Models: core-models.md
-  - Foundation Models: equinox-architectures.md
-  - Model Examples: model-examples.md
-  - GitHub Pages: github-pages.md
+  - Models:
+      - Core Models: core-models.md
+      - Foundation Models: equinox-architectures.md
+      - Model Examples: model-examples.md
+  - Guides:
+      - GitHub Pages: github-pages.md
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Source Sans 3
+    code: JetBrains Mono
+
+plugins:
+  - search
 
 markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
   - tables
-  - fenced_code
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - stylesheets/extra.css
