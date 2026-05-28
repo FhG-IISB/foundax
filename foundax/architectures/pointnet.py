@@ -1,4 +1,4 @@
-from typing import Callable, Optional, List
+from typing import Callable
 import jax
 import jax.numpy as jnp
 import equinox as eqx
@@ -149,7 +149,9 @@ class PointNet(eqx.Module):
 
         # Global feature via max pooling
         global_feature = jnp.max(c, axis=0, keepdims=True)  # (1, H)
-        global_feature = jnp.broadcast_to(global_feature, (n_points, global_feature.shape[-1]))
+        global_feature = jnp.broadcast_to(
+            global_feature, (n_points, global_feature.shape[-1])
+        )
 
         # Concatenate skip connection with global feature
         c = jnp.concatenate([skip_connection, global_feature], axis=-1)
@@ -186,4 +188,6 @@ class PointNet(eqx.Module):
         elif c.ndim == 2:
             return self._forward_single(c, key)
         else:
-            raise ValueError(f"Expected input of shape (B, N, C) or (N, C), got {c.shape}")
+            raise ValueError(
+                f"Expected input of shape (B, N, C) or (N, C), got {c.shape}"
+            )

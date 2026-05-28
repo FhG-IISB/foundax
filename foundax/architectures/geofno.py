@@ -1,15 +1,16 @@
 # geofno.py - JAX/Equinox implementation
 
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 import jax
 import jax.numpy as jnp
-import numpy as np
 import equinox as eqx
 from .linear import Linear
-from .common import get_activation as _get_act, compute_Fourier_modes
+from .common import get_activation as _get_act
 
 
-def compute_Fourier_bases(nodes: jnp.ndarray, modes: jnp.ndarray, node_mask: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+def compute_Fourier_bases(
+    nodes: jnp.ndarray, modes: jnp.ndarray, node_mask: jnp.ndarray
+) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
     Compute Fourier bases.
     Fourier bases are cos(kx), sin(kx), 1.
@@ -55,9 +56,15 @@ class SpectralConvGeo(eqx.Module):
 
         scale = 1.0 / (in_channels * out_channels)
         k1, k2, k3 = jax.random.split(key, 3)
-        self.weights_c = jax.random.uniform(k1, (in_channels, out_channels, nmodes), minval=-scale, maxval=scale)
-        self.weights_s = jax.random.uniform(k2, (in_channels, out_channels, nmodes), minval=-scale, maxval=scale)
-        self.weights_0 = jax.random.uniform(k3, (in_channels, out_channels, 1), minval=-scale, maxval=scale)
+        self.weights_c = jax.random.uniform(
+            k1, (in_channels, out_channels, nmodes), minval=-scale, maxval=scale
+        )
+        self.weights_s = jax.random.uniform(
+            k2, (in_channels, out_channels, nmodes), minval=-scale, maxval=scale
+        )
+        self.weights_0 = jax.random.uniform(
+            k3, (in_channels, out_channels, 1), minval=-scale, maxval=scale
+        )
 
     def __call__(
         self,
@@ -88,12 +95,20 @@ class SpectralConvGeo(eqx.Module):
         x_0_hat = jnp.einsum("bix,bxk->bik", x, wbases_0)
 
         # Apply weights in Fourier space (complex multiplication)
-        f_c_hat = jnp.einsum("bik,iok->bok", x_c_hat, self.weights_c) - jnp.einsum("bik,iok->bok", x_s_hat, self.weights_s)
-        f_s_hat = jnp.einsum("bik,iok->bok", x_s_hat, self.weights_c) + jnp.einsum("bik,iok->bok", x_c_hat, self.weights_s)
+        f_c_hat = jnp.einsum("bik,iok->bok", x_c_hat, self.weights_c) - jnp.einsum(
+            "bik,iok->bok", x_s_hat, self.weights_s
+        )
+        f_s_hat = jnp.einsum("bik,iok->bok", x_s_hat, self.weights_c) + jnp.einsum(
+            "bik,iok->bok", x_c_hat, self.weights_s
+        )
         f_0_hat = jnp.einsum("bik,iok->bok", x_0_hat, self.weights_0)
 
         # Inverse Fourier transform
-        x = jnp.einsum("bok,bxk->box", f_0_hat, bases_0) + 2 * jnp.einsum("bok,bxk->box", f_c_hat, bases_c) - 2 * jnp.einsum("bok,bxk->box", f_s_hat, bases_s)
+        x = (
+            jnp.einsum("bok,bxk->box", f_0_hat, bases_0)
+            + 2 * jnp.einsum("bok,bxk->box", f_c_hat, bases_c)
+            - 2 * jnp.einsum("bok,bxk->box", f_s_hat, bases_s)
+        )
 
         return x
 
@@ -174,7 +189,14 @@ class GeoFNO(eqx.Module):
         for i in range(length):
             in_ch = layers[i]
             out_ch = layers[i + 1]
-            sp_convs.append(SpectralConvGeo(in_channels=in_ch, out_channels=out_ch, nmodes=self.nmodes, key=keys[key_idx]))
+            sp_convs.append(
+                SpectralConvGeo(
+                    in_channels=in_ch,
+                    out_channels=out_ch,
+                    nmodes=self.nmodes,
+                    key=keys[key_idx],
+                )
+            )
             key_idx += 1
             ws.append(Linear(in_ch, out_ch, key=keys[key_idx]))
             key_idx += 1
@@ -233,7 +255,9 @@ class GeoFNO(eqx.Module):
         # Fourier layers
         for i in range(length):
             # Spectral convolution (integral operator K)
-            x1 = self.sp_convs[i](x, bases_c, bases_s, bases_0, wbases_c, wbases_s, wbases_0)
+            x1 = self.sp_convs[i](
+                x, bases_c, bases_s, bases_0, wbases_c, wbases_s, wbases_0
+            )
 
             # Linear transform (W) - replaces 1x1 conv
             # x: [batch, channels, nodes] -> transpose to [batch, nodes, channels],

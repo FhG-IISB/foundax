@@ -29,7 +29,9 @@ class CircularConv2d(eqx.Module):
     conv: Conv2d
     pad: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size=3, strides=(1, 1), use_bias=False, *, key):
+    def __init__(
+        self, in_ch, out_ch, kernel_size=3, strides=(1, 1), use_bias=False, *, key
+    ):
         self.pad = kernel_size // 2
         self.conv = Conv2d(
             in_ch,
@@ -57,10 +59,16 @@ class MgIte(eqx.Module):
     A: CircularConv2d
     S: CircularConv2d
 
-    def __init__(self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key):
+    def __init__(
+        self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key
+    ):
         kA, kS = jax.random.split(key)
-        self.A = CircularConv2d(num_channel_u, num_channel_f, 3, use_bias=use_bias, key=kA)
-        self.S = CircularConv2d(num_channel_f, num_channel_u, 3, use_bias=use_bias, key=kS)
+        self.A = CircularConv2d(
+            num_channel_u, num_channel_f, 3, use_bias=use_bias, key=kA
+        )
+        self.S = CircularConv2d(
+            num_channel_f, num_channel_u, 3, use_bias=use_bias, key=kS
+        )
 
     def __call__(self, u: jnp.ndarray, f: jnp.ndarray) -> jnp.ndarray:
         residual = f - self.A(u)
@@ -73,8 +81,12 @@ class MgIteInit(eqx.Module):
 
     S: CircularConv2d
 
-    def __init__(self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key):
-        self.S = CircularConv2d(num_channel_f, num_channel_u, 3, use_bias=use_bias, key=key)
+    def __init__(
+        self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key
+    ):
+        self.S = CircularConv2d(
+            num_channel_f, num_channel_u, 3, use_bias=use_bias, key=key
+        )
 
     def __call__(self, f: jnp.ndarray) -> jnp.ndarray:
         return self.S(f)
@@ -88,8 +100,12 @@ class Restrict(eqx.Module):
 
     def __init__(self, num_channel_u: int, num_channel_f: int, *, key):
         kPi, kR = jax.random.split(key)
-        self.Pi = CircularConv2d(num_channel_u, num_channel_u, 3, strides=(2, 2), use_bias=False, key=kPi)
-        self.R = CircularConv2d(num_channel_f, num_channel_f, 3, strides=(2, 2), use_bias=False, key=kR)
+        self.Pi = CircularConv2d(
+            num_channel_u, num_channel_u, 3, strides=(2, 2), use_bias=False, key=kPi
+        )
+        self.R = CircularConv2d(
+            num_channel_f, num_channel_f, 3, strides=(2, 2), use_bias=False, key=kR
+        )
 
     def __call__(self, u: jnp.ndarray, f: jnp.ndarray):
         return self.Pi(u), self.R(f)
@@ -138,7 +154,16 @@ class MgConv(eqx.Module):
     prolongate_layers: list  # length = num_levels - 1
     post_smooth_layers: list  # list of lists of MgIte, one list per level
 
-    def __init__(self, input_shape: Tuple[int, int], num_iteration: List[Tuple[int, int]], num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key):
+    def __init__(
+        self,
+        input_shape: Tuple[int, int],
+        num_iteration: List[Tuple[int, int]],
+        num_channel_u: int,
+        num_channel_f: int,
+        use_bias: bool = False,
+        *,
+        key,
+    ):
         num_levels = len(num_iteration)
         self.num_levels = num_levels
         self.num_iteration = [tuple(it) for it in num_iteration]
@@ -167,22 +192,39 @@ class MgConv(eqx.Module):
                 key, subkey = jax.random.split(key)
                 if level == 0 and i == 0:
                     # First pre-smooth at level 0 is MgIteInit
-                    init_layers.append(MgIteInit(num_channel_u, num_channel_f, use_bias=use_bias, key=subkey))
+                    init_layers.append(
+                        MgIteInit(
+                            num_channel_u, num_channel_f, use_bias=use_bias, key=subkey
+                        )
+                    )
                 else:
-                    pre_list.append(MgIte(num_channel_u, num_channel_f if level == 0 else num_channel_f, use_bias=use_bias, key=subkey))
+                    pre_list.append(
+                        MgIte(
+                            num_channel_u,
+                            num_channel_f if level == 0 else num_channel_f,
+                            use_bias=use_bias,
+                            key=subkey,
+                        )
+                    )
 
             for i in range(num_post):
                 key, subkey = jax.random.split(key)
-                post_list.append(MgIte(num_channel_u, num_channel_f, use_bias=use_bias, key=subkey))
+                post_list.append(
+                    MgIte(num_channel_u, num_channel_f, use_bias=use_bias, key=subkey)
+                )
 
             pre_smooth_layers.append(tuple(pre_list))
             post_smooth_layers.append(tuple(post_list))
 
             if level < num_levels - 1:
                 key, subkey = jax.random.split(key)
-                restrict_layers.append(Restrict(num_channel_u, num_channel_f, key=subkey))
+                restrict_layers.append(
+                    Restrict(num_channel_u, num_channel_f, key=subkey)
+                )
                 key, subkey = jax.random.split(key)
-                prolongate_layers.append(Prolongate(num_channel_u, kernel_sizes[level], key=subkey))
+                prolongate_layers.append(
+                    Prolongate(num_channel_u, kernel_sizes[level], key=subkey)
+                )
 
         self.init_layers = tuple(init_layers)  # type: ignore[assignment]
         self.pre_smooth_layers = tuple(pre_smooth_layers)  # type: ignore[assignment]
@@ -211,7 +253,9 @@ class MgConv(eqx.Module):
                 if level == 0 and i == 0 and current_u is None:
                     current_u = self.init_layers[0](current_f)
                 else:
-                    current_u = self.pre_smooth_layers[level][pre_idx](current_u, current_f)
+                    current_u = self.pre_smooth_layers[level][pre_idx](
+                        current_u, current_f
+                    )
                     pre_idx += 1
 
             level_outputs.append((current_u, current_f, num_post))
@@ -286,8 +330,27 @@ class MgNO(eqx.Module):
         for i in range(num_layer):
             in_ch = num_channel_f if i == 0 else num_channel_u
             key, k1, k2 = jax.random.split(key, 3)
-            mg_list.append(MgConv(input_shape=input_shape, num_iteration=num_iteration, num_channel_u=num_channel_u, num_channel_f=in_ch, use_bias=False, key=k1))
-            lin_list.append(Conv2d(in_ch, num_channel_u, kernel_size=1, strides=(1, 1), padding="SAME", use_bias=True, key=k2))
+            mg_list.append(
+                MgConv(
+                    input_shape=input_shape,
+                    num_iteration=num_iteration,
+                    num_channel_u=num_channel_u,
+                    num_channel_f=in_ch,
+                    use_bias=False,
+                    key=k1,
+                )
+            )
+            lin_list.append(
+                Conv2d(
+                    in_ch,
+                    num_channel_u,
+                    kernel_size=1,
+                    strides=(1, 1),
+                    padding="SAME",
+                    use_bias=True,
+                    key=k2,
+                )
+            )
 
         self.mgconv_layers = tuple(mg_list)
         self.linear_layers = tuple(lin_list)

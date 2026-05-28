@@ -1,8 +1,8 @@
 import jax
 import jax.numpy as jnp
 import equinox as eqx
-from typing import Callable, Sequence, Optional, Tuple
-from .common import BatchNorm, Conv2d as _Conv2dBase, ConvTranspose2d
+from typing import Callable, Optional
+from .common import BatchNorm, ConvTranspose2d
 
 
 def _default_float_dtype():
@@ -24,7 +24,18 @@ class Conv1dNHWC(eqx.Module):
     strides: tuple = eqx.field(static=True)
     groups: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size, strides=(1,), padding="SAME", use_bias=True, groups=1, *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size,
+        strides=(1,),
+        padding="SAME",
+        use_bias=True,
+        groups=1,
+        *,
+        key,
+    ):
         fan_in = (in_ch // groups) * kernel_size
         std = 1.0 / jnp.sqrt(jnp.array(fan_in, dtype=_default_float_dtype()))
         k1, k2 = jax.random.split(key)
@@ -38,7 +49,14 @@ class Conv1dNHWC(eqx.Module):
         was_2d = x.ndim == 2
         if was_2d:
             x = x[None]
-        y = jax.lax.conv_general_dilated(x, self.weight, self.strides, self.padding, dimension_numbers=("NWC", "WIO", "NWC"), feature_group_count=self.groups)
+        y = jax.lax.conv_general_dilated(
+            x,
+            self.weight,
+            self.strides,
+            self.padding,
+            dimension_numbers=("NWC", "WIO", "NWC"),
+            feature_group_count=self.groups,
+        )
         if self.bias is not None:
             y = y + self.bias
         if was_2d:
@@ -54,7 +72,17 @@ class ConvTranspose1d(eqx.Module):
     strides: tuple = eqx.field(static=True)
     padding: str = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size, strides=(2,), padding="SAME", use_bias=False, *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size,
+        strides=(2,),
+        padding="SAME",
+        use_bias=False,
+        *,
+        key,
+    ):
         fan_in = in_ch * kernel_size
         std = 1.0 / jnp.sqrt(jnp.array(fan_in, dtype=_default_float_dtype()))
         self.weight = jax.random.normal(key, (kernel_size, out_ch, in_ch)) * std
@@ -66,7 +94,13 @@ class ConvTranspose1d(eqx.Module):
         was_2d = x.ndim == 2
         if was_2d:
             x = x[None]
-        y = jax.lax.conv_transpose(x, self.weight, self.strides, self.padding, dimension_numbers=("NWC", "WIO", "NWC"))
+        y = jax.lax.conv_transpose(
+            x,
+            self.weight,
+            self.strides,
+            self.padding,
+            dimension_numbers=("NWC", "WIO", "NWC"),
+        )
         if self.bias is not None:
             y = y + self.bias
         if was_2d:
@@ -83,7 +117,18 @@ class Conv2dNHWC(eqx.Module):
     strides: tuple = eqx.field(static=True)
     groups: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size, strides=(1, 1), padding="SAME", use_bias=True, groups=1, *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size,
+        strides=(1, 1),
+        padding="SAME",
+        use_bias=True,
+        groups=1,
+        *,
+        key,
+    ):
         kh = kw = kernel_size if isinstance(kernel_size, int) else kernel_size[0]
         fan_in = (in_ch // groups) * kh * kw
         std = 1.0 / jnp.sqrt(jnp.array(fan_in, dtype=_default_float_dtype()))
@@ -98,7 +143,14 @@ class Conv2dNHWC(eqx.Module):
         was_3d = x.ndim == 3
         if was_3d:
             x = x[None]
-        y = jax.lax.conv_general_dilated(x, self.weight, self.strides, self.padding, dimension_numbers=("NHWC", "HWIO", "NHWC"), feature_group_count=self.groups)
+        y = jax.lax.conv_general_dilated(
+            x,
+            self.weight,
+            self.strides,
+            self.padding,
+            dimension_numbers=("NHWC", "HWIO", "NHWC"),
+            feature_group_count=self.groups,
+        )
         if self.bias is not None:
             y = y + self.bias
         if was_3d:
@@ -115,7 +167,18 @@ class Conv3dNHWC(eqx.Module):
     strides: tuple = eqx.field(static=True)
     groups: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size, strides=(1, 1, 1), padding="SAME", use_bias=True, groups=1, *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size,
+        strides=(1, 1, 1),
+        padding="SAME",
+        use_bias=True,
+        groups=1,
+        *,
+        key,
+    ):
         ks = kernel_size if isinstance(kernel_size, int) else kernel_size[0]
         fan_in = (in_ch // groups) * ks**3
         std = 1.0 / jnp.sqrt(jnp.array(fan_in, dtype=_default_float_dtype()))
@@ -129,7 +192,14 @@ class Conv3dNHWC(eqx.Module):
         was_4d = x.ndim == 4
         if was_4d:
             x = x[None]
-        y = jax.lax.conv_general_dilated(x, self.weight, self.strides, self.padding, dimension_numbers=("NDHWC", "DHWIO", "NDHWC"), feature_group_count=self.groups)
+        y = jax.lax.conv_general_dilated(
+            x,
+            self.weight,
+            self.strides,
+            self.padding,
+            dimension_numbers=("NDHWC", "DHWIO", "NDHWC"),
+            feature_group_count=self.groups,
+        )
         if self.bias is not None:
             y = y + self.bias
         if was_4d:
@@ -143,7 +213,17 @@ class ConvTranspose3d(eqx.Module):
     strides: tuple = eqx.field(static=True)
     padding: str = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size, strides=(2, 2, 2), padding="SAME", use_bias=False, *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size,
+        strides=(2, 2, 2),
+        padding="SAME",
+        use_bias=False,
+        *,
+        key,
+    ):
         ks = kernel_size if isinstance(kernel_size, int) else kernel_size[0]
         fan_in = in_ch * ks**3
         std = 1.0 / jnp.sqrt(jnp.array(fan_in, dtype=_default_float_dtype()))
@@ -156,7 +236,13 @@ class ConvTranspose3d(eqx.Module):
         was_4d = x.ndim == 4
         if was_4d:
             x = x[None]
-        y = jax.lax.conv_transpose(x, self.weight, self.strides, self.padding, dimension_numbers=("NDHWC", "DHWIO", "NDHWC"))
+        y = jax.lax.conv_transpose(
+            x,
+            self.weight,
+            self.strides,
+            self.padding,
+            dimension_numbers=("NDHWC", "DHWIO", "NDHWC"),
+        )
         if self.bias is not None:
             y = y + self.bias
         if was_4d:
@@ -211,7 +297,11 @@ def avg_pool_2d(x, window=2, stride=2):
         x = x[None]
     N, H, W, C = x.shape
     nH, nW = H // stride, W // stride
-    x = x[:, : nH * stride, : nW * stride, :].reshape(N, nH, stride, nW, stride, C).mean(axis=(2, 4))
+    x = (
+        x[:, : nH * stride, : nW * stride, :]
+        .reshape(N, nH, stride, nW, stride, C)
+        .mean(axis=(2, 4))
+    )
     if was_3d:
         x = x[0]
     return x
@@ -265,8 +355,21 @@ class UNetConv1d(eqx.Module):
     pad: int = eqx.field(static=True)
     padding_mode: str = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size=3, norm="batch", groups=1, activation=None, padding_mode="circular", *, key):
-        self.conv = Conv1dNHWC(in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=None,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv = Conv1dNHWC(
+            in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key
+        )
         self.norm_layer = _make_norm(norm, out_ch, spatial_ndim=1)
         self.activation = activation
         self.pad = kernel_size // 2
@@ -286,10 +389,39 @@ class UNetConvBlock1d(eqx.Module):
     conv1: UNetConv1d
     conv2: UNetConv1d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
-        self.conv1 = UNetConv1d(in_ch, out_channels[0], kernel_size, norm, groups, activation, padding_mode, key=k1)
-        self.conv2 = UNetConv1d(out_channels[0], out_channels[1], kernel_size, norm, groups, None, padding_mode, key=k2)
+        self.conv1 = UNetConv1d(
+            in_ch,
+            out_channels[0],
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k1,
+        )
+        self.conv2 = UNetConv1d(
+            out_channels[0],
+            out_channels[1],
+            kernel_size,
+            norm,
+            groups,
+            None,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, **kwargs):
         x = self.conv1(x)
@@ -300,8 +432,28 @@ class UNetConvBlock1d(eqx.Module):
 class UNetDownBlock1d(eqx.Module):
     conv_block: UNetConvBlock1d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
-        self.conv_block = UNetConvBlock1d(in_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv_block = UNetConvBlock1d(
+            in_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=key,
+        )
 
     def __call__(self, x, **kwargs):
         skip = self.conv_block(x)
@@ -315,7 +467,20 @@ class UNetUpBlock1d(eqx.Module):
     up_mode: str = eqx.field(static=True)
     groups: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, skip_ch, out_channels, up_mode="upconv", kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        skip_ch,
+        out_channels,
+        up_mode="upconv",
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
         self.up_mode = up_mode
         self.groups = groups
@@ -324,7 +489,16 @@ class UNetUpBlock1d(eqx.Module):
         else:
             self.upsample = Conv1dNHWC(in_ch, in_ch, 1, padding="SAME", key=k1)
         concat_ch = in_ch + skip_ch if groups == 1 else in_ch + skip_ch
-        self.conv_block = UNetConvBlock1d(concat_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=k2)
+        self.conv_block = UNetConvBlock1d(
+            concat_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, skip, **kwargs):
         if self.up_mode == "upconv":
@@ -364,7 +538,21 @@ class UNet1D(eqx.Module):
     out_channels: int = eqx.field(static=True)
     depth: int = eqx.field(static=True)
 
-    def __init__(self, in_channels=1, out_channels=1, depth=4, wf=6, norm="batch", up_mode="upconv", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key, **kwargs):
+    def __init__(
+        self,
+        in_channels=1,
+        out_channels=1,
+        depth=4,
+        wf=6,
+        norm="batch",
+        up_mode="upconv",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+        **kwargs,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.depth = depth
@@ -374,12 +562,32 @@ class UNet1D(eqx.Module):
         enc_in = in_channels
         for i in range(depth):
             ch = (2**wf) * (2**i)
-            encoders.append(UNetDownBlock1d(enc_in, (ch, ch), 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            encoders.append(
+                UNetDownBlock1d(
+                    enc_in,
+                    (ch, ch),
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             enc_in = ch
             ki += 1
         self.encoders = encoders
         bneck_ch = (2**wf) * (2 ** (depth - 1))
-        self.bottleneck = UNetConvBlock1d(enc_in, (bneck_ch, bneck_ch), 3, norm, groups, activation, padding_mode, key=keys[ki])
+        self.bottleneck = UNetConvBlock1d(
+            enc_in,
+            (bneck_ch, bneck_ch),
+            3,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=keys[ki],
+        )
         ki += 1
         decoders = []
         dec_in = bneck_ch
@@ -388,11 +596,26 @@ class UNet1D(eqx.Module):
             ch_in = (2**wf) * (2**didx)
             ch_out = (2**wf) * (2 ** max(0, didx - 1))
             skip_ch = ch_in
-            decoders.append(UNetUpBlock1d(dec_in, skip_ch, (ch_in, ch_out), up_mode, 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            decoders.append(
+                UNetUpBlock1d(
+                    dec_in,
+                    skip_ch,
+                    (ch_in, ch_out),
+                    up_mode,
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             dec_in = ch_out
             ki += 1
         self.decoders = decoders
-        self.final_conv = Conv1dNHWC(dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki])
+        self.final_conv = Conv1dNHWC(
+            dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki]
+        )
 
     def __call__(self, x, **kwargs):
         input_ndim = x.ndim
@@ -423,8 +646,21 @@ class UNetConv2d(eqx.Module):
     pad: int = eqx.field(static=True)
     padding_mode: str = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size=3, norm="batch", groups=1, activation=None, padding_mode="circular", *, key):
-        self.conv = Conv2dNHWC(in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=None,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv = Conv2dNHWC(
+            in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key
+        )
         self.norm_layer = _make_norm(norm, out_ch, spatial_ndim=2)
         self.activation = activation
         self.pad = kernel_size // 2
@@ -444,10 +680,39 @@ class UNetConvBlock2d(eqx.Module):
     conv1: UNetConv2d
     conv2: UNetConv2d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
-        self.conv1 = UNetConv2d(in_ch, out_channels[0], kernel_size, norm, groups, activation, padding_mode, key=k1)
-        self.conv2 = UNetConv2d(out_channels[0], out_channels[1], kernel_size, norm, groups, None, padding_mode, key=k2)
+        self.conv1 = UNetConv2d(
+            in_ch,
+            out_channels[0],
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k1,
+        )
+        self.conv2 = UNetConv2d(
+            out_channels[0],
+            out_channels[1],
+            kernel_size,
+            norm,
+            groups,
+            None,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, **kwargs):
         return self.conv2(self.conv1(x))
@@ -456,8 +721,28 @@ class UNetConvBlock2d(eqx.Module):
 class UNetDownBlock2d(eqx.Module):
     conv_block: UNetConvBlock2d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
-        self.conv_block = UNetConvBlock2d(in_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv_block = UNetConvBlock2d(
+            in_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=key,
+        )
 
     def __call__(self, x, **kwargs):
         skip = self.conv_block(x)
@@ -471,7 +756,20 @@ class UNetUpBlock2d(eqx.Module):
     up_mode: str = eqx.field(static=True)
     groups: int = eqx.field(static=True)
 
-    def __init__(self, in_ch, skip_ch, out_channels, up_mode="upconv", kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        skip_ch,
+        out_channels,
+        up_mode="upconv",
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
         self.up_mode = up_mode
         self.groups = groups
@@ -480,7 +778,16 @@ class UNetUpBlock2d(eqx.Module):
         else:
             self.upsample = Conv2dNHWC(in_ch, in_ch, 1, padding="SAME", key=k1)
         concat_ch = in_ch + skip_ch
-        self.conv_block = UNetConvBlock2d(concat_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=k2)
+        self.conv_block = UNetConvBlock2d(
+            concat_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, skip, **kwargs):
         if self.up_mode == "upconv":
@@ -519,7 +826,21 @@ class UNet2D(eqx.Module):
     out_channels: int = eqx.field(static=True)
     depth: int = eqx.field(static=True)
 
-    def __init__(self, in_channels=1, out_channels=1, depth=4, wf=6, norm="batch", up_mode="upconv", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key, **kwargs):
+    def __init__(
+        self,
+        in_channels=1,
+        out_channels=1,
+        depth=4,
+        wf=6,
+        norm="batch",
+        up_mode="upconv",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+        **kwargs,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.depth = depth
@@ -529,12 +850,32 @@ class UNet2D(eqx.Module):
         enc_in = in_channels
         for i in range(depth):
             ch = (2**wf) * (2**i)
-            encoders.append(UNetDownBlock2d(enc_in, (ch, ch), 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            encoders.append(
+                UNetDownBlock2d(
+                    enc_in,
+                    (ch, ch),
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             enc_in = ch
             ki += 1
         self.encoders = encoders
         bneck_ch = (2**wf) * (2 ** (depth - 1))
-        self.bottleneck = UNetConvBlock2d(enc_in, (bneck_ch, bneck_ch), 3, norm, groups, activation, padding_mode, key=keys[ki])
+        self.bottleneck = UNetConvBlock2d(
+            enc_in,
+            (bneck_ch, bneck_ch),
+            3,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=keys[ki],
+        )
         ki += 1
         decoders = []
         dec_in = bneck_ch
@@ -543,11 +884,26 @@ class UNet2D(eqx.Module):
             ch_in = (2**wf) * (2**didx)
             ch_out = (2**wf) * (2 ** max(0, didx - 1))
             skip_ch = ch_in
-            decoders.append(UNetUpBlock2d(dec_in, skip_ch, (ch_in, ch_out), up_mode, 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            decoders.append(
+                UNetUpBlock2d(
+                    dec_in,
+                    skip_ch,
+                    (ch_in, ch_out),
+                    up_mode,
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             dec_in = ch_out
             ki += 1
         self.decoders = decoders
-        self.final_conv = Conv2dNHWC(dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki])
+        self.final_conv = Conv2dNHWC(
+            dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki]
+        )
 
     def __call__(self, x, **kwargs):
         skips = []
@@ -573,8 +929,21 @@ class UNetConv3d(eqx.Module):
     pad: int = eqx.field(static=True)
     pad_fn: Callable = eqx.field(static=True)
 
-    def __init__(self, in_ch, out_ch, kernel_size=3, norm="batch", groups=1, activation=None, padding_mode="circular", *, key):
-        self.conv = Conv3dNHWC(in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=None,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv = Conv3dNHWC(
+            in_ch, out_ch, kernel_size, padding="VALID", groups=groups, key=key
+        )
         self.norm_layer = _make_norm(norm, out_ch, spatial_ndim=3)
         self.activation = activation
         self.pad = kernel_size // 2
@@ -594,10 +963,39 @@ class UNetConvBlock3d(eqx.Module):
     conv1: UNetConv3d
     conv2: UNetConv3d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
-        self.conv1 = UNetConv3d(in_ch, out_channels[0], kernel_size, norm, groups, activation, padding_mode, key=k1)
-        self.conv2 = UNetConv3d(out_channels[0], out_channels[1], kernel_size, norm, groups, None, padding_mode, key=k2)
+        self.conv1 = UNetConv3d(
+            in_ch,
+            out_channels[0],
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k1,
+        )
+        self.conv2 = UNetConv3d(
+            out_channels[0],
+            out_channels[1],
+            kernel_size,
+            norm,
+            groups,
+            None,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, **kwargs):
         return self.conv2(self.conv1(x))
@@ -606,8 +1004,28 @@ class UNetConvBlock3d(eqx.Module):
 class UNetDownBlock3d(eqx.Module):
     conv_block: UNetConvBlock3d
 
-    def __init__(self, in_ch, out_channels, kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
-        self.conv_block = UNetConvBlock3d(in_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=key)
+    def __init__(
+        self,
+        in_ch,
+        out_channels,
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
+        self.conv_block = UNetConvBlock3d(
+            in_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=key,
+        )
 
     def __call__(self, x, **kwargs):
         skip = self.conv_block(x)
@@ -620,7 +1038,20 @@ class UNetUpBlock3d(eqx.Module):
     conv_block: UNetConvBlock3d
     up_mode: str = eqx.field(static=True)
 
-    def __init__(self, in_ch, skip_ch, out_channels, up_mode="upconv", kernel_size=3, norm="batch", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key):
+    def __init__(
+        self,
+        in_ch,
+        skip_ch,
+        out_channels,
+        up_mode="upconv",
+        kernel_size=3,
+        norm="batch",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+    ):
         k1, k2 = jax.random.split(key)
         self.up_mode = up_mode
         if up_mode == "upconv":
@@ -628,14 +1059,27 @@ class UNetUpBlock3d(eqx.Module):
         else:
             self.upsample = Conv3dNHWC(in_ch, in_ch, 1, padding="SAME", key=k1)
         concat_ch = in_ch + skip_ch
-        self.conv_block = UNetConvBlock3d(concat_ch, out_channels, kernel_size, norm, groups, activation, padding_mode, key=k2)
+        self.conv_block = UNetConvBlock3d(
+            concat_ch,
+            out_channels,
+            kernel_size,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=k2,
+        )
 
     def __call__(self, x, skip, **kwargs):
         if self.up_mode == "upconv":
             x = self.upsample(x)
         else:
             D, H, W = x.shape[-4], x.shape[-3], x.shape[-2]
-            x = jax.image.resize(x, shape=(*x.shape[:-4], D * 2, H * 2, W * 2, x.shape[-1]), method="trilinear")
+            x = jax.image.resize(
+                x,
+                shape=(*x.shape[:-4], D * 2, H * 2, W * 2, x.shape[-1]),
+                method="trilinear",
+            )
             x = self.upsample(x)
         target_shape = skip.shape[:-1]
         x = x[..., : target_shape[-3], : target_shape[-2], : target_shape[-1], :]
@@ -652,7 +1096,21 @@ class UNet3D(eqx.Module):
     out_channels: int = eqx.field(static=True)
     depth: int = eqx.field(static=True)
 
-    def __init__(self, in_channels=1, out_channels=2, depth=4, wf=6, norm="batch", up_mode="upconv", groups=1, activation=jax.nn.celu, padding_mode="circular", *, key, **kwargs):
+    def __init__(
+        self,
+        in_channels=1,
+        out_channels=2,
+        depth=4,
+        wf=6,
+        norm="batch",
+        up_mode="upconv",
+        groups=1,
+        activation=jax.nn.celu,
+        padding_mode="circular",
+        *,
+        key,
+        **kwargs,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.depth = depth
@@ -662,12 +1120,32 @@ class UNet3D(eqx.Module):
         enc_in = in_channels
         for i in range(depth):
             ch = (2**wf) * (2**i)
-            encoders.append(UNetDownBlock3d(enc_in, (ch, ch), 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            encoders.append(
+                UNetDownBlock3d(
+                    enc_in,
+                    (ch, ch),
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             enc_in = ch
             ki += 1
         self.encoders = encoders
         bneck_ch = (2**wf) * (2 ** (depth - 1))
-        self.bottleneck = UNetConvBlock3d(enc_in, (bneck_ch, bneck_ch), 3, norm, groups, activation, padding_mode, key=keys[ki])
+        self.bottleneck = UNetConvBlock3d(
+            enc_in,
+            (bneck_ch, bneck_ch),
+            3,
+            norm,
+            groups,
+            activation,
+            padding_mode,
+            key=keys[ki],
+        )
         ki += 1
         decoders = []
         dec_in = bneck_ch
@@ -676,11 +1154,26 @@ class UNet3D(eqx.Module):
             ch_in = (2**wf) * (2**didx)
             ch_out = (2**wf) * (2 ** max(0, didx - 1))
             skip_ch = ch_in
-            decoders.append(UNetUpBlock3d(dec_in, skip_ch, (ch_in, ch_out), up_mode, 3, norm, groups, activation, padding_mode, key=keys[ki]))
+            decoders.append(
+                UNetUpBlock3d(
+                    dec_in,
+                    skip_ch,
+                    (ch_in, ch_out),
+                    up_mode,
+                    3,
+                    norm,
+                    groups,
+                    activation,
+                    padding_mode,
+                    key=keys[ki],
+                )
+            )
             dec_in = ch_out
             ki += 1
         self.decoders = decoders
-        self.final_conv = Conv3dNHWC(dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki])
+        self.final_conv = Conv3dNHWC(
+            dec_in, out_channels, 1, padding="SAME", use_bias=False, key=keys[ki]
+        )
 
     def __call__(self, x, **kwargs):
         input_ndim = x.ndim

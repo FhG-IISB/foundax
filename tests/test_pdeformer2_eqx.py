@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_pdeformer2")
@@ -47,8 +48,8 @@ _CFG = {
             "enable_affine": False,
             "enable_shift": True,
             "enable_scale": True,
-            "activation_fn": "sin",
-            "affine_act_fn": "identity",
+            "activation_fn": jnp.sin,
+            "affine_act_fn": jnp.tanh,
         },
     },
     "hypernet": {"dim_hidden": 16, "num_layers": 2, "shared": False},

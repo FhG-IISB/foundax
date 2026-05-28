@@ -419,7 +419,7 @@ def H(
 ti = Ti
 s = S
 m = M
-l = L
+l = L  # noqa: E741
 h = H
 
 __all__ = ["Ti", "S", "M", "L", "H", "ti", "s", "m", "l", "h"]

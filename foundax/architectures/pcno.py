@@ -1,6 +1,6 @@
 # pcno.py - JAX/Equinox implementation - https://github.com/PKU-CMEGroup/NeuralOperator/tree/main
 
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -20,7 +20,9 @@ def scaled_logit(y: jnp.ndarray, min_val: float, max_val: float) -> jnp.ndarray:
     return jnp.log((y - min_val) / (max_val - y))
 
 
-def compute_Fourier_modes(ndims: int, nks: Sequence[int], Ls: Sequence[float]) -> np.ndarray:
+def compute_Fourier_modes(
+    ndims: int, nks: Sequence[int], Ls: Sequence[float]
+) -> np.ndarray:
     """
     Compute nmeasures sets of Fourier modes.
 
@@ -29,11 +31,21 @@ def compute_Fourier_modes(ndims: int, nks: Sequence[int], Ls: Sequence[float]) -
     """
     assert len(nks) == len(Ls)
     nmeasures = len(nks) // ndims
-    k_pairs = np.stack([compute_Fourier_modes_helper(ndims, nks[i * ndims : (i + 1) * ndims], Ls[i * ndims : (i + 1) * ndims]) for i in range(nmeasures)], axis=-1)
+    k_pairs = np.stack(
+        [
+            compute_Fourier_modes_helper(
+                ndims, nks[i * ndims : (i + 1) * ndims], Ls[i * ndims : (i + 1) * ndims]
+            )
+            for i in range(nmeasures)
+        ],
+        axis=-1,
+    )
     return k_pairs
 
 
-def compute_Fourier_bases(nodes: jnp.ndarray, modes: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+def compute_Fourier_bases(
+    nodes: jnp.ndarray, modes: jnp.ndarray
+) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
     Compute Fourier bases for the whole space.
 
@@ -55,7 +67,9 @@ def compute_Fourier_bases(nodes: jnp.ndarray, modes: jnp.ndarray) -> Tuple[jnp.n
     return bases_c, bases_s, bases_0
 
 
-def compute_gradient(f: jnp.ndarray, directed_edges: jnp.ndarray, edge_gradient_weights: jnp.ndarray) -> jnp.ndarray:
+def compute_gradient(
+    f: jnp.ndarray, directed_edges: jnp.ndarray, edge_gradient_weights: jnp.ndarray
+) -> jnp.ndarray:
     """
     Compute gradient of field f at each node using least squares.
 
@@ -85,11 +99,15 @@ def compute_gradient(f: jnp.ndarray, directed_edges: jnp.ndarray, edge_gradient_
     message = message.reshape(batch_size, max_nedges, in_channels * ndims)
 
     # Scatter add to accumulate gradients
-    f_gradients = jnp.zeros((batch_size, max_nnodes, in_channels * ndims), dtype=message.dtype)
+    f_gradients = jnp.zeros(
+        (batch_size, max_nnodes, in_channels * ndims), dtype=message.dtype
+    )
 
     # Use segment_sum with sorted indices for scatter_add equivalent
     for b in range(batch_size):
-        f_gradients = f_gradients.at[b].add(jax.ops.segment_sum(message[b], target[b], num_segments=max_nnodes))
+        f_gradients = f_gradients.at[b].add(
+            jax.ops.segment_sum(message[b], target[b], num_segments=max_nnodes)
+        )
 
     return jnp.transpose(f_gradients, (0, 2, 1))
 
@@ -105,7 +123,9 @@ class SpectralConv(eqx.Module):
     weights_s: jnp.ndarray
     weights_0: jnp.ndarray
 
-    def __init__(self, in_channels: int, out_channels: int, nmodes: int, nmeasures: int, *, key):
+    def __init__(
+        self, in_channels: int, out_channels: int, nmodes: int, nmeasures: int, *, key
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.nmodes = nmodes
@@ -113,9 +133,21 @@ class SpectralConv(eqx.Module):
 
         scale = 1.0 / (in_channels * out_channels)
         k1, k2, k3 = jax.random.split(key, 3)
-        self.weights_c = jax.random.uniform(k1, (in_channels, out_channels, nmodes, nmeasures), minval=-scale, maxval=scale)
-        self.weights_s = jax.random.uniform(k2, (in_channels, out_channels, nmodes, nmeasures), minval=-scale, maxval=scale)
-        self.weights_0 = jax.random.uniform(k3, (in_channels, out_channels, 1, nmeasures), minval=-scale, maxval=scale)
+        self.weights_c = jax.random.uniform(
+            k1,
+            (in_channels, out_channels, nmodes, nmeasures),
+            minval=-scale,
+            maxval=scale,
+        )
+        self.weights_s = jax.random.uniform(
+            k2,
+            (in_channels, out_channels, nmodes, nmeasures),
+            minval=-scale,
+            maxval=scale,
+        )
+        self.weights_0 = jax.random.uniform(
+            k3, (in_channels, out_channels, 1, nmeasures), minval=-scale, maxval=scale
+        )
 
     def __call__(
         self,
@@ -146,12 +178,20 @@ class SpectralConv(eqx.Module):
         x_0_hat = jnp.einsum("bix,bxkw->bikw", x, wbases_0)
 
         # Apply weights in Fourier space
-        f_c_hat = jnp.einsum("bikw,iokw->bokw", x_c_hat, self.weights_c) - jnp.einsum("bikw,iokw->bokw", x_s_hat, self.weights_s)
-        f_s_hat = jnp.einsum("bikw,iokw->bokw", x_s_hat, self.weights_c) + jnp.einsum("bikw,iokw->bokw", x_c_hat, self.weights_s)
+        f_c_hat = jnp.einsum("bikw,iokw->bokw", x_c_hat, self.weights_c) - jnp.einsum(
+            "bikw,iokw->bokw", x_s_hat, self.weights_s
+        )
+        f_s_hat = jnp.einsum("bikw,iokw->bokw", x_s_hat, self.weights_c) + jnp.einsum(
+            "bikw,iokw->bokw", x_c_hat, self.weights_s
+        )
         f_0_hat = jnp.einsum("bikw,iokw->bokw", x_0_hat, self.weights_0)
 
         # Inverse Fourier transform
-        x = jnp.einsum("bokw,bxkw->box", f_0_hat, bases_0) + 2 * jnp.einsum("bokw,bxkw->box", f_c_hat, bases_c) - 2 * jnp.einsum("bokw,bxkw->box", f_s_hat, bases_s)
+        x = (
+            jnp.einsum("bokw,bxkw->box", f_0_hat, bases_0)
+            + 2 * jnp.einsum("bokw,bxkw->box", f_c_hat, bases_c)
+            - 2 * jnp.einsum("bokw,bxkw->box", f_s_hat, bases_s)
+        )
 
         return x
 
@@ -261,7 +301,15 @@ class PCNO(eqx.Module):
         for i in range(length):
             in_ch = layers[i]
             out_ch = layers[i + 1]
-            sp_convs.append(SpectralConv(in_channels=in_ch, out_channels=out_ch, nmodes=self.nmodes, nmeasures=nmeasures, key=keys[key_idx]))
+            sp_convs.append(
+                SpectralConv(
+                    in_channels=in_ch,
+                    out_channels=out_ch,
+                    nmodes=self.nmodes,
+                    nmeasures=nmeasures,
+                    key=keys[key_idx],
+                )
+            )
             key_idx += 1
             ws.append(Linear(in_ch, out_ch, key=keys[key_idx]))
             key_idx += 1
@@ -308,7 +356,9 @@ class PCNO(eqx.Module):
         length = len(self.layers) - 1
 
         # Scale the modes
-        inv_L_scale = scaled_sigmoid(self.inv_L_scale_latent, self.inv_L_scale_min, self.inv_L_scale_max)
+        inv_L_scale = scaled_sigmoid(
+            self.inv_L_scale_latent, self.inv_L_scale_min, self.inv_L_scale_max
+        )
         scaled_modes = self.modes * inv_L_scale
 
         # Compute Fourier bases
@@ -326,7 +376,9 @@ class PCNO(eqx.Module):
         # Main layers
         for i in range(length):
             # Spectral convolution (integral operator K)
-            x1 = self.sp_convs[i](x, bases_c, bases_s, bases_0, wbases_c, wbases_s, wbases_0)
+            x1 = self.sp_convs[i](
+                x, bases_c, bases_s, bases_0, wbases_c, wbases_s, wbases_0
+            )
 
             # Linear transform (W) - replaces 1x1 conv
             # x: [batch, channels, nodes] -> transpose to [batch, nodes, channels],

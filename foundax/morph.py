@@ -367,7 +367,7 @@ def L(
 ti = Ti
 s = S
 m = M
-l = L
+l = L  # noqa: E741
 
 __all__ = ["Ti", "S", "M", "L", "ti", "s", "m", "l"]
 

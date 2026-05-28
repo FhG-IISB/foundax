@@ -2067,9 +2067,13 @@ class ScOT(eqx.Module):
         loss = None
         if labels is not None:
             if self.config.p == 1:
-                loss_fn = lambda pred, target: jnp.mean(jnp.abs(pred - target))
+
+                def loss_fn(pred, target):
+                    return jnp.mean(jnp.abs(pred - target))
             elif self.config.p == 2:
-                loss_fn = lambda pred, target: jnp.mean((pred - target) ** 2)
+
+                def loss_fn(pred, target):
+                    return jnp.mean((pred - target) ** 2)
             else:
                 raise ValueError("p must be 1 or 2")
 

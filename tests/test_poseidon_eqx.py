@@ -9,14 +9,14 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_poseidon")
 )
 
-from jax_poseidon.scot import ScOTConfig
-from jax_poseidon.scot_eqx import ScOT as EqxScOT
+from jax_poseidon.scot_eqx import ScOTConfig, ScOT as EqxScOT
 
 
 def _make_config(**overrides):
@@ -37,7 +37,7 @@ def _make_config(**overrides):
         hidden_dropout_prob=0.0,
         attention_probs_dropout_prob=0.0,
         drop_path_rate=0.0,
-        hidden_act="gelu",
+        hidden_act=jax.nn.gelu,
         use_absolute_embeddings=False,
         initializer_range=0.02,
         layer_norm_eps=1e-5,

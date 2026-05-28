@@ -8,7 +8,7 @@ so that weights can be transferred 1-to-1.
 from __future__ import annotations
 
 import math
-from typing import Optional, Tuple
+from typing import Optional
 
 import equinox as eqx
 import jax
@@ -352,7 +352,6 @@ class hMLP_output(eqx.Module):
 
     def __call__(self, x: jnp.ndarray, state_labels: jnp.ndarray) -> jnp.ndarray:
         """x: (B, H', W', embed_dim) -> (B, H, W, n_out)."""
-        q = self.embed_dim // 4
 
         def _ct_single(xi):
             xi = xi.transpose(2, 0, 1)  # (C, H, W)
@@ -468,7 +467,6 @@ class AttentionBlock(eqx.Module):
     def __call__(self, x: jnp.ndarray, deterministic: bool = True) -> jnp.ndarray:
         """x: (T, B, H, W, C) -> (T, B, H, W, C)."""
         T, B, H, W, C = x.shape
-        head_dim = C // self.num_heads
         residual = x
 
         # Pre-norm
@@ -596,7 +594,6 @@ class AxialAttentionBlock(eqx.Module):
     ) -> jnp.ndarray:
         """x: (B, H, W, C) -> (B, H, W, C)."""
         B, H, W, C = x.shape
-        head_dim = C // self.num_heads
 
         # --- Attention branch ---
         residual = x

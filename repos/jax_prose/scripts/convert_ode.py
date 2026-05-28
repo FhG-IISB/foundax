@@ -21,7 +21,9 @@ def _strip_prefix(k: str) -> str:
 
 def _flatten_state(ckpt: dict) -> dict[str, torch.Tensor]:
     if isinstance(ckpt, dict) and "model" in ckpt and isinstance(ckpt["model"], dict):
-        return {_strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)}
+        return {
+            _strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)
+        }
 
     out: dict[str, torch.Tensor] = {}
     if isinstance(ckpt, dict) and all(isinstance(v, dict) for v in ckpt.values()):
@@ -46,9 +48,15 @@ def _map_attn(rest: str, base: list[str], params, a) -> bool:
     if m:
         i = int(m.group(1))
         q, k, v = a.reshape(3, a.shape[0] // 3, a.shape[1])
-        _set_param(params, base + [f"attentions_{i}", "q_proj", "kernel"], jnp.asarray(q.T))
-        _set_param(params, base + [f"attentions_{i}", "k_proj", "kernel"], jnp.asarray(k.T))
-        _set_param(params, base + [f"attentions_{i}", "v_proj", "kernel"], jnp.asarray(v.T))
+        _set_param(
+            params, base + [f"attentions_{i}", "q_proj", "kernel"], jnp.asarray(q.T)
+        )
+        _set_param(
+            params, base + [f"attentions_{i}", "k_proj", "kernel"], jnp.asarray(k.T)
+        )
+        _set_param(
+            params, base + [f"attentions_{i}", "v_proj", "kernel"], jnp.asarray(v.T)
+        )
         return True
 
     m = re.match(r"attentions\.(\d+)\.attn\.in_proj_bias$", rest)
@@ -66,7 +74,12 @@ def _map_attn(rest: str, base: list[str], params, a) -> bool:
         field = m.group(2)
         _set_param(
             params,
-            base + [f"attentions_{i}", "out_proj", "kernel" if field == "weight" else "bias"],
+            base
+            + [
+                f"attentions_{i}",
+                "out_proj",
+                "kernel" if field == "weight" else "bias",
+            ],
             jnp.asarray(a.T if field == "weight" else a),
         )
         return True
@@ -94,7 +107,8 @@ def _map_ffn(rest: str, base: list[str], params, a) -> bool:
         field = m.group(3)
         _set_param(
             params,
-            base + [f"ffns_{i}", f"midlin_{j}", "kernel" if field == "weight" else "bias"],
+            base
+            + [f"ffns_{i}", f"midlin_{j}", "kernel" if field == "weight" else "bias"],
             jnp.asarray(a.T if field == "weight" else a),
         )
         return True
@@ -137,7 +151,9 @@ def _map_norms(rest: str, base: list[str], params, a) -> bool:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Convert PROSE-ODE checkpoint to JAX msgpack")
+    ap = argparse.ArgumentParser(
+        description="Convert PROSE-ODE checkpoint to JAX msgpack"
+    )
     ap.add_argument("--input", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--n-words", type=int, default=-1)
@@ -173,7 +189,9 @@ def main():
     text = jnp.zeros((args.text_len, 1), dtype=jnp.int32)
     text_lengths = jnp.asarray([args.text_len], dtype=jnp.int32)
 
-    variables = model.init({"params": rng}, x, data_lengths, query_times, text, text_lengths)
+    variables = model.init(
+        {"params": rng}, x, data_lengths, query_times, text, text_lengths
+    )
     params = unfreeze(variables["params"])
 
     unknown = []
@@ -200,12 +218,18 @@ def main():
             continue
 
         if k == "text_encoder.embeddings.weight":
-            _set_param(params, ["text_encoder", "embeddings", "embedding"], jnp.asarray(a))
+            _set_param(
+                params, ["text_encoder", "embeddings", "embedding"], jnp.asarray(a)
+            )
             handled.add(k)
             continue
         if k == "text_encoder.position_embeddings.weight":
             if "position_embeddings" in params["text_encoder"]:
-                _set_param(params, ["text_encoder", "position_embeddings", "embedding"], jnp.asarray(a))
+                _set_param(
+                    params,
+                    ["text_encoder", "position_embeddings", "embedding"],
+                    jnp.asarray(a),
+                )
             handled.add(k)
             continue
         if k.startswith("text_encoder."):
@@ -222,7 +246,11 @@ def main():
 
         if k == "data_encoder.position_embeddings.weight":
             if "position_embeddings" in params["data_encoder"]:
-                _set_param(params, ["data_encoder", "position_embeddings", "embedding"], jnp.asarray(a))
+                _set_param(
+                    params,
+                    ["data_encoder", "position_embeddings", "embedding"],
+                    jnp.asarray(a),
+                )
             handled.add(k)
             continue
         if k.startswith("data_encoder."):
@@ -238,7 +266,9 @@ def main():
                 continue
 
         if k == "fusion.type_embeddings.weight":
-            _set_param(params, ["fusion", "type_embeddings", "embedding"], jnp.asarray(a))
+            _set_param(
+                params, ["fusion", "type_embeddings", "embedding"], jnp.asarray(a)
+            )
             handled.add(k)
             continue
         if k.startswith("fusion."):
@@ -254,16 +284,24 @@ def main():
                 continue
 
         if k == "data_decoder.query_embedder.weight":
-            _set_param(params, ["data_decoder", "query_embedder", "kernel"], jnp.asarray(a.T))
+            _set_param(
+                params, ["data_decoder", "query_embedder", "kernel"], jnp.asarray(a.T)
+            )
             handled.add(k)
             continue
         if k == "data_decoder.query_embedder.bias":
-            _set_param(params, ["data_decoder", "query_embedder", "bias"], jnp.asarray(a))
+            _set_param(
+                params, ["data_decoder", "query_embedder", "bias"], jnp.asarray(a)
+            )
             handled.add(k)
             continue
         if k == "data_decoder.position_embeddings.weight":
             if "position_embeddings" in params["data_decoder"]:
-                _set_param(params, ["data_decoder", "position_embeddings", "embedding"], jnp.asarray(a))
+                _set_param(
+                    params,
+                    ["data_decoder", "position_embeddings", "embedding"],
+                    jnp.asarray(a),
+                )
             handled.add(k)
             continue
         if k.startswith("data_decoder."):
@@ -276,18 +314,42 @@ def main():
             if m:
                 i = int(m.group(1))
                 q, kk, vv = a.reshape(3, a.shape[0] // 3, a.shape[1])
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "q_proj", "kernel"], jnp.asarray(q.T))
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "k_proj", "kernel"], jnp.asarray(kk.T))
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "v_proj", "kernel"], jnp.asarray(vv.T))
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "q_proj", "kernel"],
+                    jnp.asarray(q.T),
+                )
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "k_proj", "kernel"],
+                    jnp.asarray(kk.T),
+                )
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "v_proj", "kernel"],
+                    jnp.asarray(vv.T),
+                )
                 handled.add(k)
                 continue
             m = re.match(r"encoder_attn\.(\d+)\.attn\.in_proj_bias$", rest)
             if m:
                 i = int(m.group(1))
                 q, kk, vv = a.reshape(3, a.shape[0] // 3)
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "q_proj", "bias"], jnp.asarray(q))
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "k_proj", "bias"], jnp.asarray(kk))
-                _set_param(params, ["data_decoder", f"encoder_attn_{i}", "v_proj", "bias"], jnp.asarray(vv))
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "q_proj", "bias"],
+                    jnp.asarray(q),
+                )
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "k_proj", "bias"],
+                    jnp.asarray(kk),
+                )
+                _set_param(
+                    params,
+                    ["data_decoder", f"encoder_attn_{i}", "v_proj", "bias"],
+                    jnp.asarray(vv),
+                )
                 handled.add(k)
                 continue
             m = re.match(r"encoder_attn\.(\d+)\.attn\.out_proj\.(weight|bias)$", rest)
@@ -296,7 +358,12 @@ def main():
                 field = m.group(2)
                 _set_param(
                     params,
-                    ["data_decoder", f"encoder_attn_{i}", "out_proj", "kernel" if field == "weight" else "bias"],
+                    [
+                        "data_decoder",
+                        f"encoder_attn_{i}",
+                        "out_proj",
+                        "kernel" if field == "weight" else "bias",
+                    ],
                     jnp.asarray(a.T if field == "weight" else a),
                 )
                 handled.add(k)
@@ -311,7 +378,11 @@ def main():
                 field = m.group(2)
                 _set_param(
                     params,
-                    ["data_decoder", f"layer_norm15_{i}", "scale" if field == "weight" else "bias"],
+                    [
+                        "data_decoder",
+                        f"layer_norm15_{i}",
+                        "scale" if field == "weight" else "bias",
+                    ],
                     jnp.asarray(a),
                 )
                 handled.add(k)
@@ -328,35 +399,59 @@ def main():
                 handled.add(k)
                 continue
             if rest == "data_embedder.0.weight":
-                _set_param(params, ["data_decoder", "data_embedder_0", "kernel"], jnp.asarray(a.T))
+                _set_param(
+                    params,
+                    ["data_decoder", "data_embedder_0", "kernel"],
+                    jnp.asarray(a.T),
+                )
                 handled.add(k)
                 continue
             if rest == "data_embedder.0.bias":
-                _set_param(params, ["data_decoder", "data_embedder_0", "bias"], jnp.asarray(a))
+                _set_param(
+                    params, ["data_decoder", "data_embedder_0", "bias"], jnp.asarray(a)
+                )
                 handled.add(k)
                 continue
             if rest == "data_embedder.2.weight":
-                _set_param(params, ["data_decoder", "data_embedder_2", "kernel"], jnp.asarray(a.T))
+                _set_param(
+                    params,
+                    ["data_decoder", "data_embedder_2", "kernel"],
+                    jnp.asarray(a.T),
+                )
                 handled.add(k)
                 continue
             if rest == "data_embedder.2.bias":
-                _set_param(params, ["data_decoder", "data_embedder_2", "bias"], jnp.asarray(a))
+                _set_param(
+                    params, ["data_decoder", "data_embedder_2", "bias"], jnp.asarray(a)
+                )
                 handled.add(k)
                 continue
             if rest == "text_embedder.0.weight":
-                _set_param(params, ["data_decoder", "text_embedder_0", "kernel"], jnp.asarray(a.T))
+                _set_param(
+                    params,
+                    ["data_decoder", "text_embedder_0", "kernel"],
+                    jnp.asarray(a.T),
+                )
                 handled.add(k)
                 continue
             if rest == "text_embedder.0.bias":
-                _set_param(params, ["data_decoder", "text_embedder_0", "bias"], jnp.asarray(a))
+                _set_param(
+                    params, ["data_decoder", "text_embedder_0", "bias"], jnp.asarray(a)
+                )
                 handled.add(k)
                 continue
             if rest == "text_embedder.2.weight":
-                _set_param(params, ["data_decoder", "text_embedder_2", "kernel"], jnp.asarray(a.T))
+                _set_param(
+                    params,
+                    ["data_decoder", "text_embedder_2", "kernel"],
+                    jnp.asarray(a.T),
+                )
                 handled.add(k)
                 continue
             if rest == "text_embedder.2.bias":
-                _set_param(params, ["data_decoder", "text_embedder_2", "bias"], jnp.asarray(a))
+                _set_param(
+                    params, ["data_decoder", "text_embedder_2", "bias"], jnp.asarray(a)
+                )
                 handled.add(k)
                 continue
 

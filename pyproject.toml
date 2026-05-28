@@ -26,14 +26,31 @@ include-package-data = false
 include = ["foundax*", "jax_bcat*", "jax_dpot*", "jax_morph*", "jax_mpp*", "jax_pdeformer2*", "jax_poseidon*", "jax_prose*", "jax_walrus*"]
 where = [".", "repos/jax_bcat", "repos/jax_dpot", "repos/jax_morph", "repos/jax_mpp", "repos/jax_pdeformer2", "repos/jax_poseidon", "repos/jax_prose", "repos/jax_walrus"]
 
-[dependency-groups]
-dev = [
-    "pytest>=9.0.3",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["repos", ".venv", "build", "dist"]
 markers = [
     "heavy: slow integration tests for large model construction and single-step autodiff",
 ]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+foundax = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+
+[tool.pixi.tasks]
+lint = "ruff check . --fix"
+test = "pytest -x --tb=short"
+# CI tasks: read-only (no auto-fix) and skip slow tests
+ci-fmt = "ruff format --check ."
+ci-lint = "ruff check ."
+ci-test = "pytest -x --tb=short -m 'not slow'"
+
+[tool.pixi.dependencies]
+pytest = ">=9.0.3,<10"
+ruff = ">=0.9.0"

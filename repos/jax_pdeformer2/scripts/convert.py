@@ -21,8 +21,6 @@ import sys
 import textwrap
 from pathlib import Path
 
-import numpy as np
-import jax.numpy as jnp
 from flax import serialization
 from flax.core import unfreeze
 
@@ -125,9 +123,9 @@ def npz_to_msgpack(npz_path: Path, msgpack_path: Path, config: dict) -> None:
 
     n_loaded = len(jax.tree_util.tree_leaves(jax_params))
     n_ref = len(jax.tree_util.tree_leaves(ref_params))
-    assert (
-        n_loaded == n_ref
-    ), f"Leaf count mismatch after pruning: {n_loaded} vs {n_ref}"
+    assert n_loaded == n_ref, (
+        f"Leaf count mismatch after pruning: {n_loaded} vs {n_ref}"
+    )
     print(f"    Leaves: {n_loaded}")
 
     # Count total elements
@@ -158,9 +156,9 @@ if __name__ == "__main__":
             print(f"[skip] {ckpt_path.name} not found")
             continue
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f" {stem}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Stage 1: .ckpt → .npz  (MindSpore subprocess)
         ckpt_to_npz(ckpt_path, npz_path)

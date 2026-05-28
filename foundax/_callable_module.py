@@ -5,13 +5,16 @@ import types
 
 
 def install(module_name, call_fn):
-    """Replace *module_name* in ``sys.modules`` with a callable version."""
-    old = sys.modules[module_name]
+    """Make *module_name* callable — mutates the existing module in-place.
+
+    Changing ``__class__`` preserves the module's ``__dict__`` object so that
+    function ``__globals__`` references (and ``unittest.mock.patch.object``
+    patches) continue to work correctly.
+    """
+    mod = sys.modules[module_name]
 
     class _Mod(types.ModuleType):
         def __call__(self, **kwargs):
             return call_fn(**kwargs)
 
-    new = _Mod(module_name, old.__doc__)
-    new.__dict__.update(old.__dict__)
-    sys.modules[module_name] = new
+    mod.__class__ = _Mod

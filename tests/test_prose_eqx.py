@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_prose"))
 
@@ -91,7 +92,9 @@ class TestPROSE1to1:
             return jnp.mean(m(data, tin, tout, deterministic=True) ** 2)
 
         grads = loss_fn(model)
-        leaves = [l for l in jax.tree_util.tree_leaves(grads) if eqx.is_array(l)]
+        leaves = [
+            leaf for leaf in jax.tree_util.tree_leaves(grads) if eqx.is_array(leaf)
+        ]
         assert any(jnp.any(g != 0) for g in leaves)
 
 
@@ -153,7 +156,9 @@ class TestPROSE2to1:
             return jnp.mean(m(data, tin, tout, sym, sym_mask) ** 2)
 
         grads = loss_fn(model)
-        leaves = [l for l in jax.tree_util.tree_leaves(grads) if eqx.is_array(l)]
+        leaves = [
+            leaf for leaf in jax.tree_util.tree_leaves(grads) if eqx.is_array(leaf)
+        ]
         assert any(jnp.any(g != 0) for g in leaves)
 
 
@@ -211,7 +216,9 @@ class TestPROSEODE2to1:
             return jnp.mean(m(data, data_len, query, text, text_len) ** 2)
 
         grads = loss_fn(model)
-        leaves = [l for l in jax.tree_util.tree_leaves(grads) if eqx.is_array(l)]
+        leaves = [
+            leaf for leaf in jax.tree_util.tree_leaves(grads) if eqx.is_array(leaf)
+        ]
         assert any(jnp.any(g != 0) for g in leaves)
 
 
@@ -272,5 +279,7 @@ class TestPROSEPDE2to1:
             return jnp.mean(m(data, data_len, query, text, text_len) ** 2)
 
         grads = loss_fn(model)
-        leaves = [l for l in jax.tree_util.tree_leaves(grads) if eqx.is_array(l)]
+        leaves = [
+            leaf for leaf in jax.tree_util.tree_leaves(grads) if eqx.is_array(leaf)
+        ]
         assert any(jnp.any(g != 0) for g in leaves)

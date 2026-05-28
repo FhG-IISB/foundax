@@ -10,20 +10,24 @@ validates the mapping, and saves as msgpack.
 
 import argparse
 import os
-import sys
 
 import numpy as np
 import jax
 import jax.numpy as jnp
 from flax.serialization import to_bytes, from_bytes
 
-from jax_morph import ViT3DRegression, load_pytorch_state_dict, convert_pytorch_to_jax_params
+from jax_morph import (
+    ViT3DRegression,
+    load_pytorch_state_dict,
+    convert_pytorch_to_jax_params,
+)
 from jax_morph.configs import MORPH_CONFIGS as MORPH_MODELS
 
 
 def flatten_params(d, prefix=""):
     """Flatten nested dict to list of (path, array) tuples."""
     from flax.core import FrozenDict
+
     if isinstance(d, FrozenDict):
         d = dict(d)
     result = []
@@ -37,11 +41,25 @@ def flatten_params(d, prefix=""):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert MORPH PyTorch weights to JAX msgpack")
-    parser.add_argument("--input", "-i", required=True, help="Path to PyTorch checkpoint (.pth)")
-    parser.add_argument("--output", "-o", default=None, help="Output msgpack path (default: <input>.msgpack)")
-    parser.add_argument("--model-size", "-m", choices=list(MORPH_MODELS.keys()), default="Ti",
-                        help="Model variant (Ti, S, M, L)")
+    parser = argparse.ArgumentParser(
+        description="Convert MORPH PyTorch weights to JAX msgpack"
+    )
+    parser.add_argument(
+        "--input", "-i", required=True, help="Path to PyTorch checkpoint (.pth)"
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Output msgpack path (default: <input>.msgpack)",
+    )
+    parser.add_argument(
+        "--model-size",
+        "-m",
+        choices=list(MORPH_MODELS.keys()),
+        default="Ti",
+        help="Model variant (Ti, S, M, L)",
+    )
     args = parser.parse_args()
 
     if args.output is None:
@@ -77,7 +95,7 @@ def main():
     rng = jax.random.PRNGKey(0)
     dummy = jnp.zeros((1, 1, 1, 1, 8, 8, 8))
     jax_params = model.init(rng, dummy, deterministic=True)
-    print(f"  JAX model initialized")
+    print("  JAX model initialized")
 
     # ── Convert weights ──
     print("Converting PyTorch weights to JAX...")
@@ -117,7 +135,9 @@ def main():
     loaded = from_bytes(converted, loaded_bytes)
 
     loaded_flat = flatten_params(loaded["params"])
-    assert len(loaded_flat) == n_jax, f"Mismatch: saved {n_jax}, loaded {len(loaded_flat)}"
+    assert len(loaded_flat) == n_jax, (
+        f"Mismatch: saved {n_jax}, loaded {len(loaded_flat)}"
+    )
 
     max_diff = 0.0
     for (orig_path, orig_arr), (load_path, load_arr) in zip(jax_flat, loaded_flat):

@@ -11,7 +11,6 @@ loaded with ``flax.serialization.from_bytes()``.
 
 import argparse
 import os
-import sys
 
 import numpy as np
 
@@ -163,9 +162,9 @@ def main():
 
     loaded = from_bytes(jax_params_jnp, loaded_bytes)
     loaded_flat = flatten_params(loaded["params"])
-    assert (
-        len(loaded_flat) == n_jax
-    ), f"Mismatch: saved {n_jax}, loaded {len(loaded_flat)}"
+    assert len(loaded_flat) == n_jax, (
+        f"Mismatch: saved {n_jax}, loaded {len(loaded_flat)}"
+    )
 
     max_diff = 0.0
     for (orig_path, orig_arr), (load_path, load_arr) in zip(jax_flat, loaded_flat):

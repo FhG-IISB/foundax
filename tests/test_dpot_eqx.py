@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_dpot"))
 
@@ -30,7 +31,7 @@ _KWARGS = dict(
     mlp_ratio=1.0,
     n_cls=4,
     normalize=False,
-    act="gelu",
+    act=jax.nn.gelu,
     time_agg="exp_mlp",
 )
 

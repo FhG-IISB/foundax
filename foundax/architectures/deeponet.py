@@ -4,7 +4,7 @@ import equinox as eqx
 from .linear import Linear
 import jax
 import jax.numpy as jnp
-from typing import Callable, Optional, Sequence, Literal
+from typing import Callable, Optional
 from einops import repeat
 from .common import BatchNorm
 
@@ -23,7 +23,18 @@ class MLPBlock(eqx.Module):
     norm: Optional[str] = eqx.field(static=True)
     dropout_rate: float = eqx.field(static=True)
 
-    def __init__(self, in_features, features, activation=jax.nn.gelu, norm=None, dropout_rate=0.0, use_bias=True, *, key, **kwargs):
+    def __init__(
+        self,
+        in_features,
+        features,
+        activation=jax.nn.gelu,
+        norm=None,
+        dropout_rate=0.0,
+        use_bias=True,
+        *,
+        key,
+        **kwargs,
+    ):
         self.dense = Linear(in_features, features, use_bias=use_bias, key=key)
         self.activation = activation
         self.norm = norm
@@ -57,11 +68,40 @@ class DeepONetMLP(eqx.Module):
     output_layer: Linear
     output_activation: Optional[Callable] = eqx.field(static=True)
 
-    def __init__(self, in_features, hidden_dims, output_dim, activation=jax.nn.gelu, output_activation=None, norm=None, dropout_rate=0.0, use_bias=True, *, key, **kwargs):
+    def __init__(
+        self,
+        in_features,
+        hidden_dims,
+        output_dim,
+        activation=jax.nn.gelu,
+        output_activation=None,
+        norm=None,
+        dropout_rate=0.0,
+        use_bias=True,
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, len(hidden_dims) + 1)
         dims = [in_features] + list(hidden_dims)
-        self.blocks = [MLPBlock(dims[i], dims[i + 1], activation=activation, norm=norm, dropout_rate=dropout_rate, use_bias=use_bias, key=keys[i]) for i in range(len(hidden_dims))]
-        self.output_layer = Linear(hidden_dims[-1] if hidden_dims else in_features, output_dim, use_bias=use_bias, key=keys[-1])
+        self.blocks = [
+            MLPBlock(
+                dims[i],
+                dims[i + 1],
+                activation=activation,
+                norm=norm,
+                dropout_rate=dropout_rate,
+                use_bias=use_bias,
+                key=keys[i],
+            )
+            for i in range(len(hidden_dims))
+        ]
+        self.output_layer = Linear(
+            hidden_dims[-1] if hidden_dims else in_features,
+            output_dim,
+            use_bias=use_bias,
+            key=keys[-1],
+        )
         self.output_activation = output_activation
 
     def __call__(self, x, *, key=None, **kwargs):
@@ -87,11 +127,32 @@ class ResidualBlock(eqx.Module):
     activation: Callable = eqx.field(static=True)
     norm: Optional[str] = eqx.field(static=True)
 
-    def __init__(self, in_features, features, activation=jax.nn.gelu, norm="layer", dropout_rate=0.0, *, key, **kwargs):
+    def __init__(
+        self,
+        in_features,
+        features,
+        activation=jax.nn.gelu,
+        norm="layer",
+        dropout_rate=0.0,
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
-        self.mlp_block = MLPBlock(in_features, features, activation=activation, norm=norm, dropout_rate=dropout_rate, key=k1)
+        self.mlp_block = MLPBlock(
+            in_features,
+            features,
+            activation=activation,
+            norm=norm,
+            dropout_rate=dropout_rate,
+            key=k1,
+        )
         self.dense = Linear(features, features, key=k2)
-        self.proj = Linear(in_features, features, use_bias=False, key=k3) if in_features != features else None
+        self.proj = (
+            Linear(in_features, features, use_bias=False, key=k3)
+            if in_features != features
+            else None
+        )
         self.activation = activation
         self.norm = norm
 
@@ -120,10 +181,33 @@ class ResMLP(eqx.Module):
     activation: Callable = eqx.field(static=True)
     output_activation: Optional[Callable] = eqx.field(static=True)
 
-    def __init__(self, in_features, hidden_dim, output_dim, n_blocks=4, activation=jax.nn.gelu, output_activation=None, norm="layer", dropout_rate=0.0, *, key, **kwargs):
+    def __init__(
+        self,
+        in_features,
+        hidden_dim,
+        output_dim,
+        n_blocks=4,
+        activation=jax.nn.gelu,
+        output_activation=None,
+        norm="layer",
+        dropout_rate=0.0,
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, n_blocks + 2)
         self.initial_proj = Linear(in_features, hidden_dim, key=keys[0])
-        self.blocks = [ResidualBlock(hidden_dim, hidden_dim, activation=activation, norm=norm, dropout_rate=dropout_rate, key=keys[i + 1]) for i in range(n_blocks)]
+        self.blocks = [
+            ResidualBlock(
+                hidden_dim,
+                hidden_dim,
+                activation=activation,
+                norm=norm,
+                dropout_rate=dropout_rate,
+                key=keys[i + 1],
+            )
+            for i in range(n_blocks)
+        ]
         self.output_proj = Linear(hidden_dim, output_dim, key=keys[-1])
         self.activation = activation
         self.output_activation = output_activation
@@ -148,17 +232,24 @@ class FourierFeatures(eqx.Module):
     B: jnp.ndarray
     learnable: bool = eqx.field(static=True)
 
-    def __init__(self, input_dim, n_features=64, scale=1.0, learnable=False, *, key, **kwargs):
+    def __init__(
+        self, input_dim, n_features=64, scale=1.0, learnable=False, *, key, **kwargs
+    ):
         self.learnable = learnable
         if learnable:
             self.B = jax.random.normal(key, (input_dim, n_features)) * scale
         else:
-            self.B = jax.random.normal(jax.random.PRNGKey(0), (input_dim, n_features)) * scale
+            self.B = (
+                jax.random.normal(jax.random.PRNGKey(0), (input_dim, n_features))
+                * scale
+            )
 
     def __call__(self, x, **kwargs):
         B = self.B if self.learnable else jax.lax.stop_gradient(self.B)
         x_proj = x @ B
-        return jnp.concatenate([jnp.sin(2 * jnp.pi * x_proj), jnp.cos(2 * jnp.pi * x_proj)], axis=-1)
+        return jnp.concatenate(
+            [jnp.sin(2 * jnp.pi * x_proj), jnp.cos(2 * jnp.pi * x_proj)], axis=-1
+        )
 
 
 class PositionalEncoding(eqx.Module):
@@ -181,7 +272,9 @@ class PositionalEncoding(eqx.Module):
         encodings = []
         for i in range(input_dim):
             pos = x[..., i : i + 1]
-            div_term = jnp.exp(jnp.arange(0, d_per_dim, 2) * (-jnp.log(self.base) / d_per_dim))
+            div_term = jnp.exp(
+                jnp.arange(0, d_per_dim, 2) * (-jnp.log(self.base) / d_per_dim)
+            )
             pe = jnp.zeros((*x.shape[:-1], d_per_dim))
             pe = pe.at[..., 0::2].set(jnp.sin(pos * div_term))
             pe = pe.at[..., 1::2].set(jnp.cos(pos * div_term))
@@ -201,7 +294,9 @@ class AttentionBlock(eqx.Module):
     head_dim: int = eqx.field(static=True)
     dropout_rate: float = eqx.field(static=True)
 
-    def __init__(self, in_features, n_heads=8, head_dim=64, dropout_rate=0.0, *, key, **kwargs):
+    def __init__(
+        self, in_features, n_heads=8, head_dim=64, dropout_rate=0.0, *, key, **kwargs
+    ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         qkv_features = n_heads * head_dim
         self.q_proj = Linear(in_features, qkv_features, key=k1)
@@ -220,8 +315,16 @@ class AttentionBlock(eqx.Module):
         B, T, _ = x.shape
         vv = jax.vmap(jax.vmap(self.q_proj))
         q = vv(x).reshape(B, T, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
-        k = jax.vmap(jax.vmap(self.k_proj))(x).reshape(B, T, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
-        v = jax.vmap(jax.vmap(self.v_proj))(x).reshape(B, T, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
+        k = (
+            jax.vmap(jax.vmap(self.k_proj))(x)
+            .reshape(B, T, self.n_heads, self.head_dim)
+            .transpose(0, 2, 1, 3)
+        )
+        v = (
+            jax.vmap(jax.vmap(self.v_proj))(x)
+            .reshape(B, T, self.n_heads, self.head_dim)
+            .transpose(0, 2, 1, 3)
+        )
 
         scale = jnp.sqrt(jnp.array(self.head_dim, dtype=x.dtype))
         attn = jnp.einsum("bhqd,bhkd->bhqk", q, k) / scale
@@ -248,12 +351,29 @@ class TransformerBlock(eqx.Module):
     dropout_rate: float = eqx.field(static=True)
     d_model: int = eqx.field(static=True)
 
-    def __init__(self, d_model, n_heads=8, mlp_ratio=4.0, dropout_rate=0.0, activation=jax.nn.gelu, norm="layer", *, key, **kwargs):
+    def __init__(
+        self,
+        d_model,
+        n_heads=8,
+        mlp_ratio=4.0,
+        dropout_rate=0.0,
+        activation=jax.nn.gelu,
+        norm="layer",
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.d_model = d_model
         self.norm1 = eqx.nn.LayerNorm(d_model)
         self.norm2 = eqx.nn.LayerNorm(d_model)
-        self.attn = AttentionBlock(d_model, n_heads=n_heads, head_dim=d_model // n_heads, dropout_rate=dropout_rate, key=k1)
+        self.attn = AttentionBlock(
+            d_model,
+            n_heads=n_heads,
+            head_dim=d_model // n_heads,
+            dropout_rate=dropout_rate,
+            key=k1,
+        )
         mlp_dim = int(d_model * mlp_ratio)
         self.ffn1 = Linear(d_model, mlp_dim, key=k2)
         self.ffn2 = Linear(mlp_dim, d_model, key=k3)
@@ -311,8 +431,27 @@ class BranchMLP(eqx.Module):
 
     mlp: DeepONetMLP
 
-    def __init__(self, in_features, hidden_dims, output_dim, activation=jax.nn.gelu, norm=None, dropout_rate=0.0, *, key, **kwargs):
-        self.mlp = DeepONetMLP(in_features, hidden_dims, output_dim, activation=activation, norm=norm, dropout_rate=dropout_rate, key=key)
+    def __init__(
+        self,
+        in_features,
+        hidden_dims,
+        output_dim,
+        activation=jax.nn.gelu,
+        norm=None,
+        dropout_rate=0.0,
+        *,
+        key,
+        **kwargs,
+    ):
+        self.mlp = DeepONetMLP(
+            in_features,
+            hidden_dims,
+            output_dim,
+            activation=activation,
+            norm=norm,
+            dropout_rate=dropout_rate,
+            key=key,
+        )
 
     def __call__(self, u, *, key=None, **kwargs):
         x = u.reshape(-1)
@@ -324,8 +463,29 @@ class BranchResMLP(eqx.Module):
 
     resmlp: ResMLP
 
-    def __init__(self, in_features, hidden_dim, output_dim, n_blocks=4, activation=jax.nn.gelu, norm="layer", dropout_rate=0.0, *, key, **kwargs):
-        self.resmlp = ResMLP(in_features, hidden_dim, output_dim, n_blocks=n_blocks, activation=activation, norm=norm, dropout_rate=dropout_rate, key=key)
+    def __init__(
+        self,
+        in_features,
+        hidden_dim,
+        output_dim,
+        n_blocks=4,
+        activation=jax.nn.gelu,
+        norm="layer",
+        dropout_rate=0.0,
+        *,
+        key,
+        **kwargs,
+    ):
+        self.resmlp = ResMLP(
+            in_features,
+            hidden_dim,
+            output_dim,
+            n_blocks=n_blocks,
+            activation=activation,
+            norm=norm,
+            dropout_rate=dropout_rate,
+            key=key,
+        )
 
     def __call__(self, u, *, key=None, **kwargs):
         x = u.reshape(-1)
@@ -340,12 +500,28 @@ class Conv1dCL(eqx.Module):
     kernel_size: int = eqx.field(static=True)
     padding: str = eqx.field(static=True)
 
-    def __init__(self, in_channels, out_channels, kernel_size=3, padding="SAME", use_bias=True, *, key, **kwargs):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        padding="SAME",
+        use_bias=True,
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2 = jax.random.split(key)
         fan_in = in_channels * kernel_size
         std = 1.0 / jnp.sqrt(fan_in)
-        self.weight = jax.random.uniform(k1, (kernel_size, in_channels, out_channels), minval=-std, maxval=std)
-        self.bias = jax.random.uniform(k2, (out_channels,), minval=-std, maxval=std) if use_bias else None
+        self.weight = jax.random.uniform(
+            k1, (kernel_size, in_channels, out_channels), minval=-std, maxval=std
+        )
+        self.bias = (
+            jax.random.uniform(k2, (out_channels,), minval=-std, maxval=std)
+            if use_bias
+            else None
+        )
         self.kernel_size = kernel_size
         self.padding = padding
 
@@ -354,7 +530,13 @@ class Conv1dCL(eqx.Module):
         needs_squeeze = x.ndim == 2
         if needs_squeeze:
             x = x[jnp.newaxis, :, :]
-        out = jax.lax.conv_general_dilated(x, self.weight, window_strides=(1,), padding=self.padding, dimension_numbers=("NWC", "WIO", "NWC"))
+        out = jax.lax.conv_general_dilated(
+            x,
+            self.weight,
+            window_strides=(1,),
+            padding=self.padding,
+            dimension_numbers=("NWC", "WIO", "NWC"),
+        )
         if self.bias is not None:
             out = out + self.bias
         if needs_squeeze:
@@ -384,10 +566,25 @@ class BranchConv1D(eqx.Module):
     activation: Callable = eqx.field(static=True)
     pool_type: str = eqx.field(static=True)
 
-    def __init__(self, in_channels, channels, output_dim, kernel_size=3, activation=jax.nn.gelu, norm="batch", pool_type="avg", *, key, **kwargs):
+    def __init__(
+        self,
+        in_channels,
+        channels,
+        output_dim,
+        kernel_size=3,
+        activation=jax.nn.gelu,
+        norm="batch",
+        pool_type="avg",
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, len(channels) + 2)
         dims = [in_channels] + list(channels)
-        self.conv_layers = [Conv1dCL(dims[i], dims[i + 1], kernel_size=kernel_size, key=keys[i]) for i in range(len(channels))]
+        self.conv_layers = [
+            Conv1dCL(dims[i], dims[i + 1], kernel_size=kernel_size, key=keys[i])
+            for i in range(len(channels))
+        ]
         self.norm_layers = []
         for ch in channels:
             if norm == "batch":
@@ -398,7 +595,9 @@ class BranchConv1D(eqx.Module):
                 self.norm_layers.append(None)
 
         last_ch = channels[-1] if channels else in_channels
-        self.attn_dense = Linear(last_ch, 1, key=keys[-2]) if pool_type == "attention" else None
+        self.attn_dense = (
+            Linear(last_ch, 1, key=keys[-2]) if pool_type == "attention" else None
+        )
         self.output_dense = Linear(last_ch, output_dim, key=keys[-1])
         self.activation = activation
         self.pool_type = pool_type
@@ -437,16 +636,45 @@ class BranchTransformer(eqx.Module):
     output_proj: Linear
     pool_type: str = eqx.field(static=True)
 
-    def __init__(self, in_features, n_sensors, d_model, output_dim, n_layers=4, n_heads=8, mlp_ratio=4.0, dropout_rate=0.0, activation=jax.nn.gelu, pool_type="cls", *, key, **kwargs):
+    def __init__(
+        self,
+        in_features,
+        n_sensors,
+        d_model,
+        output_dim,
+        n_layers=4,
+        n_heads=8,
+        mlp_ratio=4.0,
+        dropout_rate=0.0,
+        activation=jax.nn.gelu,
+        pool_type="cls",
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, n_layers + 4)
         self.pool_type = pool_type
         self.input_proj = Linear(in_features, d_model, key=keys[0])
 
         seq_len = n_sensors + (1 if pool_type == "cls" else 0)
-        self.cls_token = jax.random.normal(keys[1], (1, d_model)) * 0.02 if pool_type == "cls" else None
+        self.cls_token = (
+            jax.random.normal(keys[1], (1, d_model)) * 0.02
+            if pool_type == "cls"
+            else None
+        )
         self.pos_embedding = jax.random.normal(keys[2], (seq_len, d_model)) * 0.02
 
-        self.blocks = [TransformerBlock(d_model, n_heads=n_heads, mlp_ratio=mlp_ratio, dropout_rate=dropout_rate, activation=activation, key=keys[i + 3]) for i in range(n_layers)]
+        self.blocks = [
+            TransformerBlock(
+                d_model,
+                n_heads=n_heads,
+                mlp_ratio=mlp_ratio,
+                dropout_rate=dropout_rate,
+                activation=activation,
+                key=keys[i + 3],
+            )
+            for i in range(n_layers)
+        ]
         self.output_proj = Linear(d_model, output_dim, key=keys[-1])
 
     def __call__(self, u, *, key=None, **kwargs):
@@ -488,11 +716,30 @@ class TrunkMLP(eqx.Module):
     embedding: object
     mlp: DeepONetMLP
 
-    def __init__(self, coord_dim, hidden_dims, output_dim, activation=jax.nn.gelu, norm=None, dropout_rate=0.0, coord_embedding=None, coord_embedding_dim=64, coord_embedding_scale=1.0, *, key, **kwargs):
+    def __init__(
+        self,
+        coord_dim,
+        hidden_dims,
+        output_dim,
+        activation=jax.nn.gelu,
+        norm=None,
+        dropout_rate=0.0,
+        coord_embedding=None,
+        coord_embedding_dim=64,
+        coord_embedding_scale=1.0,
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2 = jax.random.split(key)
         effective_dim = coord_dim
         if coord_embedding == "fourier":
-            self.embedding = FourierFeatures(coord_dim, n_features=coord_embedding_dim // 2, scale=coord_embedding_scale, key=k1)
+            self.embedding = FourierFeatures(
+                coord_dim,
+                n_features=coord_embedding_dim // 2,
+                scale=coord_embedding_scale,
+                key=k1,
+            )
             effective_dim = coord_dim + coord_embedding_dim
         elif coord_embedding == "positional":
             self.embedding = PositionalEncoding(d_model=coord_embedding_dim)
@@ -500,7 +747,15 @@ class TrunkMLP(eqx.Module):
         else:
             self.embedding = None
 
-        self.mlp = DeepONetMLP(effective_dim, hidden_dims, output_dim, activation=activation, norm=norm, dropout_rate=dropout_rate, key=k2)
+        self.mlp = DeepONetMLP(
+            effective_dim,
+            hidden_dims,
+            output_dim,
+            activation=activation,
+            norm=norm,
+            dropout_rate=dropout_rate,
+            key=k2,
+        )
 
     def __call__(self, y, *, key=None, **kwargs):
         single_point = y.ndim == 1
@@ -524,11 +779,31 @@ class TrunkResMLP(eqx.Module):
     embedding: object
     resmlp: ResMLP
 
-    def __init__(self, coord_dim, hidden_dim, output_dim, n_blocks=4, activation=jax.nn.gelu, norm="layer", dropout_rate=0.0, coord_embedding=None, coord_embedding_dim=64, coord_embedding_scale=1.0, *, key, **kwargs):
+    def __init__(
+        self,
+        coord_dim,
+        hidden_dim,
+        output_dim,
+        n_blocks=4,
+        activation=jax.nn.gelu,
+        norm="layer",
+        dropout_rate=0.0,
+        coord_embedding=None,
+        coord_embedding_dim=64,
+        coord_embedding_scale=1.0,
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2 = jax.random.split(key)
         effective_dim = coord_dim
         if coord_embedding == "fourier":
-            self.embedding = FourierFeatures(coord_dim, n_features=coord_embedding_dim // 2, scale=coord_embedding_scale, key=k1)
+            self.embedding = FourierFeatures(
+                coord_dim,
+                n_features=coord_embedding_dim // 2,
+                scale=coord_embedding_scale,
+                key=k1,
+            )
             effective_dim = coord_dim + coord_embedding_dim
         elif coord_embedding == "positional":
             self.embedding = PositionalEncoding(d_model=coord_embedding_dim)
@@ -536,7 +811,16 @@ class TrunkResMLP(eqx.Module):
         else:
             self.embedding = None
 
-        self.resmlp = ResMLP(effective_dim, hidden_dim, output_dim, n_blocks=n_blocks, activation=activation, norm=norm, dropout_rate=dropout_rate, key=k2)
+        self.resmlp = ResMLP(
+            effective_dim,
+            hidden_dim,
+            output_dim,
+            n_blocks=n_blocks,
+            activation=activation,
+            norm=norm,
+            dropout_rate=dropout_rate,
+            key=k2,
+        )
 
     def __call__(self, y, *, key=None, **kwargs):
         single_point = y.ndim == 1
@@ -563,7 +847,17 @@ class TrunkSIREN(eqx.Module):
     omega_0: float = eqx.field(static=True)
     omega_hidden: float = eqx.field(static=True)
 
-    def __init__(self, coord_dim, hidden_dims, output_dim, omega_0=30.0, omega_hidden=30.0, *, key, **kwargs):
+    def __init__(
+        self,
+        coord_dim,
+        hidden_dims,
+        output_dim,
+        omega_0=30.0,
+        omega_hidden=30.0,
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, len(hidden_dims) + 1)
         s0 = 1.0 / coord_dim
         k_w, k_rest = jax.random.split(keys[0])
@@ -572,7 +866,9 @@ class TrunkSIREN(eqx.Module):
         self.first_layer = eqx.tree_at(
             lambda m: m.weight,
             self.first_layer,
-            jax.random.uniform(k_w, self.first_layer.weight.shape, minval=-s0, maxval=s0),
+            jax.random.uniform(
+                k_w, self.first_layer.weight.shape, minval=-s0, maxval=s0
+            ),
         )
 
         self.hidden_layers = []
@@ -593,7 +889,9 @@ class TrunkSIREN(eqx.Module):
         self.output_layer = eqx.tree_at(
             lambda m: m.weight,
             self.output_layer,
-            jax.random.uniform(k_w3, self.output_layer.weight.shape, minval=-c_out, maxval=c_out),
+            jax.random.uniform(
+                k_w3, self.output_layer.weight.shape, minval=-c_out, maxval=c_out
+            ),
         )
 
         self.omega_0 = omega_0
@@ -663,7 +961,18 @@ class MLPCombination(eqx.Module):
     beta_proj: Optional[Linear]
     combination_mode: str = eqx.field(static=True)
 
-    def __init__(self, p_branch, p_trunk, hidden_dims=(128, 64), output_dim=1, activation=jax.nn.gelu, combination_mode="concat", *, key, **kwargs):
+    def __init__(
+        self,
+        p_branch,
+        p_trunk,
+        hidden_dims=(128, 64),
+        output_dim=1,
+        activation=jax.nn.gelu,
+        combination_mode="concat",
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.combination_mode = combination_mode
 
@@ -682,7 +991,9 @@ class MLPCombination(eqx.Module):
             self.gamma_proj = None
             self.beta_proj = None
 
-        self.mlp = DeepONetMLP(in_features, list(hidden_dims), output_dim, activation=activation, key=k1)
+        self.mlp = DeepONetMLP(
+            in_features, list(hidden_dims), output_dim, activation=activation, key=k1
+        )
 
     def __call__(self, branch_out, trunk_out, *, key=None, **kwargs):
         single_point = trunk_out.ndim == 1
@@ -720,7 +1031,9 @@ class CrossAttention(eqx.Module):
     n_heads: int = eqx.field(static=True)
     d_model: int = eqx.field(static=True)
 
-    def __init__(self, in_features_query, in_features_kv, d_model, n_heads=4, *, key, **kwargs):
+    def __init__(
+        self, in_features_query, in_features_kv, d_model, n_heads=4, *, key, **kwargs
+    ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.q_proj = Linear(in_features_query, d_model, key=k1)
         self.k_proj = Linear(in_features_kv, d_model, key=k2)
@@ -731,9 +1044,21 @@ class CrossAttention(eqx.Module):
 
     def __call__(self, query, kv, **kwargs):
         head_dim = self.d_model // self.n_heads
-        q = jax.vmap(self.q_proj)(query).reshape(-1, self.n_heads, head_dim).transpose(1, 0, 2)
-        k = jax.vmap(self.k_proj)(kv).reshape(-1, self.n_heads, head_dim).transpose(1, 0, 2)
-        v = jax.vmap(self.v_proj)(kv).reshape(-1, self.n_heads, head_dim).transpose(1, 0, 2)
+        q = (
+            jax.vmap(self.q_proj)(query)
+            .reshape(-1, self.n_heads, head_dim)
+            .transpose(1, 0, 2)
+        )
+        k = (
+            jax.vmap(self.k_proj)(kv)
+            .reshape(-1, self.n_heads, head_dim)
+            .transpose(1, 0, 2)
+        )
+        v = (
+            jax.vmap(self.v_proj)(kv)
+            .reshape(-1, self.n_heads, head_dim)
+            .transpose(1, 0, 2)
+        )
 
         scale = jnp.sqrt(jnp.array(head_dim, dtype=query.dtype))
         attn = jnp.einsum("hqd,hkd->hqk", q, k) / scale
@@ -751,11 +1076,15 @@ class AttentionCombination(eqx.Module):
     cross_attn: CrossAttention
     output_proj: Linear
 
-    def __init__(self, p_branch, p_trunk, d_model=128, n_heads=4, output_dim=1, *, key, **kwargs):
+    def __init__(
+        self, p_branch, p_trunk, d_model=128, n_heads=4, output_dim=1, *, key, **kwargs
+    ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.branch_proj = Linear(p_branch, d_model, key=k1)
         self.trunk_proj = Linear(p_trunk, d_model, key=k2)
-        self.cross_attn = CrossAttention(d_model, d_model, d_model, n_heads=n_heads, key=k3)
+        self.cross_attn = CrossAttention(
+            d_model, d_model, d_model, n_heads=n_heads, key=k3
+        )
         self.output_proj = Linear(d_model, output_dim, key=k4)
 
     def __call__(self, branch_out, trunk_out, **kwargs):
@@ -850,21 +1179,66 @@ class DeepONet(eqx.Module):
         # Build branch network
         if branch_type == "mlp":
             branch_in = n_sensors * sensor_channels
-            self.branch_net = BranchMLP(branch_in, branch_hidden_dims, p, activation=activation, norm=norm, dropout_rate=dropout_rate, key=k1)
+            self.branch_net = BranchMLP(
+                branch_in,
+                branch_hidden_dims,
+                p,
+                activation=activation,
+                norm=norm,
+                dropout_rate=dropout_rate,
+                key=k1,
+            )
         elif branch_type == "resmlp":
             branch_in = n_sensors * sensor_channels
-            self.branch_net = BranchResMLP(branch_in, branch_hidden_dim, p, n_blocks=branch_n_blocks, activation=activation, norm=norm, dropout_rate=dropout_rate, key=k1)
+            self.branch_net = BranchResMLP(
+                branch_in,
+                branch_hidden_dim,
+                p,
+                n_blocks=branch_n_blocks,
+                activation=activation,
+                norm=norm,
+                dropout_rate=dropout_rate,
+                key=k1,
+            )
         elif branch_type == "conv1d":
-            self.branch_net = BranchConv1D(sensor_channels, branch_channels, p, activation=activation, norm=norm, pool_type=branch_pool_type, key=k1)
+            self.branch_net = BranchConv1D(
+                sensor_channels,
+                branch_channels,
+                p,
+                activation=activation,
+                norm=norm,
+                pool_type=branch_pool_type,
+                key=k1,
+            )
         elif branch_type == "transformer":
-            self.branch_net = BranchTransformer(sensor_channels, n_sensors, branch_hidden_dim, p, n_layers=branch_n_layers, n_heads=branch_n_heads, dropout_rate=dropout_rate, activation=activation, pool_type=branch_pool_type, key=k1)
+            self.branch_net = BranchTransformer(
+                sensor_channels,
+                n_sensors,
+                branch_hidden_dim,
+                p,
+                n_layers=branch_n_layers,
+                n_heads=branch_n_heads,
+                dropout_rate=dropout_rate,
+                activation=activation,
+                pool_type=branch_pool_type,
+                key=k1,
+            )
         else:
             raise ValueError(f"Unknown branch_type: {branch_type}")
 
         # Build trunk network
         if trunk_type == "mlp":
             self.trunk_net = TrunkMLP(
-                coord_dim, trunk_hidden_dims, p, activation=activation, norm=norm, dropout_rate=dropout_rate, coord_embedding=coord_embedding, coord_embedding_dim=coord_embedding_dim, coord_embedding_scale=coord_embedding_scale, key=k2
+                coord_dim,
+                trunk_hidden_dims,
+                p,
+                activation=activation,
+                norm=norm,
+                dropout_rate=dropout_rate,
+                coord_embedding=coord_embedding,
+                coord_embedding_dim=coord_embedding_dim,
+                coord_embedding_scale=coord_embedding_scale,
+                key=k2,
             )
         elif trunk_type == "resmlp":
             self.trunk_net = TrunkResMLP(
@@ -881,7 +1255,14 @@ class DeepONet(eqx.Module):
                 key=k2,
             )
         elif trunk_type == "siren":
-            self.trunk_net = TrunkSIREN(coord_dim, trunk_hidden_dims, p, omega_0=trunk_omega_0, omega_hidden=trunk_omega_hidden, key=k2)
+            self.trunk_net = TrunkSIREN(
+                coord_dim,
+                trunk_hidden_dims,
+                p,
+                omega_0=trunk_omega_0,
+                omega_hidden=trunk_omega_hidden,
+                key=k2,
+            )
         else:
             raise ValueError(f"Unknown trunk_type: {trunk_type}")
 
@@ -891,9 +1272,24 @@ class DeepONet(eqx.Module):
         elif combination_type == "bilinear":
             self.combiner = BilinearCombination(p, output_dim=n_outputs, key=k3)
         elif combination_type == "mlp":
-            self.combiner = MLPCombination(p, p, hidden_dims=combination_hidden_dims, output_dim=n_outputs, activation=activation, combination_mode=combination_mode, key=k3)
+            self.combiner = MLPCombination(
+                p,
+                p,
+                hidden_dims=combination_hidden_dims,
+                output_dim=n_outputs,
+                activation=activation,
+                combination_mode=combination_mode,
+                key=k3,
+            )
         elif combination_type == "attention":
-            self.combiner = AttentionCombination(p, p, d_model=combination_d_model, n_heads=combination_n_heads, output_dim=n_outputs, key=k3)
+            self.combiner = AttentionCombination(
+                p,
+                p,
+                d_model=combination_d_model,
+                n_heads=combination_n_heads,
+                output_dim=n_outputs,
+                key=k3,
+            )
         else:
             raise ValueError(f"Unknown combination_type: {combination_type}")
 

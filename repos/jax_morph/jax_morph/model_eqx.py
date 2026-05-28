@@ -424,7 +424,9 @@ class LoRAMHA(eqx.Module):
         head_dim = self.embed_dim // self.num_heads
 
         # Project via vmap over (B, L)
-        proj = lambda linear, inp: jax.vmap(jax.vmap(linear))(inp)
+        def proj(linear, inp):
+            return jax.vmap(jax.vmap(linear))(inp)
+
         q = (
             proj(self.q, q_in)
             .reshape(B, L, self.num_heads, head_dim)

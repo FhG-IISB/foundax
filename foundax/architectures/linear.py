@@ -24,11 +24,24 @@ class Linear(eqx.Module):
     in_features: int = eqx.field(static=True)
     out_features: int = eqx.field(static=True)
 
-    def __init__(self, in_features: int, out_features: int, use_bias: bool = True, *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        use_bias: bool = True,
+        *,
+        key: jax.Array,
+    ):
         wkey, bkey = jax.random.split(key)
         lim = 1 / jnp.sqrt(in_features)
-        self.weight = jax.random.uniform(wkey, (out_features, in_features), minval=-lim, maxval=lim)
-        self.bias = jax.random.uniform(bkey, (out_features,), minval=-lim, maxval=lim) if use_bias else None
+        self.weight = jax.random.uniform(
+            wkey, (out_features, in_features), minval=-lim, maxval=lim
+        )
+        self.bias = (
+            jax.random.uniform(bkey, (out_features,), minval=-lim, maxval=lim)
+            if use_bias
+            else None
+        )
         self.in_features = in_features
         self.out_features = out_features
 

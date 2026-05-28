@@ -43,7 +43,10 @@ class MLP(eqx.Module):
         # Build hidden layers
         dims = [in_features] + layer_widths
         keys = jax.random.split(key, len(dims))  # one extra for output
-        self.hidden_layers = [Linear(dims[i], dims[i + 1], use_bias=use_bias, key=keys[i]) for i in range(len(layer_widths))]
+        self.hidden_layers = [
+            Linear(dims[i], dims[i + 1], use_bias=use_bias, key=keys[i])
+            for i in range(len(layer_widths))
+        ]
 
         # Output layer
         self.output_layer = Linear(

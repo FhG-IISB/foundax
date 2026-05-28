@@ -4,10 +4,19 @@
   <img src="assets/logo.png" alt="foundax logo" width="400">
 </p>
 
+<p align="center">
+    <a href="LICENSE">
+        <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=for-the-badge" alt="License"/>
+    </a>
+    <a href="https://huggingface.co/FhG-IISB/foundax">
+        <img src="https://img.shields.io/badge/🤗%20Hugging%20Face-FhG--IISB%2Ffoundax-ff9d00?style=for-the-badge" alt="Hugging Face"/>
+    </a>
+</p>
+
 Unified JAX model zoo for operator learning, PDE surrogates, and Equinox foundation-model wrappers.
 
 ```
-uv pip install foundax
+pip install foundax
 ```
 
 ## Overview

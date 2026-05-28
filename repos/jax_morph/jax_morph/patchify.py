@@ -38,9 +38,9 @@ def custom_patchify_3d(
     px = px if W >= px else W
 
     nz, ny, nx = D // pz, H // py, W // px
-    assert (
-        D % pz == 0 and H % py == 0 and W % px == 0
-    ), f"Dimensions {(D, H, W)} must be divisible by patches {(pz, py, px)}"
+    assert D % pz == 0 and H % py == 0 and W % px == 0, (
+        f"Dimensions {(D, H, W)} must be divisible by patches {(pz, py, px)}"
+    )
 
     # (B, D, H, W, C) -> (B, nz, pz, ny, py, nx, px, C)
     x = x.reshape(B, nz, pz, ny, py, nx, px, C)

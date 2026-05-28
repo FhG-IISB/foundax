@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as jnp
 
 from jax_prose import prose_fd_1to1

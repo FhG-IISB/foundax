@@ -5,7 +5,6 @@ This script tests individual components to ensure they produce
 outputs of the correct shape and follow the same logic.
 """
 
-import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -43,9 +42,9 @@ def test_mlp():
     output = mlp.apply(params, x)
 
     expected_shape = (batch_size, seq_len, dim_out)
-    assert (
-        output.shape == expected_shape
-    ), f"MLP: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"MLP: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ MLP: {x.shape} -> {output.shape}")
     return True
 
@@ -76,9 +75,9 @@ def test_graph_node_feature():
     output = layer.apply(params, node_type, in_degree, out_degree)
 
     expected_shape = (n_graph, n_node, embed_dim)
-    assert (
-        output.shape == expected_shape
-    ), f"GraphNodeFeature: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"GraphNodeFeature: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ GraphNodeFeature: node_type{node_type.shape} -> {output.shape}")
     return True
 
@@ -104,9 +103,9 @@ def test_graph_attn_bias():
     output = layer.apply(params, attn_bias, spatial_pos)
 
     expected_shape = (n_graph, num_heads, n_node, n_node)
-    assert (
-        output.shape == expected_shape
-    ), f"GraphAttnBias: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"GraphAttnBias: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ GraphAttnBias: attn_bias{attn_bias.shape} -> {output.shape}")
     return True
 
@@ -134,9 +133,9 @@ def test_multihead_attention():
     output = mha.apply(params, x, attn_bias=attn_bias)
 
     expected_shape = (n_node, n_graph, embed_dim)
-    assert (
-        output.shape == expected_shape
-    ), f"MultiheadAttention: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"MultiheadAttention: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ MultiheadAttention: {x.shape} -> {output.shape}")
     return True
 
@@ -166,9 +165,9 @@ def test_graphormer_encoder_layer():
     output = layer.apply(params, x, attn_bias=attn_bias)
 
     expected_shape = (n_node, n_graph, embed_dim)
-    assert (
-        output.shape == expected_shape
-    ), f"GraphormerEncoderLayer: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"GraphormerEncoderLayer: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ GraphormerEncoderLayer: {x.shape} -> {output.shape}")
     return True
 
@@ -200,9 +199,9 @@ def test_conv2d_func_encoder():
     # Output shape should be [n_graph, out_dim, 1, 1] for 64x64 input with 3 conv layers of stride 4
     # 64 / 4 / 4 / 4 = 1
     expected_shape = (n_graph, out_dim, 1, 1)
-    assert (
-        output.shape == expected_shape
-    ), f"Conv2dFuncEncoderV3: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"Conv2dFuncEncoderV3: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ Conv2dFuncEncoderV3: {x.shape} -> {output.shape}")
     return True
 
@@ -233,9 +232,9 @@ def test_poly_inr():
     output = inr.apply(params, x)
 
     expected_shape = (batch_size, num_points, dim_out)
-    assert (
-        output.shape == expected_shape
-    ), f"PolyINR: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"PolyINR: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ PolyINR: {x.shape} -> {output.shape}")
     return True
 
@@ -271,9 +270,9 @@ def test_poly_inr_with_modulation():
     )
 
     expected_shape = (batch_size, num_points, dim_out)
-    assert (
-        output.shape == expected_shape
-    ), f"PolyINR with modulation: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"PolyINR with modulation: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ PolyINR with modulation: {x.shape} -> {output.shape}")
     return True
 
@@ -322,9 +321,9 @@ def test_pde_encoder():
 
     # Output shape: [n_node, n_graph, embed_dim]
     expected_shape = (n_node, n_graph, embed_dim)
-    assert (
-        output.shape == expected_shape
-    ), f"PDEEncoder: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"PDEEncoder: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ PDEEncoder: node_type{inputs['node_type'].shape} -> {output.shape}")
     return True
 
@@ -381,9 +380,9 @@ def test_full_pdeformer():
 
     # Output shape: [n_graph, num_points, 1]
     expected_shape = (n_graph, num_points, 1)
-    assert (
-        output.shape == expected_shape
-    ), f"PDEformer: Expected {expected_shape}, got {output.shape}"
+    assert output.shape == expected_shape, (
+        f"PDEformer: Expected {expected_shape}, got {output.shape}"
+    )
     print(f"✓ PDEformer: coordinate{inputs['coordinate'].shape} -> {output.shape}")
 
     # Count parameters

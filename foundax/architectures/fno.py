@@ -21,7 +21,15 @@ class SpectralConv1d(eqx.Module):
     weight_real: jnp.ndarray
     weight_imag: jnp.ndarray
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes: int, linear_conv: bool = True, *, key):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes: int,
+        linear_conv: bool = True,
+        *,
+        key,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_modes = n_modes
@@ -31,8 +39,12 @@ class SpectralConv1d(eqx.Module):
         scale = 1 / (in_channels * out_channels)
 
         key1, key2 = jax.random.split(key)
-        self.weight_real = jax.random.uniform(key1, weight_shape, minval=-scale, maxval=scale)
-        self.weight_imag = jax.random.uniform(key2, weight_shape, minval=-scale, maxval=scale)
+        self.weight_real = jax.random.uniform(
+            key1, weight_shape, minval=-scale, maxval=scale
+        )
+        self.weight_imag = jax.random.uniform(
+            key2, weight_shape, minval=-scale, maxval=scale
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs):  # (w, c)
         W, C = x.shape
@@ -51,7 +63,10 @@ class SpectralConv1d(eqx.Module):
         X_truncated = X[:n_modes_actual, :]
 
         # Create complex weight and multiply
-        complex_weight = self.weight_real[:, :, :n_modes_actual] + 1j * self.weight_imag[:, :, :n_modes_actual]
+        complex_weight = (
+            self.weight_real[:, :, :n_modes_actual]
+            + 1j * self.weight_imag[:, :, :n_modes_actual]
+        )
 
         # Einsum: (modes, in_channels) x (in_channels, out_channels, modes) -> (modes, out_channels)
         X_out = jnp.einsum("mi,iom->mo", X_truncated, complex_weight)
@@ -83,7 +98,18 @@ class SpectralLayers1d(eqx.Module):
     layers_w: list
     norm_layers: Optional[list]
 
-    def __init__(self, n_channels: int, n_modes: int, linear_conv: bool = True, n_layers: int = 4, activation: Callable = jax.nn.gelu, norm: Optional[str] = None, training: bool = True, *, key):
+    def __init__(
+        self,
+        n_channels: int,
+        n_modes: int,
+        linear_conv: bool = True,
+        n_layers: int = 4,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        training: bool = True,
+        *,
+        key,
+    ):
         self.n_channels = n_channels
         self.n_modes = n_modes
         self.linear_conv = linear_conv
@@ -278,7 +304,16 @@ class SpectralConv2d(eqx.Module):
     weight_2_real: jnp.ndarray
     weight_2_imag: jnp.ndarray
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes1: int, n_modes2: int, linear_conv: bool = True, *, key):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes1: int,
+        n_modes2: int,
+        linear_conv: bool = True,
+        *,
+        key,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_modes1 = n_modes1
@@ -328,7 +363,9 @@ class SpectralConv2d(eqx.Module):
         out_ft = out_ft.at[-n_modes1:, :n_modes2, :].set(out_lower)
 
         # Inverse FFT and truncate
-        return jnp.fft.irfft2(out_ft, s=(fft_h, fft_w), axes=(0, 1), norm="ortho")[:H, :W, :]
+        return jnp.fft.irfft2(out_ft, s=(fft_h, fft_w), axes=(0, 1), norm="ortho")[
+            :H, :W, :
+        ]
 
 
 class SpectralLayers2d(eqx.Module):
@@ -345,7 +382,19 @@ class SpectralLayers2d(eqx.Module):
     w_layers: list
     norm_layers: Optional[list]
 
-    def __init__(self, n_channels: int, n_modes1: int, n_modes2: int, n_layers: int = 4, activation: Callable = jax.nn.gelu, norm: Optional[str] = None, training: bool = True, linear_conv: bool = True, *, key):
+    def __init__(
+        self,
+        n_channels: int,
+        n_modes1: int,
+        n_modes2: int,
+        n_layers: int = 4,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        training: bool = True,
+        linear_conv: bool = True,
+        *,
+        key,
+    ):
         self.n_channels = n_channels
         self.n_modes1 = n_modes1
         self.n_modes2 = n_modes2
@@ -543,7 +592,17 @@ class SpectralConv3d(eqx.Module):
     weight_4_real: jnp.ndarray
     weight_4_imag: jnp.ndarray
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes1: int, n_modes2: int, n_modes3: int, linear_conv: bool = True, *, key):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes1: int,
+        n_modes2: int,
+        n_modes3: int,
+        linear_conv: bool = True,
+        *,
+        key,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_modes1 = n_modes1
@@ -555,14 +614,30 @@ class SpectralConv3d(eqx.Module):
         scale = 1 / (in_channels * out_channels)
 
         keys = jax.random.split(key, 8)
-        self.weight_1_real = jax.random.uniform(keys[0], shape, minval=-scale, maxval=scale)
-        self.weight_1_imag = jax.random.uniform(keys[1], shape, minval=-scale, maxval=scale)
-        self.weight_2_real = jax.random.uniform(keys[2], shape, minval=-scale, maxval=scale)
-        self.weight_2_imag = jax.random.uniform(keys[3], shape, minval=-scale, maxval=scale)
-        self.weight_3_real = jax.random.uniform(keys[4], shape, minval=-scale, maxval=scale)
-        self.weight_3_imag = jax.random.uniform(keys[5], shape, minval=-scale, maxval=scale)
-        self.weight_4_real = jax.random.uniform(keys[6], shape, minval=-scale, maxval=scale)
-        self.weight_4_imag = jax.random.uniform(keys[7], shape, minval=-scale, maxval=scale)
+        self.weight_1_real = jax.random.uniform(
+            keys[0], shape, minval=-scale, maxval=scale
+        )
+        self.weight_1_imag = jax.random.uniform(
+            keys[1], shape, minval=-scale, maxval=scale
+        )
+        self.weight_2_real = jax.random.uniform(
+            keys[2], shape, minval=-scale, maxval=scale
+        )
+        self.weight_2_imag = jax.random.uniform(
+            keys[3], shape, minval=-scale, maxval=scale
+        )
+        self.weight_3_real = jax.random.uniform(
+            keys[4], shape, minval=-scale, maxval=scale
+        )
+        self.weight_3_imag = jax.random.uniform(
+            keys[5], shape, minval=-scale, maxval=scale
+        )
+        self.weight_4_real = jax.random.uniform(
+            keys[6], shape, minval=-scale, maxval=scale
+        )
+        self.weight_4_imag = jax.random.uniform(
+            keys[7], shape, minval=-scale, maxval=scale
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         D, H, W, C = x.shape
@@ -610,14 +685,18 @@ class SpectralConv3d(eqx.Module):
         out_corner4 = jnp.einsum("dhwi,iodhw->dhwo", X_corner4, w4_slice)
 
         # Build output in frequency domain
-        out_ft = jnp.zeros((freq_d, freq_h, freq_w, self.out_channels), dtype=jnp.complex64)
+        out_ft = jnp.zeros(
+            (freq_d, freq_h, freq_w, self.out_channels), dtype=jnp.complex64
+        )
         out_ft = out_ft.at[:n_modes1, :n_modes2, :n_modes3, :].set(out_corner1)
         out_ft = out_ft.at[:n_modes1, -n_modes2:, :n_modes3, :].set(out_corner2)
         out_ft = out_ft.at[-n_modes1:, :n_modes2, :n_modes3, :].set(out_corner3)
         out_ft = out_ft.at[-n_modes1:, -n_modes2:, :n_modes3, :].set(out_corner4)
 
         # Inverse FFT and truncate
-        return jnp.fft.irfftn(out_ft, s=(fft_d, fft_h, fft_w), axes=(0, 1, 2), norm="ortho")[:D, :H, :W, :]
+        return jnp.fft.irfftn(
+            out_ft, s=(fft_d, fft_h, fft_w), axes=(0, 1, 2), norm="ortho"
+        )[:D, :H, :W, :]
 
 
 class SpectralLayers3d(eqx.Module):
@@ -635,7 +714,20 @@ class SpectralLayers3d(eqx.Module):
     w_layers: list
     norm_layers: Optional[list]
 
-    def __init__(self, n_channels: int, n_modes1: int, n_modes2: int, n_modes3: int, n_layers: int = 4, activation: Callable = jax.nn.gelu, norm: Optional[str] = None, training: bool = True, linear_conv: bool = True, *, key):
+    def __init__(
+        self,
+        n_channels: int,
+        n_modes1: int,
+        n_modes2: int,
+        n_modes3: int,
+        n_layers: int = 4,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        training: bool = True,
+        linear_conv: bool = True,
+        *,
+        key,
+    ):
         self.n_channels = n_channels
         self.n_modes1 = n_modes1
         self.n_modes2 = n_modes2

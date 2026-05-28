@@ -6,7 +6,6 @@ Covers all four PROSE variants: PROSE1to1, PROSE2to1, PROSEODE2to1, PROSEPDE2to1
 
 from __future__ import annotations
 
-import math
 from typing import Optional
 
 import equinox as eqx

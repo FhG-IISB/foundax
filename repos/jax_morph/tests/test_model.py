@@ -43,7 +43,7 @@ def tiny_params(tiny_model, tiny_input):
 
 
 def test_import():
-    from jax_morph import ViT3DRegression, morph_Ti, morph_S, MORPH_CONFIGS
+    from jax_morph import MORPH_CONFIGS
 
     assert "Ti" in MORPH_CONFIGS
 

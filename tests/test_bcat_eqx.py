@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_bcat"))
 
@@ -21,7 +22,7 @@ _CFG = dict(
     n_head=4,
     norm_first=True,
     norm_type="rms",
-    activation="swiglu",
+    activation=jax.nn.silu,
     qk_norm=True,
     x_num=16,
     max_output_dim=2,
