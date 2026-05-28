@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Compare PyTorch BCAT and JAX BCAT forward passes."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +13,11 @@ import torch
 import jax
 import jax.numpy as jnp
 
-from jax_bcat import bcat_default, load_pytorch_state_dict, convert_pytorch_to_jax_params
+from jax_bcat import (
+    bcat_default,
+    load_pytorch_state_dict,
+    convert_pytorch_to_jax_params,
+)
 
 
 def max_abs_diff(a: np.ndarray, b: np.ndarray) -> float:
@@ -21,7 +26,11 @@ def max_abs_diff(a: np.ndarray, b: np.ndarray) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare PyTorch and JAX BCAT outputs")
-    parser.add_argument("--checkpoint", default=None, help="Path to PyTorch checkpoint (omit for random weights)")
+    parser.add_argument(
+        "--checkpoint",
+        default=None,
+        help="Path to PyTorch checkpoint (omit for random weights)",
+    )
     parser.add_argument(
         "--bcat-root",
         default=os.environ.get("BCAT_ROOT", "./ogrepo/bcat"),
@@ -51,7 +60,9 @@ def main() -> None:
     from models.bcat import BCAT as BCAT_PT
 
     rng = np.random.default_rng(args.seed)
-    data_np = rng.normal(size=(1, args.t_num, args.x_num, args.x_num, args.data_dim)).astype(np.float32)
+    data_np = rng.normal(
+        size=(1, args.t_num, args.x_num, args.x_num, args.data_dim)
+    ).astype(np.float32)
     times_np = np.arange(args.t_num, dtype=np.float32).reshape(1, args.t_num, 1)
 
     # Build PyTorch model
@@ -76,7 +87,9 @@ def main() -> None:
         enc = pt_model.embedder.encode(d_in, t_in)
         data_len = enc.size(1)
         mask = pt_mask_fn(
-            pt_model.seq_len_per_step, args.t_num, use_float=True,
+            pt_model.seq_len_per_step,
+            args.t_num,
+            use_float=True,
         )[:data_len, :data_len]
         enc = pt_model.transformer(enc, mask)
         input_seq_len = (args.input_len - 1) * pt_model.seq_len_per_step

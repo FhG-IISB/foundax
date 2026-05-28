@@ -17,7 +17,6 @@ import argparse
 from pathlib import Path
 
 import jax
-import jax.numpy as jnp
 import numpy as np
 from flax.serialization import to_bytes, from_bytes
 
@@ -84,10 +83,7 @@ def main():
 
     if args.verify:
         print("Verifying roundtrip...")
-        decoded = from_bytes(None, output_path.read_bytes())
-        for key_path, orig in jax.tree.leaves_with_path(jax_params):
-            path_str = "/".join(str(k) for k in key_path)
-            dec = jax.tree.leaves(decoded)  # simplified check
+        from_bytes(None, output_path.read_bytes())
         print("  ✓ Roundtrip OK")
 
 

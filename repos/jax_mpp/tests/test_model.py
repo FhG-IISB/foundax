@@ -39,8 +39,7 @@ def tiny_params(tiny_model, tiny_inputs):
 
 
 def test_import():
-    from jax_mpp import AViT
-    from jax_mpp.configs import avit_Ti, avit_S, avit_B, avit_L, AVIT_CONFIGS
+    from jax_mpp.configs import AVIT_CONFIGS
 
     assert "Ti" in AVIT_CONFIGS
 
@@ -83,7 +82,7 @@ def test_forward_finite(tiny_model, tiny_inputs, tiny_params):
 
 
 def test_convenience_constructors():
-    from jax_mpp.configs import avit_Ti, avit_S, avit_B, avit_L
+    from jax_mpp.configs import avit_Ti, avit_S
 
     assert avit_Ti() is not None
     assert avit_S() is not None

@@ -13,7 +13,7 @@ Usage::
 """
 
 import importlib
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Callable
 
 import jax
 
@@ -388,7 +388,7 @@ def L(
 
 t = T
 b = B
-l = L
+l = L  # noqa: E741
 
 __all__ = ["T", "B", "L", "t", "b", "l"]
 

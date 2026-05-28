@@ -44,9 +44,12 @@ foundax = { path = ".", editable = true }
 default = { solve-group = "default" }
 
 [tool.pixi.tasks]
+lint = "ruff check . --fix"
 test = "pytest -x --tb=short"
 # CI tasks: read-only (no auto-fix) and skip slow tests
-ci-test = "pytest -x --tb=short -m 'not heavy'"
+ci-fmt = "ruff format --check ."
+ci-lint = "ruff check ."
+ci-test = "pytest -x --tb=short -m 'not slow'"
 
 [tool.pixi.dependencies]
 pytest = ">=9.0.3,<10"

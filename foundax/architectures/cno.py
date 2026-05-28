@@ -80,9 +80,20 @@ class CNOBlock(eqx.Module):
     act: CNOLReLu
     use_bn: bool = eqx.field(static=True)
 
-    def __init__(self, in_channels: int, out_channels: int, in_size: int, out_size: int, use_bn: bool = True, *, key: jax.Array):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        in_size: int,
+        out_size: int,
+        use_bn: bool = True,
+        *,
+        key: jax.Array,
+    ):
         k1, k2 = jax.random.split(key)
-        self.conv = Conv2d(in_channels, out_channels, kernel_size=3, padding="SAME", key=k1)
+        self.conv = Conv2d(
+            in_channels, out_channels, kernel_size=3, padding="SAME", key=k1
+        )
         self.use_bn = use_bn
         self.bn = BatchNorm(out_channels) if use_bn else None
         self.act = CNOLReLu(in_size=in_size, out_size=out_size, key=k2)
@@ -103,7 +114,15 @@ class LiftProjectBlock(eqx.Module):
     inter_block: CNOBlock
     conv: Conv2d
 
-    def __init__(self, in_channels: int, out_channels: int, size: int, latent_dim: int = 64, *, key: jax.Array):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        size: int,
+        latent_dim: int = 64,
+        *,
+        key: jax.Array,
+    ):
         k1, k2 = jax.random.split(key)
         self.inter_block = CNOBlock(
             in_channels=in_channels,
@@ -113,7 +132,9 @@ class LiftProjectBlock(eqx.Module):
             use_bn=False,
             key=k1,
         )
-        self.conv = Conv2d(latent_dim, out_channels, kernel_size=3, padding="SAME", key=k2)
+        self.conv = Conv2d(
+            latent_dim, out_channels, kernel_size=3, padding="SAME", key=k2
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x = self.inter_block(x)
@@ -133,7 +154,9 @@ class ResidualBlock(eqx.Module):
     act: CNOLReLu
     use_bn: bool = eqx.field(static=True)
 
-    def __init__(self, channels: int, size: int, use_bn: bool = True, *, key: jax.Array):
+    def __init__(
+        self, channels: int, size: int, use_bn: bool = True, *, key: jax.Array
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.conv1 = Conv2d(channels, channels, kernel_size=3, padding="SAME", key=k1)
         self.conv2 = Conv2d(channels, channels, kernel_size=3, padding="SAME", key=k2)
@@ -160,9 +183,20 @@ class ResNet(eqx.Module):
 
     blocks: List[ResidualBlock]
 
-    def __init__(self, channels: int, size: int, num_blocks: int, use_bn: bool = True, *, key: jax.Array):
+    def __init__(
+        self,
+        channels: int,
+        size: int,
+        num_blocks: int,
+        use_bn: bool = True,
+        *,
+        key: jax.Array,
+    ):
         keys = jax.random.split(key, num_blocks)
-        self.blocks = [ResidualBlock(channels=channels, size=size, use_bn=use_bn, key=keys[i]) for i in range(num_blocks)]
+        self.blocks = [
+            ResidualBlock(channels=channels, size=size, use_bn=use_bn, key=keys[i])
+            for i in range(num_blocks)
+        ]
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         for block in self.blocks:
@@ -369,11 +403,11 @@ class CNO2D(eqx.Module):
 
         # ResNet blocks (one per encoder level, except neck)
         self.res_nets = []
-        for l in range(N_layers):
+        for layer_idx in range(N_layers):
             self.res_nets.append(
                 ResNet(
-                    channels=encoder_features[l],
-                    size=encoder_sizes[l],
+                    channels=encoder_features[layer_idx],
+                    size=encoder_sizes[layer_idx],
                     num_blocks=N_res,
                     use_bn=use_bn,
                     key=keys[idx],

@@ -290,9 +290,9 @@ def convert_pytorch_to_jax(
     all_pt_keys = set(pt_state_dict.keys())
     unused_pt_keys = all_pt_keys - used_pt_keys
 
-    print(f"\n{'='*80}")
-    print(f"CONVERSION SUMMARY")
-    print(f"{'='*80}")
+    print(f"\n{'=' * 80}")
+    print("CONVERSION SUMMARY")
+    print(f"{'=' * 80}")
     print(f"  JAX parameters:       {len(flat_jax)}")
     print(f"  PyTorch parameters:   {len(pt_state_dict)}")
     print(f"  Successfully matched: {matched}")
@@ -308,7 +308,7 @@ def convert_pytorch_to_jax(
             for pt_k in sorted(unused_pt_keys):
                 shape = tuple(pt_state_dict[pt_k].shape)
                 f.write(f"{pt_k}: {shape}\n")
-        print(f"  Written to: unused_pytorch_keys.txt")
+        print("  Written to: unused_pytorch_keys.txt")
 
     if len(unmatched_jax) > 0:
         with open("unmatched_jax_keys.txt", "w") as f:
@@ -319,7 +319,7 @@ def convert_pytorch_to_jax(
                 f.write(f"JAX key:      {jax_k}\n")
                 f.write(f"  Shape:      {shape}\n")
                 f.write(f"  Tried PT:   {attempted_pt_k}\n\n")
-        print(f"  Written to: unmatched_jax_keys.txt")
+        print("  Written to: unmatched_jax_keys.txt")
 
     if shape_mismatches:
         with open("shape_mismatches.txt", "w") as f:
@@ -337,7 +337,7 @@ def convert_pytorch_to_jax(
                 f.write(f"PT original shape: {pt_orig_shape}\n")
                 f.write(f"PT transposed:     {pt_transposed_shape}\n")
                 f.write(f"JAX expected:      {jax_shape}\n\n")
-        print(f"  Written to: shape_mismatches.txt")
+        print("  Written to: shape_mismatches.txt")
 
     if verbose and unused_pt_keys:
         print(f"\n--- Unused PyTorch keys ({len(unused_pt_keys)}) ---")
@@ -345,7 +345,7 @@ def convert_pytorch_to_jax(
             print(f"  {pt_k}: {tuple(pt_state_dict[pt_k].shape)}")
 
     if matched == len(flat_jax) and len(unused_pt_keys) == 0:
-        print(f"\n  SUCCESS: All parameters matched perfectly!")
+        print("\n  SUCCESS: All parameters matched perfectly!")
 
     new_params = unflatten_dict(
         {tuple(k.split("/")): v for k, v in new_flat_jax.items()}

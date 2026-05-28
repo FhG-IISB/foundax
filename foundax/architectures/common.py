@@ -4,7 +4,7 @@ Centralises BatchNorm, activation lookup, Fourier-mode computation, and
 NHWC convolution helpers so they aren't duplicated across architecture files.
 """
 
-from typing import Any, Callable, Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -66,7 +66,9 @@ def get_activation(name: str) -> Optional[Callable]:
     }
     key = name.lower()
     if key not in activations:
-        raise ValueError(f"Unknown activation '{name}'. Available: {list(activations.keys())}")
+        raise ValueError(
+            f"Unknown activation '{name}'. Available: {list(activations.keys())}"
+        )
     return activations[key]  # type: ignore[return-value]
 
 
@@ -75,7 +77,9 @@ def get_activation(name: str) -> Optional[Callable]:
 # ---------------------------------------------------------------------------
 
 
-def compute_Fourier_modes(ndims: int, nks: Sequence[int], Ls: Sequence[float]) -> np.ndarray:
+def compute_Fourier_modes(
+    ndims: int, nks: Sequence[int], Ls: Sequence[float]
+) -> np.ndarray:
     """Compute Fourier mode wave-vectors ``k``.
 
     Fourier bases are ``cos(k·x)``, ``sin(k·x)``, ``1``.

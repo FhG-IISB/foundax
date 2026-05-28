@@ -22,7 +22,9 @@ def _strip_prefix(k: str) -> str:
 
 def _flatten_state(ckpt: dict) -> dict[str, torch.Tensor]:
     if isinstance(ckpt, dict) and "model" in ckpt and isinstance(ckpt["model"], dict):
-        return {_strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)}
+        return {
+            _strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)
+        }
 
     out: dict[str, torch.Tensor] = {}
     if isinstance(ckpt, dict) and all(isinstance(v, dict) for v in ckpt.values()):
@@ -43,7 +45,10 @@ class PTPDE(tnn.Module):
             id2word[i] = f"tok_{i}"
 
         self.embedder = tnn.Sequential(
-            tnn.Linear(1 + params.max_output_dimension * params.x_patch_size, params.data_enc_emb_dim),
+            tnn.Linear(
+                1 + params.max_output_dimension * params.x_patch_size,
+                params.data_enc_emb_dim,
+            ),
             tnn.GELU(),
             tnn.Linear(params.data_enc_emb_dim, params.data_enc_emb_dim),
         )
@@ -70,7 +75,9 @@ class PTPDE(tnn.Module):
             with_output=True,
             positional_embeddings=params.data_dec_positional_embeddings,
         )
-        self.normalizer = tr.RevIN(params) if getattr(params, "normalization", False) else None
+        self.normalizer = (
+            tr.RevIN(params) if getattr(params, "normalization", False) else None
+        )
 
     def forward(self, data_input, data_len, text_input, text_len, query_times):
         x = data_input
@@ -91,15 +98,23 @@ class PTPDE(tnn.Module):
             causal=False,
         ).transpose(0, 1)
         q = self.data_decoder("query_emb", query_times=query_times)
-        y = self.data_decoder.generate(src_enc=fused, src_len=(data_len, text_len), query_emb=q)
+        y = self.data_decoder.generate(
+            src_enc=fused, src_len=(data_len, text_len), query_emb=q
+        )
         if self.normalizer is not None:
             y = self.normalizer.reverse(y, mu, var)
         return y
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Compare PROSE-PDE PyTorch and JAX outputs")
-    ap.add_argument("--prose-root", type=Path, default=Path("/home/users/armbrust/projects/prose/prose_pde"))
+    ap = argparse.ArgumentParser(
+        description="Compare PROSE-PDE PyTorch and JAX outputs"
+    )
+    ap.add_argument(
+        "--prose-root",
+        type=Path,
+        default=Path("/home/users/armbrust/projects/prose/prose_pde"),
+    )
     ap.add_argument("--checkpoint", type=Path, default=None)
     ap.add_argument("--msgpack", type=Path, default=None)
     ap.add_argument("--n-words", type=int, default=512)
@@ -149,13 +164,17 @@ def main():
     query_times = np.linspace(0.0, 1.0, args.output_len, dtype=np.float32)
 
     with torch.no_grad():
-        y_pt = pt(
-            torch.from_numpy(data_input),
-            torch.from_numpy(data_len),
-            torch.from_numpy(text_input),
-            torch.from_numpy(text_len),
-            torch.from_numpy(query_times),
-        ).cpu().numpy()
+        y_pt = (
+            pt(
+                torch.from_numpy(data_input),
+                torch.from_numpy(data_len),
+                torch.from_numpy(text_input),
+                torch.from_numpy(text_len),
+                torch.from_numpy(query_times),
+            )
+            .cpu()
+            .numpy()
+        )
 
     cfg = ProseTextData2to1Config(
         x_patch_size=args.x_patch_size,

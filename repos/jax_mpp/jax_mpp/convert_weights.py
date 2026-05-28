@@ -102,6 +102,7 @@ def convert_pytorch_to_jax_params(
 # Single-key conversion
 # ---------------------------------------------------------------------------
 
+
 def _convert_one(pt_key: str, val: np.ndarray):
     """
     Convert one PyTorch (key, value) pair to Flax (key, value).
@@ -137,22 +138,22 @@ def _convert_one(pt_key: str, val: np.ndarray):
     #    C_out of the transpose = C_in of the forward, matching the PT 2nd axis)
     # Both use the same transpose(2,3,1,0).
     if key.endswith(".weight") and val.ndim == 4:
-        jax_key = key[:-len(".weight")] + ".kernel"
+        jax_key = key[: -len(".weight")] + ".kernel"
         return jax_key, val.transpose(2, 3, 1, 0)
 
     # ---- 2-D linear weights: (O, I) -> (I, O) ----
     if key.endswith(".weight") and val.ndim == 2 and _is_dense_weight(key):
-        jax_key = key[:-len(".weight")] + ".kernel"
+        jax_key = key[: -len(".weight")] + ".kernel"
         return jax_key, val.T
 
     # ---- LayerNorm weight -> scale ----
     if key.endswith(".weight") and _is_layernorm_weight(key):
-        jax_key = key[:-len(".weight")] + ".scale"
+        jax_key = key[: -len(".weight")] + ".scale"
         return jax_key, val
 
     # ---- Embedding weight ----
     if "relative_attention_bias.weight" in key:
-        jax_key = key[:-len(".weight")] + ".embedding"
+        jax_key = key[: -len(".weight")] + ".embedding"
         return jax_key, val
 
     # ---- everything else (norm .weight/.bias, gamma, bias, etc.) → keep verbatim ----
@@ -162,6 +163,7 @@ def _convert_one(pt_key: str, val: np.ndarray):
 # ---------------------------------------------------------------------------
 # Classification helpers
 # ---------------------------------------------------------------------------
+
 
 def _is_dense_weight(key: str) -> bool:
     """2-D linear weights that must be transposed."""
@@ -183,6 +185,7 @@ def _is_conv_transpose_weight(key: str) -> bool:
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
+
 
 def _set_nested(d: dict, keys: list, val):
     """Set a value in a nested dict by a list of path segments."""

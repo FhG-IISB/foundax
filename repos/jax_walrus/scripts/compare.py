@@ -35,7 +35,7 @@ DEFAULT_JAX_WALRUS_MSGPACK = PROJECT_ROOT / "models" / "walrus.msgpack"
 
 # ── Mock the_well ──
 
-import types
+import types  # noqa: E402
 
 _well_mod = types.ModuleType("the_well")
 _data_mod = types.ModuleType("the_well.data")
@@ -226,7 +226,9 @@ def generate_synthetic_input(
                     amplitude = rng.uniform(0.5, 1.5)
                     phase = rng.uniform(0.0, 2.0 * np.pi)
                     field += amplitude * np.sin(kx * xx + phase + time_phase)
-                    field += 0.5 * amplitude * np.cos(ky * yy - phase + 0.5 * time_phase)
+                    field += (
+                        0.5 * amplitude * np.cos(ky * yy - phase + 0.5 * time_phase)
+                    )
                 data[t, b, c] = field
 
     mean = data.mean(axis=(0, 1, 3, 4), keepdims=True)
@@ -349,7 +351,7 @@ def assert_close(name, torch_out, jax_out, atol=5e-3, rtol=5e-3):
     if not np.allclose(t_np, j_np, atol=atol, rtol=rtol):
         print(f"  [FAIL] MISMATCH (atol={atol}, rtol={rtol})")
         return False
-    print(f"  [PASS] MATCH")
+    print("  [PASS] MATCH")
     return True
 
 
@@ -397,8 +399,7 @@ def visualize_input(data, metadata, save_path="synthetic_input.png"):
                 ax.set_xlabel("x")
 
     fig.suptitle(
-        f"Synthetic Input\n"
-        f"Shape: {data.shape}, Domain: {metadata['domain']}",
+        f"Synthetic Input\nShape: {data.shape}, Domain: {metadata['domain']}",
         fontsize=12,
         fontweight="bold",
     )
@@ -1080,7 +1081,7 @@ def main():
     print("\n" + "=" * 70)
     print("SUMMARY")
     print("=" * 70)
-    print(f"  Dataset:              Synthetic smooth fields")
+    print("  Dataset:              Synthetic smooth fields")
     print(f"  Input shape:          {x_np.shape}")
     print(f"  Output shape:         {torch_out.shape}")
     print(f"  Channels:             {metadata['channels']}")

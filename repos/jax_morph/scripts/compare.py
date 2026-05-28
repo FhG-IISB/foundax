@@ -17,7 +17,6 @@ import time
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 import jax
 import jax.numpy as jnp
@@ -28,10 +27,10 @@ jax.config.update("jax_platform_name", "cpu")
 MORPH_ROOT = os.environ.get("MORPH_ROOT", os.path.expanduser("~/MORPH"))
 sys.path.insert(0, MORPH_ROOT)
 
-from src.utils.vit_conv_xatt_axialatt2 import ViT3DRegression as ViT3DRegression_PT
-from jax_morph import ViT3DRegression as ViT3DRegression_JAX
-from jax_morph import load_pytorch_state_dict, convert_pytorch_to_jax_params
-from jax_morph.configs import MORPH_CONFIGS as MORPH_MODELS, CHECKPOINT_NAMES
+from src.utils.vit_conv_xatt_axialatt2 import ViT3DRegression as ViT3DRegression_PT  # noqa: E402
+from jax_morph import ViT3DRegression as ViT3DRegression_JAX  # noqa: E402
+from jax_morph import load_pytorch_state_dict, convert_pytorch_to_jax_params  # noqa: E402
+from jax_morph.configs import MORPH_CONFIGS as MORPH_MODELS, CHECKPOINT_NAMES  # noqa: E402
 
 
 def get_checkpoint(model_size, checkpoint_path=None):
@@ -47,6 +46,7 @@ def get_checkpoint(model_size, checkpoint_path=None):
     # Download from HuggingFace
     print(f"Downloading {CHECKPOINT_NAMES[model_size]} from HuggingFace...")
     from huggingface_hub import hf_hub_download
+
     path = hf_hub_download(
         repo_id="mahindrautela/MORPH",
         filename=CHECKPOINT_NAMES[model_size],
@@ -122,9 +122,15 @@ def compare_outputs(pt_out, jax_out, name="output"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare PyTorch and JAX MORPH outputs")
-    parser.add_argument("--model-size", "-m", choices=list(MORPH_MODELS.keys()), default="Ti")
-    parser.add_argument("--checkpoint", "-c", default=None, help="Path to .pth checkpoint")
+    parser = argparse.ArgumentParser(
+        description="Compare PyTorch and JAX MORPH outputs"
+    )
+    parser.add_argument(
+        "--model-size", "-m", choices=list(MORPH_MODELS.keys()), default="Ti"
+    )
+    parser.add_argument(
+        "--checkpoint", "-c", default=None, help="Path to .pth checkpoint"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--fields", type=int, default=1)
@@ -143,7 +149,9 @@ def main():
     # ── Create random input ──
     np.random.seed(args.seed)
     S = args.spatial
-    vol_np = np.random.randn(args.batch, 1, args.fields, args.components, S, S, S).astype(np.float32)
+    vol_np = np.random.randn(
+        args.batch, 1, args.fields, args.components, S, S, S
+    ).astype(np.float32)
     vol_pt = torch.from_numpy(vol_np)
     vol_jax = jnp.array(vol_np)
     print(f"Input shape: {vol_np.shape}")

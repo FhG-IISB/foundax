@@ -152,9 +152,7 @@ def _plot_comparison(
 
     # Row 2: JAX output
     for ch in range(4):
-        im_jax = ax[2, ch].imshow(
-            jax0[:, :, ch], cmap=cmap_main, vmin=vmin_out, vmax=vmax_out
-        )
+        ax[2, ch].imshow(jax0[:, :, ch], cmap=cmap_main, vmin=vmin_out, vmax=vmax_out)
         ax[2, ch].set_title(f"JAX – ch {ch}")
 
     # Row 3: Absolute difference
@@ -268,7 +266,7 @@ def verify_model_outputs(
     jax_output_np = result["jax_output"]
     correlation = np.corrcoef(pt_output_np.flatten(), jax_output_np.flatten())[0, 1]
 
-    print(f"\n--- Metrics ---")
+    print("\n--- Metrics ---")
     print(f"  Relative L2 Difference:   {result['rel_l2_diff']:.6e}")
     print(f"  Max Absolute Diff:        {result['max_abs_diff']:.6e}")
     print(f"  Mean Absolute Diff:       {result['mean_abs_diff']:.6e}")
@@ -387,21 +385,21 @@ def run_comprehensive_comparison(
 
     print(f"\n  Total samples tested: {len(results)}")
 
-    print(f"\n  L2 Difference (Primary Metric):")
+    print("\n  L2 Difference (Primary Metric):")
     print(f"    Mean:   {np.mean(l2_diffs):.6e}")
     print(f"    Std:    {np.std(l2_diffs):.6e}")
     print(f"    Min:    {np.min(l2_diffs):.6e}")
     print(f"    Max:    {np.max(l2_diffs):.6e}")
     print(f"    Median: {np.median(l2_diffs):.6e}")
 
-    print(f"\n  Relative L2 Difference:")
+    print("\n  Relative L2 Difference:")
     print(f"    Mean:   {np.mean(rel_l2_diffs):.6e}")
     print(f"    Std:    {np.std(rel_l2_diffs):.6e}")
     print(f"    Min:    {np.min(rel_l2_diffs):.6e}")
     print(f"    Max:    {np.max(rel_l2_diffs):.6e}")
     print(f"    Median: {np.median(rel_l2_diffs):.6e}")
 
-    print(f"\n  PyTorch Output Statistics (across all samples):")
+    print("\n  PyTorch Output Statistics (across all samples):")
     print(
         f"    Min  - mean: {np.mean(pt_mins):.6f}, min: {np.min(pt_mins):.6f}, max: {np.max(pt_mins):.6f}"
     )
@@ -412,7 +410,7 @@ def run_comprehensive_comparison(
         f"    Mean - mean: {np.mean(pt_means):.6f}, min: {np.min(pt_means):.6f}, max: {np.max(pt_means):.6f}"
     )
 
-    print(f"\n  JAX Output Statistics (across all samples):")
+    print("\n  JAX Output Statistics (across all samples):")
     print(
         f"    Min  - mean: {np.mean(jax_mins):.6f}, min: {np.min(jax_mins):.6f}, max: {np.max(jax_mins):.6f}"
     )
@@ -423,28 +421,28 @@ def run_comprehensive_comparison(
         f"    Mean - mean: {np.mean(jax_means):.6f}, min: {np.min(jax_means):.6f}, max: {np.max(jax_means):.6f}"
     )
 
-    print(f"\n  Max Absolute Difference:")
+    print("\n  Max Absolute Difference:")
     print(f"    Mean:   {np.mean(max_abs_diffs):.6e}")
     print(f"    Max:    {np.max(max_abs_diffs):.6e}")
 
-    print(f"\n  Mean Absolute Difference:")
+    print("\n  Mean Absolute Difference:")
     print(f"    Mean:   {np.mean(mean_abs_diffs):.6e}")
     print(f"    Max:    {np.max(mean_abs_diffs):.6e}")
 
     tolerance = 1e-3
     passed = sum(1 for r in results if r["rel_l2_diff"] < tolerance)
     print(
-        f"\n  Pass Rate (rel_L2 < {tolerance}): {passed}/{len(results)} ({100*passed/len(results):.1f}%)"
+        f"\n  Pass Rate (rel_L2 < {tolerance}): {passed}/{len(results)} ({100 * passed / len(results):.1f}%)"
     )
 
-    print(f"\n  Worst 5 samples by L2 difference:")
+    print("\n  Worst 5 samples by L2 difference:")
     sorted_results = sorted(results, key=lambda x: x["l2_diff"], reverse=True)
     for i, r in enumerate(sorted_results[:5]):
         print(
-            f"    {i+1}. Sample {r['sample_idx']}: L2={r['l2_diff']:.2e}, rel_L2={r['rel_l2_diff']:.2e}, t={r['time']:.2f}"
+            f"    {i + 1}. Sample {r['sample_idx']}: L2={r['l2_diff']:.2e}, rel_L2={r['rel_l2_diff']:.2e}, t={r['time']:.2f}"
         )
 
-    print(f"\n  L2 Difference by Time Value:")
+    print("\n  L2 Difference by Time Value:")
     time_groups = {}
     for r in results:
         t_rounded = round(r["time"], 1)
@@ -502,7 +500,7 @@ def verify_multiple_timesteps(
 
         status = "[PASS]" if result["rel_l2_diff"] < 1e-3 else "[FAIL]"
         print(
-            f"  Test {test_idx+1}: t={time_np[0]:.2f}, L2={result['l2_diff']:.2e}, rel_L2={result['rel_l2_diff']:.2e} {status}"
+            f"  Test {test_idx + 1}: t={time_np[0]:.2f}, L2={result['l2_diff']:.2e}, rel_L2={result['rel_l2_diff']:.2e} {status}"
         )
 
     print("\n" + "-" * 60)

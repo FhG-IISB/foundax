@@ -560,7 +560,7 @@ def plot_comparison(
     # Create figure: 3 rows (MindSpore, JAX, Error) x n_times columns
     fig, axes = plt.subplots(3, n_times, figsize=(4 * n_times, 10))
     fig.suptitle(
-        f"PDEFormer2-{ckpt_name}: MindSpore vs JAX Comparison\n" f"PDE: {pde_latex}",
+        f"PDEFormer2-{ckpt_name}: MindSpore vs JAX Comparison\nPDE: {pde_latex}",
         fontsize=14,
     )
 
@@ -843,9 +843,9 @@ def compare_predictions(ms_pred, jax_pred, ckpt_name, pde_name, snap_t):
     abs_err = np.abs(ms_pred - jax_pred)
     rel_err = abs_err / (np.abs(ms_pred) + 1e-8)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Results for: pdeformer2-{ckpt_name} | PDE: {pde_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"MindSpore prediction shape: {ms_pred.shape}")
     print(f"JAX prediction shape:       {jax_pred.shape}")
     print(f"MindSpore range:  [{ms_pred.min():.6f}, {ms_pred.max():.6f}]")
@@ -856,7 +856,7 @@ def compare_predictions(ms_pred, jax_pred, ckpt_name, pde_name, snap_t):
     print(
         f"Overall relative error:  max={rel_err.max():.2e}  mean={rel_err.mean():.2e}"
     )
-    print(f"\nPer-timestep errors:")
+    print("\nPer-timestep errors:")
     for i, t in enumerate(snap_t):
         ae = abs_err[i]
         print(f"  t={t:.2f}:  max_abs_err={ae.max():.2e}  mean_abs_err={ae.mean():.2e}")
@@ -905,9 +905,9 @@ def main():
                 print(f"\n[SKIP] Checkpoint not found: {ckpt_path}")
                 continue
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Testing: pdeformer2-{ckpt_name} | {pde_desc}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
 
             # Skip PDEs with no MindSpore equivalent in MS-only mode
             if pde_config.get("create_ms") is None:
@@ -916,7 +916,7 @@ def main():
                 )
 
             # JAX inference
-            print(f"\n[JAX] Running inference...")
+            print("\n[JAX] Running inference...")
             try:
                 jax_pred, n_params = run_jax_inference(
                     ckpt_name, uf_num_mod, pde_config
@@ -935,7 +935,7 @@ def main():
 
             if pde_config.get("create_ms") is not None:
                 # MindSpore inference
-                print(f"\n[MindSpore] Running inference...")
+                print("\n[MindSpore] Running inference...")
                 try:
                     ms_pred = run_mindspore_inference(
                         ckpt_name, config_file, uf_num_mod, pde_config

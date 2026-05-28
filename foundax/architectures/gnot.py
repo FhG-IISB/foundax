@@ -159,7 +159,17 @@ class MLP(eqx.Module):
     layers: list
     activation: Callable = eqx.field(static=True)
 
-    def __init__(self, in_dim: int, hidden_dim: int, out_dim: int, n_layers: int = 2, act: str = "gelu", *, key, **kwargs):
+    def __init__(
+        self,
+        in_dim: int,
+        hidden_dim: int,
+        out_dim: int,
+        n_layers: int = 2,
+        act: str = "gelu",
+        *,
+        key,
+        **kwargs,
+    ):
         activation = get_activation(act)
         self.activation = activation
 
@@ -212,7 +222,16 @@ class LinearAttention(eqx.Module):
     attn_pdrop: float = eqx.field(static=True)
     attn_type: str = eqx.field(static=True)
 
-    def __init__(self, n_embd: int, n_head: int, attn_pdrop: float = 0.0, attn_type: str = "l1", *, key, **kwargs):
+    def __init__(
+        self,
+        n_embd: int,
+        n_head: int,
+        attn_pdrop: float = 0.0,
+        attn_type: str = "l1",
+        *,
+        key,
+        **kwargs,
+    ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.query = Linear(n_embd, n_embd, key=k1)
         self.key = Linear(n_embd, n_embd, key=k2)
@@ -223,7 +242,9 @@ class LinearAttention(eqx.Module):
         self.attn_pdrop = attn_pdrop
         self.attn_type = attn_type
 
-    def __call__(self, x: jnp.ndarray, y: Optional[jnp.ndarray] = None, *, key=None, **kwargs) -> jnp.ndarray:
+    def __call__(
+        self, x: jnp.ndarray, y: Optional[jnp.ndarray] = None, *, key=None, **kwargs
+    ) -> jnp.ndarray:
         if y is None:
             y = x
 
@@ -299,18 +320,33 @@ class LinearCrossAttention(eqx.Module):
     n_inputs: int = eqx.field(static=True)
     attn_pdrop: float = eqx.field(static=True)
 
-    def __init__(self, n_embd: int, n_head: int, n_inputs: int, attn_pdrop: float = 0.0, *, key, **kwargs):
+    def __init__(
+        self,
+        n_embd: int,
+        n_head: int,
+        n_inputs: int,
+        attn_pdrop: float = 0.0,
+        *,
+        key,
+        **kwargs,
+    ):
         keys = jax.random.split(key, 2 * n_inputs + 2)
         self.query_proj = Linear(n_embd, n_embd, key=keys[0])
-        self.key_projs = [Linear(n_embd, n_embd, key=keys[1 + i]) for i in range(n_inputs)]
-        self.value_projs = [Linear(n_embd, n_embd, key=keys[1 + n_inputs + i]) for i in range(n_inputs)]
+        self.key_projs = [
+            Linear(n_embd, n_embd, key=keys[1 + i]) for i in range(n_inputs)
+        ]
+        self.value_projs = [
+            Linear(n_embd, n_embd, key=keys[1 + n_inputs + i]) for i in range(n_inputs)
+        ]
         self.proj = Linear(n_embd, n_embd, key=keys[-1])
         self.n_embd = n_embd
         self.n_head = n_head
         self.n_inputs = n_inputs
         self.attn_pdrop = attn_pdrop
 
-    def __call__(self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs) -> jnp.ndarray:
+    def __call__(
+        self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs
+    ) -> jnp.ndarray:
         B, T1, C = x.shape
         head_dim = C // self.n_head
 
@@ -411,16 +447,28 @@ class CrossAttentionBlock(eqx.Module):
         self.ln4 = eqx.nn.LayerNorm(n_embd)
         self.ln5 = eqx.nn.LayerNorm(n_embd)
 
-        self.cross_attn = LinearCrossAttention(n_embd=n_embd, n_head=cfg.n_head, n_inputs=cfg.n_inputs, attn_pdrop=cfg.attn_pdrop, key=keys[0])
-        self.self_attn = LinearAttention(n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1])
+        self.cross_attn = LinearCrossAttention(
+            n_embd=n_embd,
+            n_head=cfg.n_head,
+            n_inputs=cfg.n_inputs,
+            attn_pdrop=cfg.attn_pdrop,
+            key=keys[0],
+        )
+        self.self_attn = LinearAttention(
+            n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1]
+        )
         self.ffn1 = FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[2])
         self.ffn2 = FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[3])
         self.resid_pdrop = cfg.resid_pdrop
 
-    def __call__(self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs) -> jnp.ndarray:
+    def __call__(
+        self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs
+    ) -> jnp.ndarray:
         # Cross-attention
         x_norm = jax.vmap(jax.vmap(self.ln1))(x)
-        ys_norm = [jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)]
+        ys_norm = [
+            jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)
+        ]
 
         ca_out = self.cross_attn(x_norm, ys_norm, key=key)
         if self.resid_pdrop > 0 and key is not None:
@@ -482,8 +530,16 @@ class MoECrossAttentionBlock(eqx.Module):
         self.ln4 = eqx.nn.LayerNorm(n_embd)
         self.ln5 = eqx.nn.LayerNorm(n_embd)
 
-        self.cross_attn = LinearCrossAttention(n_embd=n_embd, n_head=cfg.n_head, n_inputs=cfg.n_inputs, attn_pdrop=cfg.attn_pdrop, key=keys[0])
-        self.self_attn = LinearAttention(n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1])
+        self.cross_attn = LinearCrossAttention(
+            n_embd=n_embd,
+            n_head=cfg.n_head,
+            n_inputs=cfg.n_inputs,
+            attn_pdrop=cfg.attn_pdrop,
+            key=keys[0],
+        )
+        self.self_attn = LinearAttention(
+            n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1]
+        )
 
         activation = get_activation(cfg.act)
         self.gate_activation = activation
@@ -496,8 +552,20 @@ class MoECrossAttentionBlock(eqx.Module):
         ]
 
         # MoE experts
-        self.moe_ffn1_experts = [FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[5 + i]) for i in range(cfg.n_experts)]
-        self.moe_ffn2_experts = [FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[5 + cfg.n_experts + i]) for i in range(cfg.n_experts)]
+        self.moe_ffn1_experts = [
+            FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[5 + i])
+            for i in range(cfg.n_experts)
+        ]
+        self.moe_ffn2_experts = [
+            FFN(
+                n_embd,
+                cfg.n_inner,
+                n_embd,
+                act=cfg.act,
+                key=keys[5 + cfg.n_experts + i],
+            )
+            for i in range(cfg.n_experts)
+        ]
 
         self.resid_pdrop = cfg.resid_pdrop
         self.n_experts = cfg.n_experts
@@ -512,12 +580,22 @@ class MoECrossAttentionBlock(eqx.Module):
         gate_scores = jax.nn.softmax(x, axis=-1)
         return gate_scores[..., None, :]  # [B, T, 1, n_experts]
 
-    def __call__(self, x: jnp.ndarray, ys: List[jnp.ndarray], pos: jnp.ndarray, *, key=None, **kwargs) -> jnp.ndarray:
+    def __call__(
+        self,
+        x: jnp.ndarray,
+        ys: List[jnp.ndarray],
+        pos: jnp.ndarray,
+        *,
+        key=None,
+        **kwargs,
+    ) -> jnp.ndarray:
         gate_scores = self._apply_gate(pos)
 
         # Cross-attention
         x_norm = jax.vmap(jax.vmap(self.ln1))(x)
-        ys_norm = [jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)]
+        ys_norm = [
+            jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)
+        ]
 
         ca_out = self.cross_attn(x_norm, ys_norm, key=key)
         if self.resid_pdrop > 0 and key is not None:
@@ -526,7 +604,9 @@ class MoECrossAttentionBlock(eqx.Module):
         x = x + ca_out
 
         # MoE FFN 1
-        expert_outputs_1 = [jax.vmap(jax.vmap(expert))(x) for expert in self.moe_ffn1_experts]
+        expert_outputs_1 = [
+            jax.vmap(jax.vmap(expert))(x) for expert in self.moe_ffn1_experts
+        ]
         x_moe1 = jnp.stack(expert_outputs_1, axis=-1)
         x_moe1 = (gate_scores * x_moe1).sum(axis=-1)
         x = x + jax.vmap(jax.vmap(self.ln3))(x_moe1)
@@ -540,7 +620,9 @@ class MoECrossAttentionBlock(eqx.Module):
         x = x + sa_out
 
         # MoE FFN 2
-        expert_outputs_2 = [jax.vmap(jax.vmap(expert))(x) for expert in self.moe_ffn2_experts]
+        expert_outputs_2 = [
+            jax.vmap(jax.vmap(expert))(x) for expert in self.moe_ffn2_experts
+        ]
         x_moe2 = jnp.stack(expert_outputs_2, axis=-1)
         x_moe2 = (gate_scores * x_moe2).sum(axis=-1)
         x = x + jax.vmap(jax.vmap(self.ln5))(x_moe2)
@@ -629,16 +711,38 @@ class CGPTNO(eqx.Module):
         keys = jax.random.split(key, n_total)
 
         # Trunk MLP
-        self.trunk_mlp = MLP(self._trunk_size, n_hidden, n_hidden, n_layers=mlp_layers, act=act, key=keys[0])
+        self.trunk_mlp = MLP(
+            self._trunk_size,
+            n_hidden,
+            n_hidden,
+            n_layers=mlp_layers,
+            act=act,
+            key=keys[0],
+        )
 
         # Branch MLPs
-        self.branch_mlps = [MLP(self._branch_sizes[i], n_hidden, n_hidden, n_layers=mlp_layers, act=act, key=keys[1 + i]) for i in range(self._n_inputs)]
+        self.branch_mlps = [
+            MLP(
+                self._branch_sizes[i],
+                n_hidden,
+                n_hidden,
+                n_layers=mlp_layers,
+                act=act,
+                key=keys[1 + i],
+            )
+            for i in range(self._n_inputs)
+        ]
 
         # Transformer blocks
-        self.blocks = [CrossAttentionBlock(config, key=keys[1 + self._n_inputs + i]) for i in range(n_layers)]
+        self.blocks = [
+            CrossAttentionBlock(config, key=keys[1 + self._n_inputs + i])
+            for i in range(n_layers)
+        ]
 
         # Output MLP
-        self.out_mlp = MLP(n_hidden, n_hidden, output_size, n_layers=mlp_layers, act=act, key=keys[-1])
+        self.out_mlp = MLP(
+            n_hidden, n_hidden, output_size, n_layers=mlp_layers, act=act, key=keys[-1]
+        )
 
     def __call__(
         self,
@@ -664,14 +768,20 @@ class CGPTNO(eqx.Module):
         if self.horiz_fourier_dim > 0:
             x_trunk = horizontal_fourier_embedding(x_trunk, self.horiz_fourier_dim)
             if x_branches is not None:
-                x_branches = [horizontal_fourier_embedding(xb, self.horiz_fourier_dim) for xb in x_branches]
+                x_branches = [
+                    horizontal_fourier_embedding(xb, self.horiz_fourier_dim)
+                    for xb in x_branches
+                ]
 
         # Trunk embedding
         x = jax.vmap(jax.vmap(self.trunk_mlp))(x_trunk)
 
         # Branch embeddings
         if x_branches is not None and len(x_branches) > 0:
-            z_list = [jax.vmap(jax.vmap(self.branch_mlps[i]))(xb) for i, xb in enumerate(x_branches)]
+            z_list = [
+                jax.vmap(jax.vmap(self.branch_mlps[i]))(xb)
+                for i, xb in enumerate(x_branches)
+            ]
         else:
             z_list = [x]
 
@@ -761,13 +871,35 @@ class GNOT(eqx.Module):
         n_total = 2 + self._n_inputs + n_layers
         keys = jax.random.split(key, n_total)
 
-        self.trunk_mlp = MLP(self._trunk_size, n_hidden, n_hidden, n_layers=mlp_layers, act=act, key=keys[0])
+        self.trunk_mlp = MLP(
+            self._trunk_size,
+            n_hidden,
+            n_hidden,
+            n_layers=mlp_layers,
+            act=act,
+            key=keys[0],
+        )
 
-        self.branch_mlps = [MLP(self._branch_sizes[i], n_hidden, n_hidden, n_layers=mlp_layers, act=act, key=keys[1 + i]) for i in range(self._n_inputs)]
+        self.branch_mlps = [
+            MLP(
+                self._branch_sizes[i],
+                n_hidden,
+                n_hidden,
+                n_layers=mlp_layers,
+                act=act,
+                key=keys[1 + i],
+            )
+            for i in range(self._n_inputs)
+        ]
 
-        self.blocks = [MoECrossAttentionBlock(config, key=keys[1 + self._n_inputs + i]) for i in range(n_layers)]
+        self.blocks = [
+            MoECrossAttentionBlock(config, key=keys[1 + self._n_inputs + i])
+            for i in range(n_layers)
+        ]
 
-        self.out_mlp = MLP(n_hidden, n_hidden, output_size, n_layers=mlp_layers, act=act, key=keys[-1])
+        self.out_mlp = MLP(
+            n_hidden, n_hidden, output_size, n_layers=mlp_layers, act=act, key=keys[-1]
+        )
 
     def __call__(
         self,
@@ -792,11 +924,17 @@ class GNOT(eqx.Module):
 
         if self.horiz_fourier_dim > 0:
             x_trunk = horizontal_fourier_embedding(x_trunk, self.horiz_fourier_dim)
-            x_branches = [horizontal_fourier_embedding(xb, self.horiz_fourier_dim) for xb in x_branches]
+            x_branches = [
+                horizontal_fourier_embedding(xb, self.horiz_fourier_dim)
+                for xb in x_branches
+            ]
 
         x = jax.vmap(jax.vmap(self.trunk_mlp))(x_trunk)
 
-        z_list = [jax.vmap(jax.vmap(self.branch_mlps[i]))(xb) for i, xb in enumerate(x_branches)]
+        z_list = [
+            jax.vmap(jax.vmap(self.branch_mlps[i]))(xb)
+            for i, xb in enumerate(x_branches)
+        ]
 
         for block in self.blocks:
             x = block(x, z_list, pos, key=key)

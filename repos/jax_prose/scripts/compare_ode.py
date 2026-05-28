@@ -22,7 +22,9 @@ def _strip_prefix(k: str) -> str:
 
 def _flatten_state(ckpt: dict) -> dict[str, torch.Tensor]:
     if isinstance(ckpt, dict) and "model" in ckpt and isinstance(ckpt["model"], dict):
-        return {_strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)}
+        return {
+            _strip_prefix(k): v for k, v in ckpt["model"].items() if torch.is_tensor(v)
+        }
 
     out: dict[str, torch.Tensor] = {}
     if isinstance(ckpt, dict) and all(isinstance(v, dict) for v in ckpt.values()):
@@ -84,12 +86,20 @@ class PTODE(tnn.Module):
             causal=False,
         ).transpose(0, 1)
         q = self.data_decoder("query_emb", query_times=query_times)
-        return self.data_decoder.generate(src_enc=fused, src_len=(data_len, text_len), query_emb=q)
+        return self.data_decoder.generate(
+            src_enc=fused, src_len=(data_len, text_len), query_emb=q
+        )
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Compare PROSE-ODE PyTorch and JAX outputs")
-    ap.add_argument("--prose-root", type=Path, default=Path("/home/users/armbrust/projects/prose/prose_ode"))
+    ap = argparse.ArgumentParser(
+        description="Compare PROSE-ODE PyTorch and JAX outputs"
+    )
+    ap.add_argument(
+        "--prose-root",
+        type=Path,
+        default=Path("/home/users/armbrust/projects/prose/prose_ode"),
+    )
     ap.add_argument("--checkpoint", type=Path, default=None)
     ap.add_argument("--msgpack", type=Path, default=None)
     ap.add_argument("--n-words", type=int, default=512)
@@ -124,20 +134,26 @@ def main():
     pt.eval()
 
     rng = np.random.default_rng(args.seed)
-    data_input = rng.normal(size=(args.input_len, 1, 1 + args.max_output_dimension)).astype(np.float32)
+    data_input = rng.normal(
+        size=(args.input_len, 1, 1 + args.max_output_dimension)
+    ).astype(np.float32)
     data_len = np.asarray([args.input_len], dtype=np.int64)
     text_input = rng.integers(3, n_words, size=(args.text_len, 1), dtype=np.int64)
     text_len = np.asarray([args.text_len], dtype=np.int64)
     query_times = np.linspace(0.0, 1.0, args.output_len, dtype=np.float32)
 
     with torch.no_grad():
-        y_pt = pt(
-            torch.from_numpy(data_input),
-            torch.from_numpy(data_len),
-            torch.from_numpy(text_input),
-            torch.from_numpy(text_len),
-            torch.from_numpy(query_times),
-        ).cpu().numpy()
+        y_pt = (
+            pt(
+                torch.from_numpy(data_input),
+                torch.from_numpy(data_len),
+                torch.from_numpy(text_input),
+                torch.from_numpy(text_len),
+                torch.from_numpy(query_times),
+            )
+            .cpu()
+            .numpy()
+        )
 
     cfg = ProseTextData2to1Config()
     j_model = PROSEODE2to1(

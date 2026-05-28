@@ -2,7 +2,6 @@
 Positional encoding utilities: interpolation helpers for learned embeddings.
 """
 
-import jax
 import jax.numpy as jnp
 
 

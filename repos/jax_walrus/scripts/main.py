@@ -138,7 +138,9 @@ def compare_weights(jax_params_jnp, msgpack_path: Path) -> dict:
     exact = 0
     total_elements = 0
 
-    for (orig_path, orig_arr), (load_path, load_arr) in zip(flat_converted, flat_loaded):
+    for (orig_path, orig_arr), (load_path, load_arr) in zip(
+        flat_converted, flat_loaded
+    ):
         if orig_path != load_path:
             raise ValueError(f"Path mismatch: {orig_path} vs {load_path}")
 
@@ -169,9 +171,7 @@ def print_summary(checkpoint_path: Path, msgpack_path: Path, metrics: dict) -> N
     print(f"msgpack_size_mb: {msgpack_path.stat().st_size / (1024 * 1024):.1f}")
     print(f"keys_converted: {metrics['keys_converted']}")
     print(f"keys_msgpack: {metrics['keys_msgpack']}")
-    print(
-        f"exact_tensors: {metrics['exact_tensors']}/{metrics['keys_converted']}"
-    )
+    print(f"exact_tensors: {metrics['exact_tensors']}/{metrics['keys_converted']}")
     print(f"total_elements: {metrics['total_elements']:,}")
     print(f"global_l2: {metrics['global_l2']:.6e}")
     print(f"global_max_abs: {metrics['global_max_abs']:.6e}")

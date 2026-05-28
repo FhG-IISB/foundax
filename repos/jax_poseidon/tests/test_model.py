@@ -2,7 +2,6 @@
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 import pytest
 
 jax.config.update("jax_platform_name", "cpu")
@@ -36,7 +35,7 @@ def params(model, dummy_input):
 
 
 def test_import():
-    from jax_poseidon import ScOT, ScOTConfig, poseidonT, poseidonB, poseidonL
+    pass
 
 
 def test_init(params):

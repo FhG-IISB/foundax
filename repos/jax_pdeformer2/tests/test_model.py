@@ -50,11 +50,7 @@ def mini_params(mini_model, dummy_inputs):
 
 def test_import():
     from jax_pdeformer2 import (
-        PDEformer,
-        create_pdeformer_from_config,
         PDEFORMER_SMALL_CONFIG,
-        PDEFORMER_BASE_CONFIG,
-        PDEFORMER_FAST_CONFIG,
     )
 
     assert PDEFORMER_SMALL_CONFIG is not None

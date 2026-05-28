@@ -32,7 +32,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,7 +73,9 @@ def _compare_morph(
     spatial: int = 4,
 ) -> Tuple[float, float, str]:
     """MORPH ViT3DRegression: PyTorch ↔ Equinox."""
-    import torch, jax, jax.numpy as jnp
+    import torch
+    import jax
+    import jax.numpy as jnp
 
     jax.config.update("jax_platform_name", "cpu")
     _ensure_paths(
@@ -161,7 +163,9 @@ def _compare_mpp(
     resolution: int = 32,
 ) -> Tuple[float, float, str]:
     """MPP AViT: PyTorch ↔ Equinox."""
-    import torch, jax, jax.numpy as jnp
+    import torch
+    import jax
+    import jax.numpy as jnp
 
     jax.config.update("jax_platform_name", "cpu")
     _ensure_paths(
@@ -170,7 +174,6 @@ def _compare_mpp(
         projects_root.parent / "tests",
     )
 
-    from jax_mpp.avit import AViT as FlaxAViT
     from jax_mpp.avit_eqx import AViT as EqxAViT
     from jax_mpp import convert_pytorch_to_jax_params
     from models.avit import build_avit
@@ -257,7 +260,9 @@ def _compare_poseidon(
     PT→Flax key converter matches all parameters.  Image size is shrunk
     to 32 to keep memory and runtime reasonable.
     """
-    import torch, jax, jax.numpy as jnp
+    import torch
+    import jax
+    import jax.numpy as jnp
 
     jax.config.update("jax_platform_name", "cpu")
     _ensure_paths(
@@ -389,7 +394,9 @@ def _compare_bcat(
     seed: int = 42,
 ) -> Tuple[float, float, str]:
     """BCAT: PyTorch ↔ Equinox."""
-    import torch, jax, jax.numpy as jnp
+    import torch
+    import jax
+    import jax.numpy as jnp
 
     jax.config.update("jax_platform_name", "cpu")
     _ensure_paths(
@@ -536,8 +543,8 @@ def _compare_walrus(
       transfer_weights → Equinox, then compare Flax vs Eqx forward.
     """
     import types
-    import jax, jax.numpy as jnp
-    import torch
+    import jax
+    import jax.numpy as jnp
 
     jax.config.update("jax_platform_name", "cpu")
 
@@ -668,9 +675,7 @@ def _compare_walrus(
         learned_pad=True,
     )
     flax_model = FlaxModel(**eqx_cfg, jitter_patches=False)
-    rng = jax.random.PRNGKey(42)
     B, T, H, W, C = 1, 2, 16, 16, N_STATES
-    x_init = jnp.ones((B, T, H, W, C))
     state_labels = jnp.arange(C)
     bcs = [[0, 0], [0, 0]]
     flax_vars_pt = {"params": pt_flax["params"]}
@@ -927,7 +932,8 @@ def _compare_prose(
 ) -> Tuple[float, float, str]:
     """PROSE 2to1: PyTorch ↔ Equinox."""
     import types
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import torch
 
     jax.config.update("jax_platform_name", "cpu")
@@ -1136,7 +1142,8 @@ def _compare_dpot(
     seed: int = 42,
 ) -> Tuple[float, float, str]:
     """DPOT: PyTorch ↔ Equinox."""
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import torch
 
     jax.config.update("jax_platform_name", "cpu")
@@ -1234,7 +1241,8 @@ def _compare_pdeformer2(
     import subprocess
     import tempfile
 
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     from flax.core import freeze
 
     jax.config.update("jax_platform_name", "cpu")
@@ -1243,7 +1251,6 @@ def _compare_pdeformer2(
         projects_root.parent / "tests",
     )
 
-    from jax_pdeformer2.pdeformer import create_pdeformer_from_config
     from jax_pdeformer2.utils import convert_mindspore_to_jax
     from jax_pdeformer2.model_eqx import PDEformer as EqxPDEformer
     from test_pdeformer2_eqx import transfer_weights as flax_to_eqx
@@ -1433,9 +1440,9 @@ def run_comparisons(
     """Return {model: {"forward": float|None, "gradient": float|None, "type": str}}."""
     results: Dict[str, Dict[str, Any]] = {}
     for name in models:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  Running comparison: {name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         _cleanup_ogrepo_modules()
         try:
             fwd, grad, kind = RUNNERS[name](projects_root)
@@ -1464,7 +1471,6 @@ def plot_heatmap(
     and gradient accuracy are equal, and dashed crosshairs at float32
     machine-epsilon give an at-a-glance reference.
     """
-    from matplotlib.offsetbox import AnchoredText
     import matplotlib.patheffects as pe
 
     # -- Collect data -------------------------------------------------------

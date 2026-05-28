@@ -25,17 +25,24 @@ except ImportError:
 
 def main():
     parser = argparse.ArgumentParser(description="Compare PyTorch vs JAX MPP outputs")
-    parser.add_argument("--checkpoint", type=str, required=True, help="PyTorch checkpoint path")
-    parser.add_argument("--variant", type=str, default="Ti", choices=["Ti", "S", "B", "L"])
+    parser.add_argument(
+        "--checkpoint", type=str, required=True, help="PyTorch checkpoint path"
+    )
+    parser.add_argument(
+        "--variant", type=str, default="Ti", choices=["Ti", "S", "B", "L"]
+    )
     parser.add_argument("--n_steps", type=int, default=4, help="Number of time steps")
     parser.add_argument("--resolution", type=int, default=128)
     parser.add_argument("--batch", type=int, default=2)
-    parser.add_argument("--n_channels", type=int, default=None,
-                        help="Active channels (default: all n_states)")
+    parser.add_argument(
+        "--n_channels",
+        type=int,
+        default=None,
+        help="Active channels (default: all n_states)",
+    )
     args = parser.parse_args()
 
     assert torch is not None, "PyTorch is required for comparison"
-    import jax
     import jax.numpy as jnp
     from jax_mpp import load_pytorch_state_dict, convert_pytorch_to_jax_params
     from jax_mpp.configs import AVIT_CONFIGS, _make_model
@@ -54,7 +61,7 @@ def main():
     # State labels: PyTorch expects [[0,1,...,C-1]] (nested list)
     #               JAX expects jnp.arange(C) (1-D array)
     labels_list = list(range(C))
-    labels_pt = [labels_list]       # nested list for PT SubsampledLinear
+    labels_pt = [labels_list]  # nested list for PT SubsampledLinear
     labels_jax = jnp.arange(C)
 
     # ---- Load checkpoint ----
@@ -67,12 +74,15 @@ def main():
         from models.avit import build_avit
     except ImportError:
         print("ERROR: Cannot import original PyTorch AViT.")
-        print("Try: PYTHONPATH=/path/to/multiple_physics_pretraining python scripts/compare.py ...")
+        print(
+            "Try: PYTHONPATH=/path/to/multiple_physics_pretraining python scripts/compare.py ..."
+        )
         sys.exit(1)
 
     # Build a params namespace matching the variant config
     class Params:
         pass
+
     params = Params()
     params.embed_dim = cfg["embed_dim"]
     params.processor_blocks = cfg["processor_blocks"]

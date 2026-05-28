@@ -44,7 +44,9 @@ def pairwise_dist(res1x: int, res1y: int, res2x: int, res2y: int) -> jnp.ndarray
     return (dist / 2.0).astype(_default_float_dtype())
 
 
-def pairwise_dist_from_coords(coords1: jnp.ndarray, coords2: jnp.ndarray) -> jnp.ndarray:
+def pairwise_dist_from_coords(
+    coords1: jnp.ndarray, coords2: jnp.ndarray
+) -> jnp.ndarray:
     """
     Compute pairwise squared distances between two sets of coordinates.
 
@@ -113,7 +115,9 @@ class MultiHeadPosAtt(eqx.Module):
         self.r = jax.random.normal(key1, (n_head, 1, 1))
 
         # Learnable value projection weights
-        self.weight = jax.random.normal(key2, (n_head, hid_channels, v_dim)) * (1.0 / jnp.sqrt(hid_channels))
+        self.weight = jax.random.normal(key2, (n_head, hid_channels, v_dim)) * (
+            1.0 / jnp.sqrt(hid_channels)
+        )
 
     def __call__(self, m_dist: jnp.ndarray, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """
@@ -134,7 +138,9 @@ class MultiHeadPosAtt(eqx.Module):
         # Apply locality mask if needed
         if self.locality <= 100:
             # Compute threshold as quantile of distances
-            threshold = jnp.percentile(scaled_dist, self.locality, axis=-1, keepdims=True)
+            threshold = jnp.percentile(
+                scaled_dist, self.locality, axis=-1, keepdims=True
+            )
             # Mask out distant positions
             scaled_dist = jnp.where(scaled_dist <= threshold, scaled_dist, jnp.inf)
 
@@ -144,12 +150,16 @@ class MultiHeadPosAtt(eqx.Module):
         # Project input to values
         # x: [batch, N_key, hid_channels]
         # weight: [n_head, hid_channels, v_dim]
-        value = jnp.einsum("bnj,hjk->bhnk", x, self.weight)  # [batch, n_head, N_key, v_dim]
+        value = jnp.einsum(
+            "bnj,hjk->bhnk", x, self.weight
+        )  # [batch, n_head, N_key, v_dim]
 
         # Apply attention
         # att: [n_head, N_query, N_key]
         # value: [batch, n_head, N_key, v_dim]
-        out = jnp.einsum("hjn,bhnk->bhjk", att, value)  # [batch, n_head, N_query, v_dim]
+        out = jnp.einsum(
+            "hjn,bhnk->bhjk", att, value
+        )  # [batch, n_head, N_query, v_dim]
 
         # Reshape: [batch, n_head, N_query, v_dim] -> [batch, N_query, n_head, v_dim]
         out = jnp.transpose(out, (0, 2, 1, 3))
@@ -229,7 +239,12 @@ class PiT(eqx.Module):
         # Encoder
         self.en_fc1 = Linear(in_channels, hid_channels, key=keys[idx])
         idx += 1
-        self.down = MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=en_locality, key=keys[idx])
+        self.down = MultiHeadPosAtt(
+            n_head=n_head,
+            hid_channels=hid_channels,
+            locality=en_locality,
+            key=keys[idx],
+        )
         idx += 1
 
         # Processor
@@ -237,9 +252,23 @@ class PiT(eqx.Module):
         MLP_blocks = []
         W_blocks = []
         for i in range(self.n_blocks):
-            PA_blocks.append(MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=proc_localities[i], key=keys[idx]))
+            PA_blocks.append(
+                MultiHeadPosAtt(
+                    n_head=n_head,
+                    hid_channels=hid_channels,
+                    locality=proc_localities[i],
+                    key=keys[idx],
+                )
+            )
             idx += 1
-            MLP_blocks.append(PiTMLP(in_channels=hid_channels, hid_channels=hid_channels, out_channels=hid_channels, key=keys[idx]))
+            MLP_blocks.append(
+                PiTMLP(
+                    in_channels=hid_channels,
+                    hid_channels=hid_channels,
+                    out_channels=hid_channels,
+                    key=keys[idx],
+                )
+            )
             idx += 1
             W_blocks.append(Linear(hid_channels, hid_channels, key=keys[idx]))
             idx += 1
@@ -248,7 +277,12 @@ class PiT(eqx.Module):
         self.W_blocks = W_blocks
 
         # Decoder
-        self.up = MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=de_locality, key=keys[idx])
+        self.up = MultiHeadPosAtt(
+            n_head=n_head,
+            hid_channels=hid_channels,
+            locality=de_locality,
+            key=keys[idx],
+        )
         idx += 1
         self.de_fc1 = Linear(hid_channels, hid_channels, key=keys[idx])
         idx += 1
@@ -363,11 +397,17 @@ class PiTWithCoords(eqx.Module):
 
         # Precompute distance matrices for regular grids
         # Encoder: input -> latent
-        self.m_dist_down = pairwise_dist(latent_res[0], latent_res[1], input_res[0], input_res[1])
+        self.m_dist_down = pairwise_dist(
+            latent_res[0], latent_res[1], input_res[0], input_res[1]
+        )
         # Processor: latent -> latent
-        self.m_dist_proc = pairwise_dist(latent_res[0], latent_res[1], latent_res[0], latent_res[1])
+        self.m_dist_proc = pairwise_dist(
+            latent_res[0], latent_res[1], latent_res[0], latent_res[1]
+        )
         # Decoder: latent -> output
-        self.m_dist_up = pairwise_dist(output_res[0], output_res[1], latent_res[0], latent_res[1])
+        self.m_dist_up = pairwise_dist(
+            output_res[0], output_res[1], latent_res[0], latent_res[1]
+        )
 
         # Split keys for all sub-modules
         keys = jax.random.split(key, 3 + 3 * self.n_blocks + 2)
@@ -376,7 +416,12 @@ class PiTWithCoords(eqx.Module):
         # Encoder
         self.en_fc1 = Linear(in_channels, hid_channels, key=keys[idx])
         idx += 1
-        self.down = MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=en_locality, key=keys[idx])
+        self.down = MultiHeadPosAtt(
+            n_head=n_head,
+            hid_channels=hid_channels,
+            locality=en_locality,
+            key=keys[idx],
+        )
         idx += 1
 
         # Processor
@@ -384,9 +429,23 @@ class PiTWithCoords(eqx.Module):
         MLP_blocks = []
         W_blocks = []
         for i in range(self.n_blocks):
-            PA_blocks.append(MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=proc_localities[i], key=keys[idx]))
+            PA_blocks.append(
+                MultiHeadPosAtt(
+                    n_head=n_head,
+                    hid_channels=hid_channels,
+                    locality=proc_localities[i],
+                    key=keys[idx],
+                )
+            )
             idx += 1
-            MLP_blocks.append(PiTMLP(in_channels=hid_channels, hid_channels=hid_channels, out_channels=hid_channels, key=keys[idx]))
+            MLP_blocks.append(
+                PiTMLP(
+                    in_channels=hid_channels,
+                    hid_channels=hid_channels,
+                    out_channels=hid_channels,
+                    key=keys[idx],
+                )
+            )
             idx += 1
             W_blocks.append(Linear(hid_channels, hid_channels, key=keys[idx]))
             idx += 1
@@ -395,7 +454,12 @@ class PiTWithCoords(eqx.Module):
         self.W_blocks = W_blocks
 
         # Decoder
-        self.up = MultiHeadPosAtt(n_head=n_head, hid_channels=hid_channels, locality=de_locality, key=keys[idx])
+        self.up = MultiHeadPosAtt(
+            n_head=n_head,
+            hid_channels=hid_channels,
+            locality=de_locality,
+            key=keys[idx],
+        )
         idx += 1
         self.de_fc1 = Linear(hid_channels, hid_channels, key=keys[idx])
         idx += 1
@@ -418,15 +482,17 @@ class PiTWithCoords(eqx.Module):
             x = x[None, ...]
             squeeze_batch = True
 
-        en_locality = self.localities[0]
-        de_locality = self.localities[-1]
-        proc_localities = self.localities[1:-1]
-
         # Broadcast distance matrices for multi-head attention
         # Shape: [n_head, N_query, N_key]
-        m_dist_down = jnp.broadcast_to(self.m_dist_down[None, ...], (self.n_head,) + self.m_dist_down.shape)
-        m_dist_proc = jnp.broadcast_to(self.m_dist_proc[None, ...], (self.n_head,) + self.m_dist_proc.shape)
-        m_dist_up = jnp.broadcast_to(self.m_dist_up[None, ...], (self.n_head,) + self.m_dist_up.shape)
+        m_dist_down = jnp.broadcast_to(
+            self.m_dist_down[None, ...], (self.n_head,) + self.m_dist_down.shape
+        )
+        m_dist_proc = jnp.broadcast_to(
+            self.m_dist_proc[None, ...], (self.n_head,) + self.m_dist_proc.shape
+        )
+        m_dist_up = jnp.broadcast_to(
+            self.m_dist_up[None, ...], (self.n_head,) + self.m_dist_up.shape
+        )
 
         # ============ Encoder ============
         x = jax.vmap(jax.vmap(self.en_fc1))(x)

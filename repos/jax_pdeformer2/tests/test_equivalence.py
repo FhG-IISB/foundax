@@ -76,7 +76,7 @@ def run_mindspore(
 ):
     """Run the MindSpore model and optionally save initialized weights."""
     try:
-        import mindspore as ms
+        import mindspore  # noqa: F401
         from mindspore import Tensor, context
         from mindspore import dtype as mstype
     except ImportError:
@@ -267,12 +267,12 @@ def compare_outputs(ms_output: np.ndarray, jax_output: np.ndarray):
     abs_diff = np.abs(ms_output - jax_output)
     rel_diff = abs_diff / (np.abs(ms_output) + 1e-8)
 
-    print(f"\nAbsolute difference:")
+    print("\nAbsolute difference:")
     print(f"  Max:  {abs_diff.max():.6e}")
     print(f"  Mean: {abs_diff.mean():.6e}")
     print(f"  Std:  {abs_diff.std():.6e}")
 
-    print(f"\nRelative difference:")
+    print("\nRelative difference:")
     print(f"  Max:  {rel_diff.max():.6e}")
     print(f"  Mean: {rel_diff.mean():.6e}")
 
@@ -339,7 +339,7 @@ def main():
         if args.save_inputs:
             save_inputs(inputs, args.inputs_path)
 
-    print(f"\nInput shapes:")
+    print("\nInput shapes:")
     for key, val in inputs.items():
         print(f"  {key}: {val.shape} ({val.dtype})")
 

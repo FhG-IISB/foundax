@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
-import equinox as eqx
 import numpy as np
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_walrus"))
 
@@ -74,9 +74,9 @@ class TestWalrusEqx:
         bcs = [[0, 0], [0, 0]]
         out1 = np.array(self.model(x, state_labels, bcs, deterministic=True))
         out2 = np.array(self.model(x, state_labels, bcs, deterministic=True))
-        assert np.allclose(
-            out1, out2, atol=0
-        ), "Non-deterministic in deterministic mode"
+        assert np.allclose(out1, out2, atol=0), (
+            "Non-deterministic in deterministic mode"
+        )
 
 
 if __name__ == "__main__":

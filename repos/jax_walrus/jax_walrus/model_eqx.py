@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 from math import pi
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import equinox as eqx
 import jax
@@ -521,7 +521,6 @@ class AdaptiveDVstrideEncoder(eqx.Module):
         self.norm2 = RMSGroupNorm(groups, output_dim)
 
     def __call__(self, x, stride1, stride2):
-        bk1 = tuple(self.base_kernel_size[i][0] for i in range(self.spatial_dims))
         w1 = self.proj1_weight
         s1 = list(stride1)
         spatial_shape = x.shape[2:]
@@ -1140,7 +1139,6 @@ class IsotropicModel(eqx.Module):
             field_indices = jnp.asarray(field_indices, dtype=jnp.int32)
 
         # Convert (B, T, *spatial, C) -> (T, B, C, *spatial)
-        n_spatial = x.ndim - 3
         x = jnp.moveaxis(x, -1, 2)
         x = jnp.swapaxes(x, 0, 1)
 
@@ -1174,7 +1172,6 @@ class IsotropicModel(eqx.Module):
         x = x * self.encoder_dummy
 
         # Jitter / learned padding
-        jitter_active = False  # deterministic mode only for testing
         should_jitter = self.learned_pad
         if should_jitter:
             bcs_flat = bcs[0] if isinstance(bcs, tuple) else bcs

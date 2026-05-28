@@ -7,6 +7,7 @@ Usage:
 Creates <output_dir>/ms_params.npz  (model weights, MS naming)
         <output_dir>/ms_io.npz     (inputs + forward output + gradient)
 """
+
 import os
 import sys
 
@@ -134,8 +135,7 @@ def main(output_dir: str, ogrepo_path: str, seed: int = 42) -> None:
     )
 
     print(
-        f"OK  params={len(ms_params)}  output={ms_output.shape}  "
-        f"grad={ms_grad.shape}",
+        f"OK  params={len(ms_params)}  output={ms_output.shape}  grad={ms_grad.shape}",
         flush=True,
     )
 

@@ -76,7 +76,9 @@ class DispatchTests(unittest.TestCase):
 
     def test_dpot_dispatch(self):
         # dpot uses _adapted_cls() which subclasses DPOTNet; provide a real base
-        _FakeDPOTNet = type("DPOTNet", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        _FakeDPOTNet = type(
+            "DPOTNet", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)}
+        )
         fake = SimpleNamespace(DPOTNet=_FakeDPOTNet)
         seen, ensure, importer = _patch_module(dpot, fake)
 
@@ -91,7 +93,11 @@ class DispatchTests(unittest.TestCase):
 
     def test_morph_dispatch(self):
         # morph uses _adapted_cls() which subclasses ViT3DRegression
-        _FakeViT = type("ViT3DRegression", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        _FakeViT = type(
+            "ViT3DRegression",
+            (),
+            {"__init__": lambda self, **kw: setattr(self, "_kw", kw)},
+        )
         fake = SimpleNamespace(ViT3DRegression=_FakeViT)
         seen, ensure, importer = _patch_module(morph, fake)
 
@@ -106,7 +112,9 @@ class DispatchTests(unittest.TestCase):
 
     def test_mpp_dispatch(self):
         # mpp uses _adapted_cls() which subclasses AViT
-        _FakeAViT = type("AViT", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        _FakeAViT = type(
+            "AViT", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)}
+        )
         fake = SimpleNamespace(AViT=_FakeAViT)
         seen, ensure, importer = _patch_module(mpp, fake)
 

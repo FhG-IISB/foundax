@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import pytest
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "repos", "jax_dpot"))
 
