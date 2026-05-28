@@ -30,7 +30,7 @@ _KWARGS = dict(
     mlp_ratio=1.0,
     n_cls=4,
     normalize=False,
-    act="gelu",
+    act=jax.nn.gelu,
     time_agg="exp_mlp",
 )
 

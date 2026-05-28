@@ -1,3 +1,4 @@
+import importlib as _importlib
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -26,79 +27,37 @@ class Recorder:
 
 def _patch_module(module, fake_vendor_module):
     seen = {}
+    _real_import = _importlib.import_module
 
     def _ensure(name):
         seen["repo"] = name
 
     def _import(name):
-        seen["import"] = name
-        return fake_vendor_module
+        # Intercept only vendor repos (jax_*) and fall through for all other
+        # imports (JAX internals, jaxlib, etc.) to avoid breaking XLA init.
+        if name.startswith("jax_"):
+            seen["import"] = name
+            return fake_vendor_module
+        return _real_import(name)
 
     return seen, _ensure, _import
 
 
 class DispatchTests(unittest.TestCase):
-    def test_morph_dispatch(self):
+    def test_bcat_dispatch(self):
         rec = Recorder()
-        fake = SimpleNamespace(
-            morph_Ti=rec.record("morph_Ti"),
-            morph_S=rec.record("morph_S"),
-            morph_M=rec.record("morph_M"),
-            morph_L=rec.record("morph_L"),
-        )
-        seen, ensure, importer = _patch_module(morph, fake)
+        fake = SimpleNamespace(BCAT=rec.record("BCAT"))
+        seen, ensure, importer = _patch_module(bcat, fake)
 
         with (
-            patch.object(morph, "ensure_repo_on_path", ensure),
-            patch.object(morph.importlib, "import_module", importer),
+            patch.object(bcat, "ensure_repo_on_path", ensure),
+            patch.object(bcat.importlib, "import_module", importer),
         ):
-            out = morph.Ti(1, foo=2)
+            out = bcat.base()
 
-        self.assertEqual(seen["repo"], "jax_morph")
-        self.assertEqual(seen["import"], "jax_morph")
-        self.assertEqual(out["name"], "morph_Ti")
-        self.assertEqual(out["args"], (1,))
-        self.assertEqual(out["kwargs"], {"foo": 2})
-
-    def test_mpp_dispatch(self):
-        rec = Recorder()
-        fake = SimpleNamespace(
-            avit_Ti=rec.record("avit_Ti"),
-            avit_S=rec.record("avit_S"),
-            avit_B=rec.record("avit_B"),
-            avit_L=rec.record("avit_L"),
-        )
-        seen, ensure, importer = _patch_module(mpp, fake)
-
-        with (
-            patch.object(mpp, "ensure_repo_on_path", ensure),
-            patch.object(mpp.importlib, "import_module", importer),
-        ):
-            out = mpp.B(n_states=12)
-
-        self.assertEqual(seen["repo"], "jax_mpp")
-        self.assertEqual(seen["import"], "jax_mpp")
-        self.assertEqual(out["name"], "avit_B")
-        self.assertEqual(out["kwargs"], {"n_states": 12})
-
-    def test_poseidon_dispatch(self):
-        rec = Recorder()
-        fake = SimpleNamespace(
-            poseidonT=rec.record("poseidonT"),
-            poseidonB=rec.record("poseidonB"),
-            poseidonL=rec.record("poseidonL"),
-        )
-        seen, ensure, importer = _patch_module(poseidon, fake)
-
-        with (
-            patch.object(poseidon, "ensure_repo_on_path", ensure),
-            patch.object(poseidon.importlib, "import_module", importer),
-        ):
-            out = poseidon.L(num_in_channels=1)
-
-        self.assertEqual(seen["repo"], "jax_poseidon")
-        self.assertEqual(seen["import"], "jax_poseidon")
-        self.assertEqual(out["name"], "poseidonL")
+        self.assertEqual(seen["repo"], "jax_bcat")
+        self.assertEqual(seen["import"], "jax_bcat.model_eqx")
+        self.assertEqual(out["name"], "BCAT")
 
     def test_walrus_dispatch(self):
         rec = Recorder()
@@ -112,52 +71,81 @@ class DispatchTests(unittest.TestCase):
             out = walrus.base(processor_blocks=40)
 
         self.assertEqual(seen["repo"], "jax_walrus")
-        self.assertEqual(seen["import"], "jax_walrus")
+        self.assertEqual(seen["import"], "jax_walrus.model_eqx")
         self.assertEqual(out["name"], "IsotropicModel")
 
-    def test_bcat_dispatch(self):
-        rec = Recorder()
-        fake = SimpleNamespace(bcat_default=rec.record("bcat_default"))
-        seen, ensure, importer = _patch_module(bcat, fake)
-
-        with (
-            patch.object(bcat, "ensure_repo_on_path", ensure),
-            patch.object(bcat.importlib, "import_module", importer),
-        ):
-            out = bcat.base()
-
-        self.assertEqual(seen["repo"], "jax_bcat")
-        self.assertEqual(seen["import"], "jax_bcat")
-        self.assertEqual(out["name"], "bcat_default")
-
     def test_dpot_dispatch(self):
-        rec = Recorder()
-        fake = SimpleNamespace(
-            dpot_ti=rec.record("dpot_ti"),
-            dpot_s=rec.record("dpot_s"),
-            dpot_m=rec.record("dpot_m"),
-            dpot_l=rec.record("dpot_l"),
-            dpot_h=rec.record("dpot_h"),
-        )
+        # dpot uses _adapted_cls() which subclasses DPOTNet; provide a real base
+        _FakeDPOTNet = type("DPOTNet", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        fake = SimpleNamespace(DPOTNet=_FakeDPOTNet)
         seen, ensure, importer = _patch_module(dpot, fake)
 
         with (
             patch.object(dpot, "ensure_repo_on_path", ensure),
             patch.object(dpot.importlib, "import_module", importer),
         ):
-            out = dpot.H()
+            dpot.H()
 
         self.assertEqual(seen["repo"], "jax_dpot")
-        self.assertEqual(seen["import"], "jax_dpot")
-        self.assertEqual(out["name"], "dpot_h")
+        self.assertEqual(seen["import"], "jax_dpot.model_eqx")
+
+    def test_morph_dispatch(self):
+        # morph uses _adapted_cls() which subclasses ViT3DRegression
+        _FakeViT = type("ViT3DRegression", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        fake = SimpleNamespace(ViT3DRegression=_FakeViT)
+        seen, ensure, importer = _patch_module(morph, fake)
+
+        with (
+            patch.object(morph, "ensure_repo_on_path", ensure),
+            patch.object(morph.importlib, "import_module", importer),
+        ):
+            morph.Ti()
+
+        self.assertEqual(seen["repo"], "jax_morph")
+        self.assertEqual(seen["import"], "jax_morph.model_eqx")
+
+    def test_mpp_dispatch(self):
+        # mpp uses _adapted_cls() which subclasses AViT
+        _FakeAViT = type("AViT", (), {"__init__": lambda self, **kw: setattr(self, "_kw", kw)})
+        fake = SimpleNamespace(AViT=_FakeAViT)
+        seen, ensure, importer = _patch_module(mpp, fake)
+
+        with (
+            patch.object(mpp, "ensure_repo_on_path", ensure),
+            patch.object(mpp.importlib, "import_module", importer),
+        ):
+            mpp.B(n_states=12)
+
+        self.assertEqual(seen["repo"], "jax_mpp")
+        self.assertEqual(seen["import"], "jax_mpp.avit_eqx")
+
+    def test_poseidon_dispatch(self):
+        rec = Recorder()
+        # _build imports "jax_poseidon" (for ScOTConfig) then "jax_poseidon.scot_eqx"
+        # (for ScOT); both intercepts return the same fake
+        fake = SimpleNamespace(
+            ScOTConfig=lambda **kw: kw,
+            ScOT=rec.record("ScOT"),
+        )
+        seen, ensure, importer = _patch_module(poseidon, fake)
+
+        with (
+            patch.object(poseidon, "ensure_repo_on_path", ensure),
+            patch.object(poseidon.importlib, "import_module", importer),
+        ):
+            out = poseidon.L()
+
+        self.assertEqual(seen["repo"], "jax_poseidon")
+        self.assertEqual(seen["import"], "jax_poseidon.scot_eqx")
+        self.assertEqual(out["name"], "ScOT")
 
     def test_prose_dispatch(self):
         rec = Recorder()
         fake = SimpleNamespace(
-            prose_fd_1to1=rec.record("prose_fd_1to1"),
-            prose_fd_2to1=rec.record("prose_fd_2to1"),
-            prose_ode_2to1=rec.record("prose_ode_2to1"),
-            prose_pde_2to1=rec.record("prose_pde_2to1"),
+            PROSE1to1=rec.record("PROSE1to1"),
+            PROSE2to1=rec.record("PROSE2to1"),
+            PROSEODE2to1=rec.record("PROSEODE2to1"),
+            PROSEPDE2to1=rec.record("PROSEPDE2to1"),
         )
         seen, ensure, importer = _patch_module(prose, fake)
 
@@ -165,34 +153,26 @@ class DispatchTests(unittest.TestCase):
             patch.object(prose, "ensure_repo_on_path", ensure),
             patch.object(prose.importlib, "import_module", importer),
         ):
-            out = prose.pde_2to1(x_num=128)
+            out = prose.pde_2to1(n_words=100, pad_index=0, x_grid_size=128)
 
         self.assertEqual(seen["repo"], "jax_prose")
-        self.assertEqual(seen["import"], "jax_prose")
-        self.assertEqual(out["name"], "prose_pde_2to1")
-        self.assertEqual(out["kwargs"], {"x_num": 128})
+        self.assertEqual(seen["import"], "jax_prose.model_eqx")
+        self.assertEqual(out["name"], "PROSEPDE2to1")
 
     def test_pdeformer2_dispatch(self):
         rec = Recorder()
-        fake = SimpleNamespace(
-            PDEFORMER_SMALL_CONFIG={"name": "small"},
-            PDEFORMER_BASE_CONFIG={"name": "base"},
-            PDEFORMER_FAST_CONFIG={"name": "fast"},
-            create_pdeformer_from_config=rec.record("create_pdeformer_from_config"),
-        )
+        fake = SimpleNamespace(PDEformer=rec.record("PDEformer"))
         seen, ensure, importer = _patch_module(pdeformer2, fake)
 
         with (
             patch.object(pdeformer2, "ensure_repo_on_path", ensure),
             patch.object(pdeformer2.importlib, "import_module", importer),
         ):
-            out = pdeformer2.fast(alpha=1)
+            out = pdeformer2.fast()
 
         self.assertEqual(seen["repo"], "jax_pdeformer2")
-        self.assertEqual(seen["import"], "jax_pdeformer2")
-        self.assertEqual(out["name"], "create_pdeformer_from_config")
-        self.assertEqual(out["args"][0], {"model": {"name": "fast"}})
-        self.assertEqual(out["kwargs"], {"alpha": 1})
+        self.assertEqual(seen["import"], "jax_pdeformer2.model_eqx")
+        self.assertEqual(out["name"], "PDEformer")
 
 
 if __name__ == "__main__":
