@@ -1,4 +1,7 @@
 from . import bcat, dpot, morph, mpp, pdeformer2, poseidon, prose, walrus
+from . import layers
+from .pipe import block, Block, Pipe, ShapeMismatchError
+from .combinators import dot, add, cat
 from .nn import (
     # non-foundation architectures
     linear,
@@ -51,6 +54,17 @@ __version__ = "0.1.6"
 
 __all__ = [
     "__version__",
+    # pipe API
+    "block",
+    "Block",
+    "Pipe",
+    "ShapeMismatchError",
+    # combinators
+    "dot",
+    "add",
+    "cat",
+    # composable layers subpackage
+    "layers",
     # submodule namespaces
     "poseidon",
     "walrus",
