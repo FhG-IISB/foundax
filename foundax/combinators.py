@@ -31,7 +31,7 @@ class DotCombinator(eqx.Module):
 
     def __call__(self, u, y):
         b = self.branch(u)  # (C,)
-        t = self.trunk(y)   # (N, C)
+        t = self.trunk(y)  # (N, C)
         return jnp.einsum("c,nc->n", b, t)
 
 

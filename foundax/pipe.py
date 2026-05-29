@@ -26,7 +26,7 @@ from typing import Optional
 
 import equinox as eqx
 
-_IN_NAMES  = ("in_channels", "in_features")
+_IN_NAMES = ("in_channels", "in_features")
 _OUT_NAMES = ("out_channels", "out_features", "output_dim")
 
 
@@ -41,8 +41,8 @@ def _sniff(module: eqx.Module, names: tuple) -> Optional[int]:
 def _format_pipeline(blocks: list, mismatch_idx: Optional[int] = None) -> str:
     lines = ["  Pipeline:"]
     for i, b in enumerate(blocks):
-        in_s   = str(b._in_channels)  if b._in_channels  is not None else "?"
-        out_s  = str(b._out_channels) if b._out_channels is not None else "?"
+        in_s = str(b._in_channels) if b._in_channels is not None else "?"
+        out_s = str(b._out_channels) if b._out_channels is not None else "?"
         marker = "  <-- mismatch here" if i == mismatch_idx else ""
         lines.append(f"    [{i}] {b.name:<32s}  in={in_s:<6s} out={out_s}{marker}")
     return "\n".join(lines)
@@ -50,11 +50,11 @@ def _format_pipeline(blocks: list, mismatch_idx: Optional[int] = None) -> str:
 
 def _check_edge(
     left_name: str,
-    left_out:  Optional[int],
+    left_out: Optional[int],
     right_name: str,
-    right_in:   Optional[int],
+    right_in: Optional[int],
     all_blocks: list,
-    right_idx:  int,
+    right_idx: int,
 ) -> None:
     if left_out is not None and right_in is not None and left_out != right_in:
         pipeline_str = _format_pipeline(all_blocks, mismatch_idx=right_idx)
@@ -79,7 +79,7 @@ class Block(eqx.Module):
     """
 
     module: eqx.Module
-    _in_channels:  Optional[int] = eqx.field(static=True)
+    _in_channels: Optional[int] = eqx.field(static=True)
     _out_channels: Optional[int] = eqx.field(static=True)
     name: str = eqx.field(static=True)
 
@@ -95,17 +95,23 @@ class Block(eqx.Module):
             if other.blocks:
                 first = other.blocks[0]
                 _check_edge(
-                    self.name, self._out_channels,
-                    first.name, first._in_channels,
-                    all_blocks, 1,
+                    self.name,
+                    self._out_channels,
+                    first.name,
+                    first._in_channels,
+                    all_blocks,
+                    1,
                 )
             return Pipe(all_blocks)
 
         all_blocks = [self, other]
         _check_edge(
-            self.name, self._out_channels,
-            other.name, other._in_channels,
-            all_blocks, 1,
+            self.name,
+            self._out_channels,
+            other.name,
+            other._in_channels,
+            all_blocks,
+            1,
         )
         return Pipe(all_blocks)
 
@@ -135,12 +141,15 @@ class Pipe(eqx.Module):
         if isinstance(other, Pipe):
             all_blocks = self.blocks + other.blocks
             if self.blocks and other.blocks:
-                last  = self.blocks[-1]
+                last = self.blocks[-1]
                 first = other.blocks[0]
                 _check_edge(
-                    last.name,  last._out_channels,
-                    first.name, first._in_channels,
-                    all_blocks, len(self.blocks),
+                    last.name,
+                    last._out_channels,
+                    first.name,
+                    first._in_channels,
+                    all_blocks,
+                    len(self.blocks),
                 )
             return Pipe(all_blocks)
 
@@ -148,9 +157,12 @@ class Pipe(eqx.Module):
         if self.blocks:
             last = self.blocks[-1]
             _check_edge(
-                last.name,  last._out_channels,
-                other.name, other._in_channels,
-                all_blocks, len(self.blocks),
+                last.name,
+                last._out_channels,
+                other.name,
+                other._in_channels,
+                all_blocks,
+                len(self.blocks),
             )
         return Pipe(all_blocks)
 
@@ -183,7 +195,7 @@ def block(module: eqx.Module, *, name: Optional[str] = None) -> Block:
         b2 = fx.block(fx.layers.SpectralBlock2d(32, 1, n_modes=16, key=k2))
         pipe = b1 | b2 | b3
     """
-    in_c  = _sniff(module, _IN_NAMES)
+    in_c = _sniff(module, _IN_NAMES)
     out_c = _sniff(module, _OUT_NAMES)
     label = name or type(module).__name__
     return Block(module, in_c, out_c, label)

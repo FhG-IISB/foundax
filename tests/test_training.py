@@ -19,8 +19,8 @@ jnp = pytest.importorskip("jax.numpy")
 eqx = pytest.importorskip("equinox")
 optax = pytest.importorskip("optax")
 
-import foundax as fx
-import foundax.layers as fl
+import foundax as fx  # noqa: E402
+import foundax.layers as fl  # noqa: E402
 
 pytestmark = pytest.mark.train
 
@@ -86,14 +86,13 @@ class TestTrain1DSpectralPipe:
 
     def _model(self):
         k1, k2 = ks(2)
-        return (
-            fx.block(fl.SpectralBlock1d(1, 16, n_modes=8, key=k1))
-            | fx.block(fl.SpectralBlock1d(16, 1, n_modes=8, key=k2))
+        return fx.block(fl.SpectralBlock1d(1, 16, n_modes=8, key=k1)) | fx.block(
+            fl.SpectralBlock1d(16, 1, n_modes=8, key=k2)
         )
 
     def _data(self):
-        x = jnp.linspace(0, 1, 64)[:, None]      # (64, 1)
-        y = jnp.sin(2 * jnp.pi * x)               # (64, 1)
+        x = jnp.linspace(0, 1, 64)[:, None]  # (64, 1)
+        y = jnp.sin(2 * jnp.pi * x)  # (64, 1)
         return x, y
 
     def test_loss_decreases(self):
@@ -166,7 +165,7 @@ class TestTrain2DSpectralPipe:
         )
 
     def _data(self):
-        x = jnp.ones((8, 8, 1)) * 0.1   # non-zero so all weight gradients are non-zero
+        x = jnp.ones((8, 8, 1)) * 0.1  # non-zero so all weight gradients are non-zero
         y = jnp.ones((8, 8, 1)) * 0.5
         return x, y
 
@@ -214,14 +213,13 @@ class TestTrainMLPPipe:
 
     def _model(self):
         k1, k2 = ks(2)
-        return (
-            fx.block(fx.mlp(in_features=1, output_dim=16, hidden_dims=16, key=k1))
-            | fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=8, key=k2))
-        )
+        return fx.block(
+            fx.mlp(in_features=1, output_dim=16, hidden_dims=16, key=k1)
+        ) | fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=8, key=k2))
 
     def _data(self):
         x = jnp.linspace(-1, 1, 32)[:, None]  # (32, 1)
-        y = x ** 2                              # (32, 1)
+        y = x**2  # (32, 1)
         return x, y
 
     def test_loss_decreases(self):
@@ -239,8 +237,12 @@ class TestTrainMLPPipe:
         w0_before = model.blocks[0].module.hidden_layers[0].weight
         w1_before = model.blocks[1].module.hidden_layers[0].weight
         _, _, trained = _train(model, opt, _make_step_fn(model, opt), x, y)
-        assert not jnp.allclose(trained.blocks[0].module.hidden_layers[0].weight, w0_before)
-        assert not jnp.allclose(trained.blocks[1].module.hidden_layers[0].weight, w1_before)
+        assert not jnp.allclose(
+            trained.blocks[0].module.hidden_layers[0].weight, w0_before
+        )
+        assert not jnp.allclose(
+            trained.blocks[1].module.hidden_layers[0].weight, w1_before
+        )
 
     def test_sgd_also_decreases_loss(self):
         """SGD with momentum should also work as an optimiser."""
@@ -303,10 +305,10 @@ class TestTrainCatCombinator:
 
     def _model(self):
         k1, k2, k3 = ks(3)
-        a    = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=k1))
-        b    = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=k2))
-        catter = fx.block(fx.cat(a, b))          # outputs 16 channels
-        proj   = fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=k3))
+        a = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
+        b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
+        catter = fx.block(fx.cat(a, b))  # outputs 16 channels
+        proj = fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=k3))
         return catter | proj
 
     def _data(self):
@@ -345,13 +347,13 @@ class TestTrainDotCombinator:
     def _model(self):
         k1, k2 = ks(2)
         branch = fx.block(fx.mlp(in_features=8, output_dim=16, hidden_dims=16, key=k1))
-        trunk  = fx.block(fx.mlp(in_features=1, output_dim=16, hidden_dims=16, key=k2))
+        trunk = fx.block(fx.mlp(in_features=1, output_dim=16, hidden_dims=16, key=k2))
         return fx.dot(branch, trunk)
 
     def _data(self):
         # u: sensor values (8,), y: query points (10, 1), target: (10,)
-        u      = jnp.ones((8,))
-        y_pts  = jnp.linspace(0, 1, 10)[:, None]
+        u = jnp.ones((8,))
+        y_pts = jnp.linspace(0, 1, 10)[:, None]
         target = jnp.zeros((10,))
         return u, y_pts, target
 
@@ -398,12 +400,12 @@ class TestTrainLongPipe:
     def _model(self):
         k = ks(6)
         blocks = [
-            fx.block(fl.SpectralBlock2d(1,  16, n_modes=4, key=k[0]), name="lift"),
+            fx.block(fl.SpectralBlock2d(1, 16, n_modes=4, key=k[0]), name="lift"),
             fx.block(fl.SpectralBlock2d(16, 16, n_modes=4, key=k[1])),
             fx.block(fl.SpectralBlock2d(16, 16, n_modes=4, key=k[2])),
             fx.block(fl.SpectralBlock2d(16, 16, n_modes=4, key=k[3])),
             fx.block(fl.SpectralBlock2d(16, 16, n_modes=4, key=k[4])),
-            fx.block(fl.SpectralBlock2d(16,  1, n_modes=4, key=k[5]), name="project"),
+            fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=k[5]), name="project"),
         ]
         pipe = blocks[0]
         for b in blocks[1:]:
@@ -411,7 +413,7 @@ class TestTrainLongPipe:
         return pipe
 
     def _data(self):
-        x = jnp.ones((8, 8, 1)) * 0.1   # non-zero so skip-weight gradients are non-zero
+        x = jnp.ones((8, 8, 1)) * 0.1  # non-zero so skip-weight gradients are non-zero
         y = jnp.full((8, 8, 1), 0.3)
         return x, y
 
@@ -483,9 +485,8 @@ class TestTrainWithRegularisation:
 
     def _model_and_data(self):
         k1, k2 = ks(2)
-        model = (
-            fx.block(fl.SpectralBlock2d(1, 8, n_modes=4, key=k1))
-            | fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k2))
+        model = fx.block(fl.SpectralBlock2d(1, 8, n_modes=4, key=k1)) | fx.block(
+            fl.SpectralBlock2d(8, 1, n_modes=4, key=k2)
         )
         x = jnp.zeros((8, 8, 1))
         y = jnp.ones((8, 8, 1)) * 0.5
@@ -519,10 +520,8 @@ class TestTrainWithRegularisation:
                 grads, opt_state, eqx.filter(model, eqx.is_array)
             )
             # Compute update norm before applying
-            update_leaves = jax.tree_util.tree_leaves(
-                eqx.filter(updates, eqx.is_array)
-            )
-            norm = jnp.sqrt(sum(jnp.sum(u ** 2) for u in update_leaves))
+            update_leaves = jax.tree_util.tree_leaves(eqx.filter(updates, eqx.is_array))
+            norm = jnp.sqrt(sum(jnp.sum(u**2) for u in update_leaves))
             return norm, new_state
 
         update_norm, _ = step_with_grads(model, opt_state, x, y)

@@ -29,18 +29,17 @@ jax = pytest.importorskip("jax")
 jnp = pytest.importorskip("jax.numpy")
 eqx = pytest.importorskip("equinox")
 
-import foundax as fx
-import foundax.layers as fl
-from foundax.pipe import (
+import foundax as fx  # noqa: E402
+import foundax.layers as fl  # noqa: E402
+from foundax.pipe import (  # noqa: E402
     Block,
     Pipe,
     ShapeMismatchError,
     _sniff,
     _IN_NAMES,
     _OUT_NAMES,
-    block,
 )
-from foundax.combinators import (
+from foundax.combinators import (  # noqa: E402
     DotCombinator,
     AddCombinator,
     CatCombinator,
@@ -232,8 +231,8 @@ class TestPipeConstruction:
     # B|P
     def test_block_or_pipe_flattens(self):
         bs = self._blocks(3)
-        tail = bs[1] | bs[2]        # Pipe([b1, b2])
-        full = bs[0] | tail          # Block | Pipe
+        tail = bs[1] | bs[2]  # Pipe([b1, b2])
+        full = bs[0] | tail  # Block | Pipe
         assert isinstance(full, Pipe)
         assert len(full.blocks) == 3
 
@@ -263,17 +262,17 @@ class TestPipeConstruction:
     # P|P
     def test_pipe_or_pipe_flattens(self):
         bs = self._blocks(4)
-        left  = bs[0] | bs[1]
+        left = bs[0] | bs[1]
         right = bs[2] | bs[3]
-        full  = left | right
+        full = left | right
         assert isinstance(full, Pipe)
         assert len(full.blocks) == 4
 
     def test_pipe_or_pipe_order(self):
         bs = self._blocks(4)
-        left  = bs[0] | bs[1]
+        left = bs[0] | bs[1]
         right = bs[2] | bs[3]
-        full  = left | right
+        full = left | right
         assert full.blocks[0] is bs[0]
         assert full.blocks[3] is bs[3]
 
@@ -295,18 +294,20 @@ class TestPipeConstruction:
         assert isinstance(p, eqx.Module)
 
     def test_channel_mismatch_at_pipe_join(self):
-        b1 = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(8, 16, n_modes=4, key=ks(1)[0]))
-        b3 = fx.block(fl.SpectralBlock2d(8,  1, n_modes=4, key=ks(1)[0]))  # mismatch at join
-        left  = b1 | b2        # Pipe([b1, b2])
-        right = b3             # expects 8, gets 16
+        b3 = fx.block(
+            fl.SpectralBlock2d(8, 1, n_modes=4, key=ks(1)[0])
+        )  # mismatch at join
+        left = b1 | b2  # Pipe([b1, b2])
+        right = b3  # expects 8, gets 16
         with pytest.raises(ShapeMismatchError):
             _ = left | right
 
     def test_different_channel_blocks_chain_ok(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  16, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 16, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(16, 32, n_modes=4, key=ks(1)[0]))
-        b3 = fx.block(fl.SpectralBlock2d(32,  1, n_modes=4, key=ks(1)[0]))
+        b3 = fx.block(fl.SpectralBlock2d(32, 1, n_modes=4, key=ks(1)[0]))
         pipe = b1 | b2 | b3
         assert len(pipe.blocks) == 3
 
@@ -340,26 +341,26 @@ class TestPipeConstruction:
 
 class TestShapeMismatch:
     def test_raises_on_obvious_mismatch(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError):
             _ = b1 | b2
 
     def test_is_subclass_of_value_error(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  8, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 8, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ValueError):
             _ = b1 | b2
 
     def test_error_contains_left_channel_count(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError, match="32"):
             _ = b1 | b2
 
     def test_error_contains_right_channel_count(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError, match="64"):
             _ = b1 | b2
 
@@ -376,23 +377,23 @@ class TestShapeMismatch:
             _ = b1 | b2
 
     def test_error_contains_pipeline_marker(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError) as exc:
             _ = b1 | b2
         assert "mismatch" in str(exc.value).lower()
 
     def test_error_contains_hint(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError) as exc:
             _ = b1 | b2
         assert "Hint" in str(exc.value) or "hint" in str(exc.value).lower()
 
     def test_mismatch_at_second_join_in_3block_pipe(self):
-        b1 = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(8, 16, n_modes=4, key=ks(1)[0]))
-        b3 = fx.block(fl.SpectralBlock2d(32,  1, n_modes=4, key=ks(1)[0]))
+        b3 = fx.block(fl.SpectralBlock2d(32, 1, n_modes=4, key=ks(1)[0]))
         with pytest.raises(ShapeMismatchError, match="16"):
             _ = b1 | b2 | b3
 
@@ -404,17 +405,19 @@ class TestShapeMismatch:
 
     def test_no_error_when_either_side_unknown(self):
         raw = eqx.nn.MLP(in_size=16, out_size=1, width_size=8, depth=1, key=ks(1)[0])
-        b_known   = fx.block(fl.SpectralBlock2d(3, 999, n_modes=4, key=ks(1)[0]))
+        b_known = fx.block(fl.SpectralBlock2d(3, 999, n_modes=4, key=ks(1)[0]))
         b_unknown = fx.block(raw)
         # Even though b_known outputs 999 and b_unknown expects unknown, no error
         pipe = b_known | b_unknown
         assert isinstance(pipe, Pipe)
 
     def test_error_in_pipe_or_pipe_join(self):
-        left  = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=ks(1)[0])) | \
-                fx.block(fl.SpectralBlock2d(8, 16, n_modes=4, key=ks(1)[0]))
-        right = fx.block(fl.SpectralBlock2d(32,  1, n_modes=4, key=ks(1)[0])) | \
-                fx.block(fl.SpectralBlock2d(1,   1, n_modes=4, key=ks(1)[0]))
+        left = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=ks(1)[0])) | fx.block(
+            fl.SpectralBlock2d(8, 16, n_modes=4, key=ks(1)[0])
+        )
+        right = fx.block(fl.SpectralBlock2d(32, 1, n_modes=4, key=ks(1)[0])) | fx.block(
+            fl.SpectralBlock2d(1, 1, n_modes=4, key=ks(1)[0])
+        )
         with pytest.raises(ShapeMismatchError):
             _ = left | right
 
@@ -426,15 +429,15 @@ class TestShapeMismatch:
 
 class TestPipeForward:
     def test_two_block_2d_shape(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  16, n_modes=4, key=ks(1)[0]))
-        b2 = fx.block(fl.SpectralBlock2d(16,  1, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 16, n_modes=4, key=ks(1)[0]))
+        b2 = fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=ks(1)[0]))
         y = (b1 | b2)(jnp.ones((8, 8, 3)))
         assert y.shape == (8, 8, 1)
 
     def test_three_block_2d_shape(self):
-        b1 = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=ks(1)[0]))
-        b3 = fx.block(fl.SpectralBlock2d(32,  1, n_modes=4, key=ks(1)[0]))
+        b3 = fx.block(fl.SpectralBlock2d(32, 1, n_modes=4, key=ks(1)[0]))
         y = (b1 | b2 | b3)(jnp.ones((10, 10, 3)))
         assert y.shape == (10, 10, 1)
 
@@ -460,7 +463,7 @@ class TestPipeForward:
         b2 = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k2))
         x = jnp.ones((8, 8, 4))
         pipe_out = (b1 | b2)(x)
-        b1_out   = b1(x)
+        b1_out = b1(x)
         assert not jnp.allclose(pipe_out, b1_out, atol=1e-5)
 
     def test_pipe_blocks_applied_in_order(self):
@@ -469,7 +472,7 @@ class TestPipeForward:
         # Same channel width so both orderings accept the same input
         b1 = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k1))
         b2 = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k2))
-        x  = jnp.ones((8, 8, 4))
+        x = jnp.ones((8, 8, 4))
         out_12 = (b1 | b2)(x)
         out_21 = (b2 | b1)(x)
         # Same shape but different weights applied in different order → different values
@@ -477,16 +480,18 @@ class TestPipeForward:
         assert not jnp.allclose(out_12, out_21, atol=1e-5)
 
     def test_channel_expanding_then_contracting(self):
-        b1 = fx.block(fl.SpectralBlock2d(1,  64, n_modes=4, key=ks(1)[0]))
+        b1 = fx.block(fl.SpectralBlock2d(1, 64, n_modes=4, key=ks(1)[0]))
         b2 = fx.block(fl.SpectralBlock2d(64, 64, n_modes=4, key=ks(1)[0]))
-        b3 = fx.block(fl.SpectralBlock2d(64,  1, n_modes=4, key=ks(1)[0]))
+        b3 = fx.block(fl.SpectralBlock2d(64, 1, n_modes=4, key=ks(1)[0]))
         y = (b1 | b2 | b3)(jnp.ones((12, 12, 1)))
         assert y.shape == (12, 12, 1)
 
     def test_pipe_mixed_1d_mlp(self):
         b_spec = fx.block(fl.SpectralBlock1d(3, 16, n_modes=4, key=ks(1)[0]))
-        b_mlp  = fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=8, key=ks(1)[0]))
-        pipe   = b_spec | b_mlp
+        b_mlp = fx.block(
+            fx.mlp(in_features=16, output_dim=1, hidden_dims=8, key=ks(1)[0])
+        )
+        pipe = b_spec | b_mlp
         y = pipe(jnp.ones((32, 3)))
         assert y.shape == (32, 1)
 
@@ -544,17 +549,17 @@ class TestSpectralBlockVariants:
 
     def test_spectral_block_channel_fields_1d(self):
         blk = fl.SpectralBlock1d(5, 11, n_modes=4, key=ks(1)[0])
-        assert blk.in_channels  == 5
+        assert blk.in_channels == 5
         assert blk.out_channels == 11
 
     def test_spectral_block_channel_fields_2d(self):
         blk = fl.SpectralBlock2d(7, 13, n_modes=4, key=ks(1)[0])
-        assert blk.in_channels  == 7
+        assert blk.in_channels == 7
         assert blk.out_channels == 13
 
     def test_spectral_block_channel_fields_3d(self):
         blk = fl.SpectralBlock3d(2, 6, n_modes=4, key=ks(1)[0])
-        assert blk.in_channels  == 2
+        assert blk.in_channels == 2
         assert blk.out_channels == 6
 
     def test_spectral_block_norm_layer_is_none_when_no_norm(self):
@@ -572,8 +577,12 @@ class TestSpectralBlockVariants:
 
         # Kill spectral path: set all spectral weights to zero
         blk_no_spectral = eqx.tree_at(
-            lambda m: [m.spectral_conv.weight_1_real, m.spectral_conv.weight_1_imag,
-                       m.spectral_conv.weight_2_real, m.spectral_conv.weight_2_imag],
+            lambda m: [
+                m.spectral_conv.weight_1_real,
+                m.spectral_conv.weight_1_imag,
+                m.spectral_conv.weight_2_real,
+                m.spectral_conv.weight_2_imag,
+            ],
             blk,
             [jnp.zeros_like(blk.spectral_conv.weight_1_real)] * 4,
         )
@@ -584,7 +593,7 @@ class TestSpectralBlockVariants:
             jnp.zeros_like(blk.linear_skip.weight),
         )
         out_no_spectral = blk_no_spectral(x)
-        out_no_skip     = blk_no_skip(x)
+        out_no_skip = blk_no_skip(x)
         assert not jnp.allclose(out_no_spectral, out_no_skip, atol=1e-5)
 
     def test_determinism_same_key_same_weights(self):
@@ -608,8 +617,12 @@ class TestSpectralBlockVariants:
 class TestDotCombinator:
     def _make(self, branch_in=3, trunk_in=2, basis=16, seed=0):
         k1, k2 = ks(2, seed)
-        branch = fx.block(fx.mlp(in_features=branch_in, output_dim=basis, hidden_dims=basis, key=k1))
-        trunk  = fx.block(fx.mlp(in_features=trunk_in,  output_dim=basis, hidden_dims=basis, key=k2))
+        branch = fx.block(
+            fx.mlp(in_features=branch_in, output_dim=basis, hidden_dims=basis, key=k1)
+        )
+        trunk = fx.block(
+            fx.mlp(in_features=trunk_in, output_dim=basis, hidden_dims=basis, key=k2)
+        )
         return fx.dot(branch, trunk)
 
     def test_output_shape(self):
@@ -642,8 +655,6 @@ class TestDotCombinator:
         b2 = fx.block(fx.mlp(in_features=16, output_dim=8, hidden_dims=8, key=k2))
         trunk = fx.block(fx.mlp(in_features=2, output_dim=8, hidden_dims=8, key=k3))
         model = fx.dot(b1 | b2, trunk)
-        u = jnp.ones((32, 3))   # branch gets a 1-D field
-        y = jnp.ones((10, 2))
         # branch output is (32, 8) → need (8,) for dot; this tests the user sets up shapes
         # so instead test that the combinator stores the pipe correctly
         assert isinstance(model.branch, Pipe)
@@ -731,10 +742,12 @@ class TestAddCombinator:
 
     def test_add_with_pipe_branches(self):
         k1, k2, k3, k4 = ks(4)
-        pa = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k1)) | \
-             fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k2))
-        pb = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k3)) | \
-             fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k4))
+        pa = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k1)) | fx.block(
+            fl.SpectralBlock2d(4, 4, n_modes=4, key=k2)
+        )
+        pb = fx.block(fl.SpectralBlock2d(4, 4, n_modes=4, key=k3)) | fx.block(
+            fl.SpectralBlock2d(4, 4, n_modes=4, key=k4)
+        )
         m = fx.add(pa, pb)
         out = m(jnp.ones((8, 8, 4)))
         assert out.shape == (8, 8, 4)
@@ -744,7 +757,7 @@ class TestCatCombinator:
     def test_output_channels_sum(self):
         k1, k2 = ks(2)
         a = fx.block(fl.SpectralBlock2d(4, 16, n_modes=4, key=k1))
-        b = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=k2))
+        b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
         out = fx.cat(a, b)(jnp.ones((8, 8, 4)))
         assert out.shape == (8, 8, 24)
 
@@ -789,8 +802,16 @@ class TestCatCombinator:
             return jnp.mean(model(jnp.ones((8, 8, 4))) ** 2)
 
         grads = loss(m)
-        assert any(jnp.any(g != 0) for g in jax.tree_util.tree_leaves(grads.a) if hasattr(g, "shape"))
-        assert any(jnp.any(g != 0) for g in jax.tree_util.tree_leaves(grads.b) if hasattr(g, "shape"))
+        assert any(
+            jnp.any(g != 0)
+            for g in jax.tree_util.tree_leaves(grads.a)
+            if hasattr(g, "shape")
+        )
+        assert any(
+            jnp.any(g != 0)
+            for g in jax.tree_util.tree_leaves(grads.b)
+            if hasattr(g, "shape")
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -801,9 +822,9 @@ class TestCatCombinator:
 class TestCombinatorComposition:
     def test_cat_then_project(self):
         k1, k2, k3 = ks(3)
-        a   = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=k1))
-        b   = fx.block(fl.SpectralBlock2d(4,  8, n_modes=4, key=k2))
-        cat = fx.cat(a, b)               # output (*, 16)
+        a = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
+        b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
+        cat = fx.cat(a, b)  # output (*, 16)
         proj = fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=8, key=k3))
         pipeline = fx.block(cat) | proj
         out = pipeline(jnp.ones((8, 8, 4)))
@@ -811,8 +832,8 @@ class TestCombinatorComposition:
 
     def test_add_then_project(self):
         k1, k2, k3 = ks(3)
-        a    = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
-        b    = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
+        a = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
+        b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
         addc = fx.add(a, b)
         proj = fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k3))
         pipeline = fx.block(addc) | proj
@@ -821,10 +842,10 @@ class TestCombinatorComposition:
 
     def test_nested_add_inside_cat(self):
         k1, k2, k3, k4, k5 = ks(5)
-        a  = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
-        b  = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
-        c  = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k3))
-        d  = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k4))
+        a = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
+        b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k2))
+        c = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k3))
+        d = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k4))
         nested = fx.cat(fx.add(a, b), fx.add(c, d))  # (*, 16)
         proj = fx.block(fl.SpectralBlock2d(16, 1, n_modes=4, key=k5))
         out = (fx.block(nested) | proj)(jnp.ones((8, 8, 4)))
@@ -948,9 +969,8 @@ class TestGradients:
 
     def test_grads_pipe_two_spectral_blocks(self):
         k1, k2 = ks(2)
-        pipe = (
-            fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
-            | fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k2))
+        pipe = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1)) | fx.block(
+            fl.SpectralBlock2d(8, 1, n_modes=4, key=k2)
         )
         grads = eqx.filter_grad(self._loss)(pipe, jnp.ones((8, 8, 4)))
         assert finite_grads(grads)
@@ -1025,9 +1045,8 @@ class TestPytreeOps:
 
     def test_eqx_partition_combine_roundtrip_pipe(self):
         k1, k2 = ks(2)
-        pipe = (
-            fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
-            | fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k2))
+        pipe = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1)) | fx.block(
+            fl.SpectralBlock2d(8, 1, n_modes=4, key=k2)
         )
         arrays, static = eqx.partition(pipe, eqx.is_array)
         reconstructed = eqx.combine(arrays, static)
@@ -1075,12 +1094,16 @@ class TestWrappingExistingModels:
         assert b(jnp.ones((5,))).shape == (3,)
 
     def test_wrap_fno2d_no_crash(self):
-        m = fx.fno2d(in_features=3, hidden_channels=16, n_modes=4, d_vars=1, key=ks(1)[0])
+        m = fx.fno2d(
+            in_features=3, hidden_channels=16, n_modes=4, d_vars=1, key=ks(1)[0]
+        )
         b = fx.block(m)
         assert isinstance(b, Block)
 
     def test_wrap_fno2d_forward(self):
-        m = fx.fno2d(in_features=3, hidden_channels=16, n_modes=4, d_vars=1, key=ks(1)[0])
+        m = fx.fno2d(
+            in_features=3, hidden_channels=16, n_modes=4, d_vars=1, key=ks(1)[0]
+        )
         b = fx.block(m)
         y = b(jnp.ones((8, 8, 3)))
         assert y.shape[2] == 1
@@ -1114,9 +1137,8 @@ class TestVmap:
 
     def test_vmap_pipe(self):
         k1, k2 = ks(2)
-        pipe = (
-            fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1))
-            | fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k2))
+        pipe = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=k1)) | fx.block(
+            fl.SpectralBlock2d(8, 1, n_modes=4, key=k2)
         )
         batched = jax.vmap(pipe)
         y = batched(jnp.ones((3, 8, 8, 4)))
@@ -1204,7 +1226,9 @@ class TestLongPipelines:
     """Tests for realistic multi-block pipelines of depth 6-20."""
 
     def _spec_blocks(self, n, c=16, seed=0):
-        return [fx.block(fl.SpectralBlock2d(c, c, n_modes=4, key=k)) for k in ks(n, seed)]
+        return [
+            fx.block(fl.SpectralBlock2d(c, c, n_modes=4, key=k)) for k in ks(n, seed)
+        ]
 
     # ── length / shape ──────────────────────────────────────────────────────
 
@@ -1246,12 +1270,14 @@ class TestLongPipelines:
     def test_fno_style_6_block_pipeline(self):
         """lift(3→32) + 4 shared-channel blocks + project(32→1)."""
         k = ks(6)
-        lift    = fx.block(fl.SpectralBlock2d(3,  32, n_modes=4, key=k[0]), name="lift")
-        s1      = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[1]), name="s1")
-        s2      = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[2]), name="s2")
-        s3      = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[3]), name="s3")
-        s4      = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[4]), name="s4")
-        project = fx.block(fl.SpectralBlock2d(32,  1, n_modes=4, key=k[5]), name="project")
+        lift = fx.block(fl.SpectralBlock2d(3, 32, n_modes=4, key=k[0]), name="lift")
+        s1 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[1]), name="s1")
+        s2 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[2]), name="s2")
+        s3 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[3]), name="s3")
+        s4 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=4, key=k[4]), name="s4")
+        project = fx.block(
+            fl.SpectralBlock2d(32, 1, n_modes=4, key=k[5]), name="project"
+        )
         pipe = lift | s1 | s2 | s3 | s4 | project
         assert len(pipe.blocks) == 6
         y = pipe(jnp.ones((16, 16, 3)))
@@ -1291,24 +1317,24 @@ class TestLongPipelines:
     def test_associativity_split_at_1(self):
         """(b0) | (b1|b2|b3) == b0|b1|b2|b3"""
         blocks = self._spec_blocks(4)
-        flat   = blocks[0] | blocks[1] | blocks[2] | blocks[3]
-        split  = blocks[0] | (blocks[1] | blocks[2] | blocks[3])
+        flat = blocks[0] | blocks[1] | blocks[2] | blocks[3]
+        split = blocks[0] | (blocks[1] | blocks[2] | blocks[3])
         x = jnp.ones((8, 8, 16))
         assert jnp.allclose(flat(x), split(x), atol=1e-6)
 
     def test_associativity_split_at_2(self):
         """(b0|b1) | (b2|b3) == b0|b1|b2|b3"""
         blocks = self._spec_blocks(4)
-        flat   = blocks[0] | blocks[1] | blocks[2] | blocks[3]
-        split  = (blocks[0] | blocks[1]) | (blocks[2] | blocks[3])
+        flat = blocks[0] | blocks[1] | blocks[2] | blocks[3]
+        split = (blocks[0] | blocks[1]) | (blocks[2] | blocks[3])
         x = jnp.ones((8, 8, 16))
         assert jnp.allclose(flat(x), split(x), atol=1e-6)
 
     def test_associativity_split_at_3(self):
         """(b0|b1|b2) | b3 == b0|b1|b2|b3"""
         blocks = self._spec_blocks(4)
-        flat   = blocks[0] | blocks[1] | blocks[2] | blocks[3]
-        split  = (blocks[0] | blocks[1] | blocks[2]) | blocks[3]
+        flat = blocks[0] | blocks[1] | blocks[2] | blocks[3]
+        split = (blocks[0] | blocks[1] | blocks[2]) | blocks[3]
         x = jnp.ones((8, 8, 16))
         assert jnp.allclose(flat(x), split(x), atol=1e-6)
 
@@ -1354,7 +1380,7 @@ class TestLongPipelines:
             pipe = pipe | b
 
         x = jnp.ones((8, 8, C))
-        eager  = pipe(x)
+        eager = pipe(x)
         jitted = eqx.filter_jit(pipe)(x)
         assert jnp.allclose(eager, jitted, atol=1e-6)
 
@@ -1362,13 +1388,15 @@ class TestLongPipelines:
         """Realistic 1-D operator pipeline: lift → 4 spectral → pointwise MLP."""
         k = ks(6)
         blocks = [
-            fx.block(fl.SpectralBlock1d(1,  16, n_modes=8, key=k[0]), name="lift"),
+            fx.block(fl.SpectralBlock1d(1, 16, n_modes=8, key=k[0]), name="lift"),
             fx.block(fl.SpectralBlock1d(16, 16, n_modes=8, key=k[1])),
             fx.block(fl.SpectralBlock1d(16, 16, n_modes=8, key=k[2])),
             fx.block(fl.SpectralBlock1d(16, 16, n_modes=8, key=k[3])),
-            fx.block(fl.SpectralBlock1d(16,  8, n_modes=8, key=k[4])),
-            fx.block(fx.mlp(in_features=8, output_dim=1, hidden_dims=16, key=k[5]),
-                     name="project"),
+            fx.block(fl.SpectralBlock1d(16, 8, n_modes=8, key=k[4])),
+            fx.block(
+                fx.mlp(in_features=8, output_dim=1, hidden_dims=16, key=k[5]),
+                name="project",
+            ),
         ]
         pipe = blocks[0]
         for b in blocks[1:]:
@@ -1410,7 +1438,7 @@ class TestPytreeStructure:
 
     def _pipe2(self, c_in=4, c_mid=8, c_out=4, seed=0):
         k1, k2 = ks(2, seed)
-        b1 = fx.block(fl.SpectralBlock2d(c_in,  c_mid, n_modes=4, key=k1))
+        b1 = fx.block(fl.SpectralBlock2d(c_in, c_mid, n_modes=4, key=k1))
         b2 = fx.block(fl.SpectralBlock2d(c_mid, c_out, n_modes=4, key=k2))
         return b1 | b2, b1, b2
 
@@ -1429,17 +1457,24 @@ class TestPytreeStructure:
     def test_block_module_has_spectral_conv(self):
         pipe, _, _ = self._pipe2()
         from foundax.architectures.fno import SpectralConv2d
+
         assert isinstance(pipe.blocks[0].module.spectral_conv, SpectralConv2d)
 
     def test_block_module_has_linear_skip(self):
         pipe, _, _ = self._pipe2()
         from foundax.architectures.linear import Linear
+
         assert isinstance(pipe.blocks[0].module.linear_skip, Linear)
 
     def test_spectral_conv_weight_fields_are_arrays(self):
         pipe, _, _ = self._pipe2()
         sc = pipe.blocks[0].module.spectral_conv
-        for attr in ("weight_1_real", "weight_1_imag", "weight_2_real", "weight_2_imag"):
+        for attr in (
+            "weight_1_real",
+            "weight_1_imag",
+            "weight_2_real",
+            "weight_2_imag",
+        ):
             w = getattr(sc, attr)
             assert hasattr(w, "shape"), f"{attr} is not an array"
 
@@ -1461,17 +1496,21 @@ class TestPytreeStructure:
         arrays = jax.tree_util.tree_leaves(eqx.filter(b, eqx.is_array))
         # All leaves should be arrays (no ints)
         for leaf in arrays:
-            assert hasattr(leaf, "shape"), "a non-array leaked into array-filtered leaves"
+            assert hasattr(leaf, "shape"), (
+                "a non-array leaked into array-filtered leaves"
+            )
         # Static int values must not appear as bare Python ints in the pytree leaves
         all_leaves = jax.tree_util.tree_leaves(b)
-        assert not any(isinstance(leaf, int) and leaf == 7 for leaf in all_leaves), \
+        assert not any(isinstance(leaf, int) and leaf == 7 for leaf in all_leaves), (
             "_in_channels leaked as a pytree leaf"
+        )
 
     def test_block_name_is_static(self):
         b = fx.block(fl.SpectralBlock2d(4, 8, n_modes=4, key=ks(1)[0]), name="myblock")
         all_leaves = jax.tree_util.tree_leaves(b)
-        assert not any(leaf == "myblock" for leaf in all_leaves if isinstance(leaf, str)), \
-            "name string leaked as a pytree leaf"
+        assert not any(
+            leaf == "myblock" for leaf in all_leaves if isinstance(leaf, str)
+        ), "name string leaked as a pytree leaf"
 
     def test_spectral_block_in_channels_static_not_leaf(self):
         blk = fl.SpectralBlock2d(5, 5, n_modes=4, key=ks(1)[0])
@@ -1494,10 +1533,10 @@ class TestPytreeStructure:
         b2 = fx.block(fl.SpectralBlock2d(8, 8, n_modes=4, key=k2))
         b3 = fx.block(fl.SpectralBlock2d(8, 1, n_modes=4, key=k3))
         pipe = b1 | b2 | b3
-        total  = len(jax.tree_util.tree_leaves(eqx.filter(pipe, eqx.is_array)))
-        per_b1 = len(jax.tree_util.tree_leaves(eqx.filter(b1,   eqx.is_array)))
-        per_b2 = len(jax.tree_util.tree_leaves(eqx.filter(b2,   eqx.is_array)))
-        per_b3 = len(jax.tree_util.tree_leaves(eqx.filter(b3,   eqx.is_array)))
+        total = len(jax.tree_util.tree_leaves(eqx.filter(pipe, eqx.is_array)))
+        per_b1 = len(jax.tree_util.tree_leaves(eqx.filter(b1, eqx.is_array)))
+        per_b2 = len(jax.tree_util.tree_leaves(eqx.filter(b2, eqx.is_array)))
+        per_b3 = len(jax.tree_util.tree_leaves(eqx.filter(b3, eqx.is_array)))
         assert total == per_b1 + per_b2 + per_b3
 
     def test_param_count_per_block_accessible_by_index(self):
@@ -1517,7 +1556,8 @@ class TestPytreeStructure:
         zeros = jnp.zeros_like(pipe.blocks[0].module.linear_skip.weight)
         pipe_mod = eqx.tree_at(
             lambda p: p.blocks[0].module.linear_skip.weight,
-            pipe, zeros,
+            pipe,
+            zeros,
         )
         assert jnp.all(pipe_mod.blocks[0].module.linear_skip.weight == 0)
 
@@ -1528,7 +1568,8 @@ class TestPytreeStructure:
         zeros = jnp.zeros_like(pipe.blocks[0].module.linear_skip.weight)
         pipe_mod = eqx.tree_at(
             lambda p: p.blocks[0].module.linear_skip.weight,
-            pipe, zeros,
+            pipe,
+            zeros,
         )
         assert jnp.allclose(pipe_mod.blocks[1].module.linear_skip.weight, w1_before)
 
@@ -1553,11 +1594,14 @@ class TestPytreeStructure:
         zeros = jnp.zeros_like(w_before[3])
         pipe_mod = eqx.tree_at(
             lambda p: p.blocks[3].module.linear_skip.weight,
-            pipe, zeros,
+            pipe,
+            zeros,
         )
         assert jnp.all(pipe_mod.blocks[3].module.linear_skip.weight == 0)
         for i in [0, 1, 2, 4, 5]:
-            assert jnp.allclose(pipe_mod.blocks[i].module.linear_skip.weight, w_before[i])
+            assert jnp.allclose(
+                pipe_mod.blocks[i].module.linear_skip.weight, w_before[i]
+            )
 
     # ── named gradient access ───────────────────────────────────────────────
 
@@ -1606,10 +1650,12 @@ class TestPytreeStructure:
 
         grads = loss(pipe, jnp.ones((8, 8, C)))
         for i in range(8):
-            skip_grad     = grads.blocks[i].module.linear_skip.weight
+            skip_grad = grads.blocks[i].module.linear_skip.weight
             spectral_grad = grads.blocks[i].module.spectral_conv.weight_1_real
-            assert jnp.all(jnp.isfinite(skip_grad)),     f"block {i} skip grad not finite"
-            assert jnp.all(jnp.isfinite(spectral_grad)), f"block {i} spectral grad not finite"
+            assert jnp.all(jnp.isfinite(skip_grad)), f"block {i} skip grad not finite"
+            assert jnp.all(jnp.isfinite(spectral_grad)), (
+                f"block {i} spectral grad not finite"
+            )
 
     # ── zero-weight / zero-map invariants ───────────────────────────────────
 
@@ -1617,7 +1663,7 @@ class TestPytreeStructure:
         """Zeroing every array leaf → forward pass stays finite (just activation bias)."""
         pipe, _, _ = self._pipe2()
         arrays, static = eqx.partition(pipe, eqx.is_array)
-        zeroed_arrays  = jax.tree_util.tree_map(jnp.zeros_like, arrays)
+        zeroed_arrays = jax.tree_util.tree_map(jnp.zeros_like, arrays)
         pipe_zero = eqx.combine(zeroed_arrays, static)
         y = pipe_zero(jnp.ones((8, 8, 4)))
         assert jnp.all(jnp.isfinite(y))

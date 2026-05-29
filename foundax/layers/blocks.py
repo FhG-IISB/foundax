@@ -34,44 +34,44 @@ class SpectralBlock1d(eqx.Module):
     normalisation pointwise over W, then the activation.
     """
 
-    in_channels:  int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
-    n_modes:      int = eqx.field(static=True)
-    activation:   Callable = eqx.field(static=True)
-    norm:         Optional[str] = eqx.field(static=True)
+    n_modes: int = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+    norm: Optional[str] = eqx.field(static=True)
 
     spectral_conv: SpectralConv1d
-    linear_skip:   Linear
-    norm_layer:    Optional[eqx.Module]
+    linear_skip: Linear
+    norm_layer: Optional[eqx.Module]
 
     def __init__(
         self,
-        in_channels:  int,
+        in_channels: int,
         out_channels: int,
-        n_modes:      int,
-        activation:   Callable = jax.nn.gelu,
-        norm:         Optional[str] = None,
-        linear_conv:  bool = True,
+        n_modes: int,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        linear_conv: bool = True,
         *,
         key,
     ):
-        self.in_channels  = in_channels
+        self.in_channels = in_channels
         self.out_channels = out_channels
-        self.n_modes      = n_modes
-        self.activation   = activation
-        self.norm         = norm
+        self.n_modes = n_modes
+        self.activation = activation
+        self.norm = norm
 
         k1, k2 = jax.random.split(key)
         self.spectral_conv = SpectralConv1d(
             in_channels, out_channels, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer  = _make_norm(norm, out_channels)
+        self.norm_layer = _make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
-        x  = x1 + x2
+        x = x1 + x2
         if self.norm_layer is not None:
             x = jax.vmap(self.norm_layer)(x)
         return self.activation(x)
@@ -87,44 +87,44 @@ class SpectralBlock2d(eqx.Module):
     ``SpectralConv2d`` directly.
     """
 
-    in_channels:  int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
-    n_modes:      int = eqx.field(static=True)
-    activation:   Callable = eqx.field(static=True)
-    norm:         Optional[str] = eqx.field(static=True)
+    n_modes: int = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+    norm: Optional[str] = eqx.field(static=True)
 
     spectral_conv: SpectralConv2d
-    linear_skip:   Linear
-    norm_layer:    Optional[eqx.Module]
+    linear_skip: Linear
+    norm_layer: Optional[eqx.Module]
 
     def __init__(
         self,
-        in_channels:  int,
+        in_channels: int,
         out_channels: int,
-        n_modes:      int,
-        activation:   Callable = jax.nn.gelu,
-        norm:         Optional[str] = None,
-        linear_conv:  bool = True,
+        n_modes: int,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        linear_conv: bool = True,
         *,
         key,
     ):
-        self.in_channels  = in_channels
+        self.in_channels = in_channels
         self.out_channels = out_channels
-        self.n_modes      = n_modes
-        self.activation   = activation
-        self.norm         = norm
+        self.n_modes = n_modes
+        self.activation = activation
+        self.norm = norm
 
         k1, k2 = jax.random.split(key)
         self.spectral_conv = SpectralConv2d(
             in_channels, out_channels, n_modes, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer  = _make_norm(norm, out_channels)
+        self.norm_layer = _make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
-        x  = x1 + x2
+        x = x1 + x2
         if self.norm_layer is not None:
             x = jax.vmap(jax.vmap(self.norm_layer))(x)
         return self.activation(x)
@@ -137,44 +137,44 @@ class SpectralBlock3d(eqx.Module):
     modes use ``SpectralConv3d`` directly.
     """
 
-    in_channels:  int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
-    n_modes:      int = eqx.field(static=True)
-    activation:   Callable = eqx.field(static=True)
-    norm:         Optional[str] = eqx.field(static=True)
+    n_modes: int = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+    norm: Optional[str] = eqx.field(static=True)
 
     spectral_conv: SpectralConv3d
-    linear_skip:   Linear
-    norm_layer:    Optional[eqx.Module]
+    linear_skip: Linear
+    norm_layer: Optional[eqx.Module]
 
     def __init__(
         self,
-        in_channels:  int,
+        in_channels: int,
         out_channels: int,
-        n_modes:      int,
-        activation:   Callable = jax.nn.gelu,
-        norm:         Optional[str] = None,
-        linear_conv:  bool = True,
+        n_modes: int,
+        activation: Callable = jax.nn.gelu,
+        norm: Optional[str] = None,
+        linear_conv: bool = True,
         *,
         key,
     ):
-        self.in_channels  = in_channels
+        self.in_channels = in_channels
         self.out_channels = out_channels
-        self.n_modes      = n_modes
-        self.activation   = activation
-        self.norm         = norm
+        self.n_modes = n_modes
+        self.activation = activation
+        self.norm = norm
 
         k1, k2 = jax.random.split(key)
         self.spectral_conv = SpectralConv3d(
             in_channels, out_channels, n_modes, n_modes, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer  = _make_norm(norm, out_channels)
+        self.norm_layer = _make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
-        x  = x1 + x2
+        x = x1 + x2
         if self.norm_layer is not None:
             x = jax.vmap(jax.vmap(jax.vmap(self.norm_layer)))(x)
         return self.activation(x)

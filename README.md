@@ -101,21 +101,6 @@ def step(model, state, u, y, target):
     return eqx.apply_updates(model, updates), state, loss
 ```
 
-Channel mismatches are caught immediately:
-
-```python
-b1 = fx.block(fx.layers.SpectralBlock2d(3, 32, n_modes=16, key=ks[0]), name="encoder")
-b2 = fx.block(fx.layers.SpectralBlock2d(64,  1, n_modes=16, key=ks[1]), name="decoder")
-
-b1 | b2
-# foundax.ShapeMismatchError:
-#   Channel mismatch: 'encoder' outputs 32 channels but 'decoder' expects 64.
-#   Pipeline:
-#     [0] encoder   in=3      out=32
-#     [1] decoder   in=64     out=1    <-- mismatch here
-#   Hint: change 'decoder' in_channels to 32, or insert a projection layer between them.
-```
-
 ## Integration With jNO
 
 ```python

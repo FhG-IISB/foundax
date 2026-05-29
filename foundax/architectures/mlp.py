@@ -38,7 +38,7 @@ class MLP(eqx.Module):
         **kwargs,
     ):
         self.in_features = in_features
-        self.output_dim  = output_dim
+        self.output_dim = output_dim
 
         if isinstance(hidden_dims, int):
             layer_widths = [hidden_dims] * num_layers
