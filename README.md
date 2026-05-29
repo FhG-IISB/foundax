@@ -48,6 +48,59 @@ model = fx.dpot.Ti()      # Ti/S/M/L/H
 model, variables = fx.prose.fd_1to1()
 ```
 
+## Composable Pipe API
+
+Wrap any model or layer with `fx.block()` and chain them with `|`.
+Channel mismatches are caught at construction time with a clear error message.
+
+```python
+import jax
+import foundax as fx
+
+ks = jax.random.split(jax.random.PRNGKey(0), 8)
+
+# ── Build a 2-D FNO-style pipeline from individual spectral layers ──────────
+lift    = fx.block(fx.layers.SpectralBlock2d(1,  32, n_modes=16, key=ks[0]), name="lift")
+s1      = fx.block(fx.layers.SpectralBlock2d(32, 32, n_modes=16, key=ks[1]))
+s2      = fx.block(fx.layers.SpectralBlock2d(32, 32, n_modes=16, key=ks[2]))
+s3      = fx.block(fx.layers.SpectralBlock2d(32, 32, n_modes=16, key=ks[3]))
+project = fx.block(fx.layers.SpectralBlock2d(32,  1, n_modes=16, key=ks[4]), name="project")
+
+model = lift | s1 | s2 | s3 | project   # Pipe of 5 blocks
+
+# ── Existing full models work as blocks too ──────────────────────────────────
+encoder = fx.block(fx.fno2d(in_features=3, hidden_channels=32, n_modes=16, key=ks[5]))
+decoder = fx.block(fx.layers.SpectralBlock2d(32, 1, n_modes=16, key=ks[6]))
+
+model = encoder | decoder
+
+# ── Multi-input combinators (DeepONet-style) ─────────────────────────────────
+branch = (
+    fx.block(fx.layers.SpectralBlock1d(1, 32, n_modes=16, key=ks[0]))
+    | fx.block(fx.mlp(in_features=32, output_dim=64, hidden_dims=64, key=ks[1]))
+)
+trunk = fx.block(fx.mlp(in_features=2, output_dim=64, hidden_dims=64, key=ks[2]))
+
+model = fx.dot(branch, trunk)   # branch(u) · trunk(y)  →  (N_pts,)
+
+# Also available: fx.add(a, b)  — elementwise sum of two branches
+#                 fx.cat(a, b)  — concatenate outputs along the channel axis
+
+# ── All pipe models are plain Equinox modules ────────────────────────────────
+import equinox as eqx, optax, jax.numpy as jnp
+
+opt   = optax.adam(1e-3)
+state = opt.init(eqx.filter(model, eqx.is_array))
+
+@eqx.filter_jit
+def step(model, state, u, y, target):
+    loss, grads = eqx.filter_value_and_grad(
+        lambda m: jnp.mean((m(u, y) - target) ** 2)
+    )(model)
+    updates, state = opt.update(grads, state, eqx.filter(model, eqx.is_array))
+    return eqx.apply_updates(model, updates), state, loss
+```
+
 ## Integration With jNO
 
 ```python

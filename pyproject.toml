@@ -31,6 +31,7 @@ testpaths = ["tests"]
 norecursedirs = ["repos", ".venv", "build", "dist"]
 markers = [
     "heavy: slow integration tests for large model construction and single-step autodiff",
+    "train: tests that require optax and perform actual training steps",
 ]
 
 [tool.pixi.workspace]
@@ -42,6 +43,7 @@ foundax = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
 lint = "ruff check . --fix"
@@ -54,3 +56,10 @@ ci-test = "pytest -x --tb=short -m 'not slow'"
 [tool.pixi.dependencies]
 pytest = ">=9.0.3,<10"
 ruff = ">=0.9.0"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+optax = ">=0.2"
+
+[tool.pixi.feature.dev.tasks]
+test-train = "pytest --tb=short -m train -v"
+test-all = "pytest --tb=short -v"

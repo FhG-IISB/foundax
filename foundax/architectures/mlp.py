@@ -11,6 +11,8 @@ class MLP(eqx.Module):
     Multi-Layer Perceptron with configurable architecture.
     """
 
+    in_features: int = eqx.field(static=True)
+    output_dim: int = eqx.field(static=True)
     hidden_layers: list
     output_layer: Linear
     norm_layers: list
@@ -35,6 +37,9 @@ class MLP(eqx.Module):
         key,
         **kwargs,
     ):
+        self.in_features = in_features
+        self.output_dim = output_dim
+
         if isinstance(hidden_dims, int):
             layer_widths = [hidden_dims] * num_layers
         else:
