@@ -1,10 +1,9 @@
 name: prose
-github_url: https://github.com/BaratiLab/PROSE
+# Original repo appears to be private — structural check runs without it
+github_url: null
 hf_checkpoint: null
-compare_needs_pt_repo: true
-compare_extra_args:
-  - "--prose-root"
-  - "{repos_dir}/prose"
+compare_needs_pt_repo: false
+compare_extra_args: []
 has_compare: true
 convert_extra_args: []
 prose_variant: fd

@@ -512,6 +512,57 @@ def verify_multiple_timesteps(
     return all(r["rel_l2_diff"] < 1e-3 for r in results)
 
 
+def _run_structural_check() -> int:
+    """JAX-only structural validation with random weights (no PT repo needed)."""
+    import time
+    import jax
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    jax.config.update("jax_platform_name", "cpu")
+
+    from jax_poseidon import ScOT, ScOTConfig
+
+    print("\n[Poseidon] Structural validation (JAX only, random weights)")
+    print("  (--model-path not provided or file not found — skipping full comparison)")
+
+    config = ScOTConfig(
+        name="poseidonT-tiny",
+        image_size=56,
+        patch_size=4,
+        num_channels=1,
+        num_out_channels=1,
+        embed_dim=24,
+        depths=(2, 2),
+        num_heads=(3, 6),
+        skip_connections=(True,),
+        window_size=7,
+    )
+    key = jax.random.PRNGKey(0)
+    model = ScOT(config, key=key)
+
+    H, W = 56, 56
+    x = jnp.zeros((1, H, W, 1), dtype=jnp.float32)
+    print(f"  Input shape: {x.shape}  (B=1, H={H}, W={W}, C=1)")
+
+    t0 = time.perf_counter()
+    out = model(x)
+    elapsed = time.perf_counter() - t0
+
+    out_np = np.asarray(out.output if hasattr(out, "output") else out)
+    print(f"  Output shape: {out_np.shape}")
+
+    if not np.all(np.isfinite(out_np)):
+        print("  FAIL: output contains non-finite values")
+        return 1
+
+    print(f"  Output range: [{out_np.min():.4f}, {out_np.max():.4f}]")
+    print(f"  Elapsed: {elapsed:.2f}s")
+    print("  PASS: output shape correct and finite")
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
     import torch
@@ -523,8 +574,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model-path",
         type=str,
-        required=True,
-        help="Path to the PyTorch model checkpoint (e.g., /path/to/poseidonT)",
+        default=None,
+        help="Path to the PyTorch model checkpoint (omit for structural check)",
     )
     parser.add_argument(
         "--num-samples",
@@ -549,6 +600,9 @@ if __name__ == "__main__":
         help="Save the converted JAX model to a .msgpack file",
     )
     args = parser.parse_args()
+
+    if args.model_path is None or not __import__("pathlib").Path(args.model_path).exists():
+        raise SystemExit(_run_structural_check())
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 

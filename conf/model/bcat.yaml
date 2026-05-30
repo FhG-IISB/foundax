@@ -1,9 +1,8 @@
 name: bcat
-github_url: https://github.com/BaratiLab/BCAT
+# Original BCAT repo may be private; structural check runs without it
+github_url: null
 hf_checkpoint: null
-compare_needs_pt_repo: true
-compare_extra_args:
-  - "--bcat-root"
-  - "{repos_dir}/bcat"
+compare_needs_pt_repo: false
+compare_extra_args: []
 has_compare: true
 convert_extra_args: []

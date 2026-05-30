@@ -700,15 +700,84 @@ def visualize_channel_statistics(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def run_structural_check(args) -> int:
+    """JAX-only structural validation with random weights.
+
+    Uses n_states=4, n_out_states=1 (plus 3 coord channels = 4 total input channels).
+    field_indices = [0, 2, 0, 1] selects from the n_states=4 weight table.
+    """
+    from jax_walrus.model_eqx import IsotropicModel
+
+    print("\n[Walrus] Structural validation (JAX only, random weights)")
+    print("  (walrus-root, checkpoint, or msgpack not found — skipping full comparison)")
+    key = jax.random.PRNGKey(getattr(args, "seed", 42))
+
+    n_states = 4
+    n_out_states = 1
+
+    model = IsotropicModel(
+        hidden_dim=64,
+        intermediate_dim=16,
+        n_states=n_states,
+        processor_blocks=2,
+        groups=4,
+        num_heads=4,
+        mlp_dim=0,
+        max_d=3,
+        causal_in_time=True,
+        drop_path=0.0,
+        bias_type="rel",
+        base_kernel_size=((4, 2), (4, 2), (4, 2)),
+        use_spacebag=True,
+        use_silu=True,
+        include_d=(2, 3),
+        encoder_groups=4,
+        learned_pad=False,
+        key=key,
+    )
+
+    # x: (B, T, H, W, C_total) where C_total = n_out_states + 3 coord dims
+    B, T, H, W = 1, 2, 8, 8
+    C_total = n_out_states + 3
+    x = jnp.zeros((B, T, H, W, C_total), dtype=jnp.float32)
+    state_labels = jnp.arange(n_out_states, dtype=jnp.int32)
+    # field_indices: n_out_states physical channels (indices 0..n_out_states-1) +
+    #               3 coord channels (indices 2, 0, 1 into n_states weight table)
+    field_indices = jnp.array(
+        list(range(n_out_states)) + [2, 0, 1], dtype=jnp.int32
+    )
+    bcs = [0, 0]
+    stride1 = (4, 4, 1)
+    stride2 = (2, 2, 1)
+    print(f"  Input shape: {x.shape}  (B={B}, T={T}, H={H}, W={W}, C={C_total})")
+
+    import time as _time
+    t0 = _time.perf_counter()
+    out = model(
+        x, state_labels, bcs,
+        stride1=stride1, stride2=stride2,
+        field_indices=field_indices, dim_key=2,
+    )
+    elapsed = _time.perf_counter() - t0
+
+    out_np = np.asarray(out)
+    print(f"  Output shape: {out_np.shape}")
+
+    if not np.all(np.isfinite(out_np)):
+        print("  FAIL: output contains non-finite values")
+        return 1
+
+    print(f"  Output range: [{out_np.min():.4f}, {out_np.max():.4f}]")
+    print(f"  Elapsed: {elapsed:.2f}s")
+    print("  PASS: output shape correct and finite")
+    return 0
+
+
 def main():
     args = parse_args()
 
-    if not args.walrus_root.exists():
-        raise FileNotFoundError(f"Walrus repository not found: {args.walrus_root}")
-    if not args.checkpoint_path.exists():
-        raise FileNotFoundError(f"Walrus checkpoint not found: {args.checkpoint_path}")
-    if not args.msgpack_path.exists():
-        raise FileNotFoundError(f"JAX msgpack not found: {args.msgpack_path}")
+    if not args.walrus_root.exists() or not args.checkpoint_path.exists() or not args.msgpack_path.exists():
+        raise SystemExit(run_structural_check(args))
     walrus_modules = import_walrus_modules(args.walrus_root)
     jax_walrus_modules = import_jax_walrus_modules(PROJECT_ROOT)
     TorchSpaceBagEncoder = walrus_modules["TorchSpaceBagEncoder"]

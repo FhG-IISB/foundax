@@ -13,7 +13,7 @@ compare_extra_args:
   - "{checkpoints_dir}/walrus/walrus.msgpack"
 has_compare: true
 convert_extra_args:
-  - "--checkpoint"
+  - "--input"
   - "{checkpoints_dir}/walrus/walrus.pt"
   - "--output"
   - "{checkpoints_dir}/walrus/walrus.msgpack"

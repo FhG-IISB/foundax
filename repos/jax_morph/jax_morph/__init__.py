@@ -20,10 +20,20 @@ from jax_morph.configs import (
     HF_REPO_ID,
 )
 
+
+def convert_pytorch_to_jax_params(state_dict, model, **kwargs):
+    """Stub — weight conversion not yet implemented for MORPH."""
+    raise NotImplementedError(
+        "convert_pytorch_to_jax_params is not yet implemented for jax_morph. "
+        "Full numerical comparison requires a weight converter."
+    )
+
+
 __all__ = [
     "__version__",
     "ViT3DRegression",
     "MORPH_CONFIGS",
     "CHECKPOINT_NAMES",
     "HF_REPO_ID",
+    "convert_pytorch_to_jax_params",
 ]

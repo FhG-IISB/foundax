@@ -1,23 +1,27 @@
 defaults:
   - _self_
-  - model:
-    - walrus
-    - poseidon
-    - morph
-    - mpp
-    - bcat
-    - dpot
-    - pdeformer2
-    - prose
+
+# List of model names to verify (must match conf/model/<name>.yaml)
+# Use 'models=[walrus,morph]' on the CLI to run a subset
+models:
+  - walrus
+  - poseidon
+  - morph
+  - mpp
+  - bcat
+  - dpot
+  - pdeformer2
+  - prose
 
 # Root for downloaded/cloned artefacts
 outdir: ${hydra:runtime.cwd}/verify_output
 # Where to clone original PyTorch repos
 repos_dir: ${hydra:runtime.cwd}/og_repos
 
-# Pipeline steps to run (subset of: clone download convert compare)
+# Pipeline steps to run (subset of: clone install download convert compare)
 steps:
   - clone
+  - install
   - download
   - convert
   - compare

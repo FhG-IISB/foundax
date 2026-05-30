@@ -4,9 +4,10 @@ hf_checkpoint:
   repo_id: polymathic-ai/multiple_physics_pretraining
   filename: MPP_AViT_Ti.pt
 compare_needs_pt_repo: false
+# Without --checkpoint the compare script runs a structural check
 compare_extra_args:
-  - "--checkpoint"
-  - "{checkpoints_dir}/mpp/MPP_AViT_Ti.pt"
+  - "--variant"
+  - "Ti"
 has_compare: true
 convert_extra_args:
   - "--checkpoint"

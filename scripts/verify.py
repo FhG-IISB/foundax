@@ -29,8 +29,24 @@ import subprocess
 import sys
 from pathlib import Path
 
-import hydra
-from omegaconf import DictConfig
+# Hydra 1.3.x / Python 3.14 compatibility: argparse._check_help now does
+# `'%' not in help_string` which requires __contains__, but Hydra's
+# LazyCompletionHelp (a local class) doesn't implement it.
+import argparse as _argparse
+
+_orig_expand_help = _argparse.HelpFormatter._expand_help
+
+
+def _patched_expand_help(self, action):  # type: ignore[override]
+    if action.help is not None and not isinstance(action.help, str):
+        action.help = repr(action.help)
+    return _orig_expand_help(self, action)
+
+
+_argparse.HelpFormatter._expand_help = _patched_expand_help  # type: ignore[method-assign]
+
+import hydra  # noqa: E402
+from omegaconf import DictConfig, OmegaConf  # noqa: E402
 
 # ── repo root (two levels up from scripts/) ──────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +72,29 @@ def _interpolate(args: list[str], ctx: dict[str, str]) -> list[str]:
     return out
 
 
+def step_install(model_cfg: DictConfig, repos_dir: Path) -> int:
+    dest = repos_dir / model_cfg.name
+    if not dest.exists():
+        print(f"  [install] {model_cfg.name}: repo not cloned — skipping")
+        return 0
+    req_file = dest / "requirements.txt"
+    if not req_file.exists():
+        print(f"  [install] {model_cfg.name}: no requirements.txt — skipping")
+        return 0
+    return _run(
+        [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
+        cwd=dest,
+    )
+
+
+def _to_ssh_url(url: str) -> str:
+    """Convert https://github.com/owner/repo to git@github.com:owner/repo."""
+    if url.startswith("https://github.com/"):
+        path = url[len("https://github.com/"):]
+        return f"git@github.com:{path}"
+    return url
+
+
 def step_clone(model_cfg: DictConfig, repos_dir: Path) -> int:
     dest = repos_dir / model_cfg.name
     if dest.exists():
@@ -66,7 +105,7 @@ def step_clone(model_cfg: DictConfig, repos_dir: Path) -> int:
     if not url:
         print(f"  [clone] {model_cfg.name}: no github_url configured — skipping")
         return 0
-    return _run(["git", "clone", "--depth=1", url, str(dest)])
+    return _run(["git", "clone", "--depth=1", _to_ssh_url(url), str(dest)])
 
 
 def step_download(model_cfg: DictConfig, checkpoints_dir: Path, force: bool) -> int:
@@ -149,7 +188,11 @@ def main(cfg: DictConfig) -> None:
     print(f"  steps:     {steps}")
     print("=" * 70)
 
-    models = cfg.model if isinstance(cfg.model, list) else [cfg.model]
+    # cfg.models is a list of model name strings; load each from conf/model/<name>.yaml
+    conf_model_dir = REPO_ROOT / "conf" / "model"
+    raw = cfg.models
+    model_names = [raw] if isinstance(raw, str) else list(raw)
+    models = [OmegaConf.load(conf_model_dir / f"{name}.yaml") for name in model_names]
 
     results: dict[str, dict[str, int]] = {}
 
@@ -173,6 +216,12 @@ def main(cfg: DictConfig) -> None:
             rc_map["clone"] = rc
             if rc != 0:
                 print(f"  [clone] WARNING: exited {rc} — downstream steps may fail")
+
+        if "install" in steps and model_cfg.get("compare_needs_pt_repo", False):
+            rc = step_install(model_cfg, repos_dir)
+            rc_map["install"] = rc
+            if rc != 0:
+                print(f"  [install] WARNING: exited {rc} — downstream steps may fail")
 
         if "download" in steps:
             rc = step_download(model_cfg, checkpoints_dir, force=cfg.force_download)
