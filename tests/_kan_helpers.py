@@ -81,8 +81,13 @@ def pipe_checks(layer_factory, in_features: int, hidden: int, out_features: int)
         _ = a | bad
 
 
-def network_train_overfit_sin(network_factory):
-    """Toy training: overfit y = sin(2πx) on [0, 1]. Should reach MSE < 5e-2 fast."""
+def network_train_overfit_sin(network_factory, *, loss_threshold: float = 5e-2):
+    """Toy training: overfit y = sin(2πx) on [0, 1].
+
+    Should reach ``MSE < loss_threshold`` (default 5e-2) within 500 Adam steps.
+    Bases whose polynomials grow rapidly outside [-1, 1] (e.g. Hermite) may
+    need a looser threshold — pass one explicitly in those cases.
+    """
     optax = pytest.importorskip("optax")
 
     key = jax.random.PRNGKey(123)
@@ -105,7 +110,9 @@ def network_train_overfit_sin(network_factory):
 
     for _ in range(500):
         model, state, loss = step(model, state)
-    assert float(loss) < 5e-2, f"toy training loss too high: {float(loss):.4f}"
+    assert float(loss) < loss_threshold, (
+        f"toy training loss too high: {float(loss):.4f} >= {loss_threshold:.4f}"
+    )
 
 
 def dtype_checks(layer_factory, in_features: int, out_features: int):
