@@ -13,6 +13,7 @@ nav:
   - Getting Started: getting-started.md
   - Models:
       - Core Models: core-models.md
+      - Kolmogorov–Arnold Networks: kan.md
       - Foundation Models: equinox-architectures.md
       - Model Examples: model-examples.md
   - Guides:
