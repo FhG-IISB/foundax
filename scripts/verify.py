@@ -24,6 +24,7 @@ Overrideable config keys (see conf/verify.yaml):
 
 from __future__ import annotations
 
+import re
 import shlex
 import subprocess
 import sys
@@ -60,6 +61,41 @@ def _run(cmd: list[str], *, cwd: Path = REPO_ROOT) -> int:
     print("  $", " ".join(shlex.quote(str(c)) for c in cmd))
     result = subprocess.run(cmd, cwd=str(cwd), check=False)
     return result.returncode
+
+
+def _run_capture(cmd: list[str], *, cwd: Path = REPO_ROOT) -> tuple[int, str]:
+    """Run cmd, stream output to stdout in real-time, and return (rc, captured_text)."""
+    print("  $", " ".join(shlex.quote(str(c)) for c in cmd))
+    proc = subprocess.Popen(
+        cmd, cwd=str(cwd),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1,
+    )
+    lines: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        print(line, end="")
+        lines.append(line)
+    proc.wait()
+    return proc.returncode, "".join(lines)
+
+
+def _extract_l2_metric(output: str) -> str | None:
+    """Return the last output line that looks like a numeric L2/rel-error summary."""
+    candidates = []
+    for line in output.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        # Must contain a number in scientific notation
+        if not re.search(r"\d\.\d+e[+-]\d+", s):
+            continue
+        # Must mention a diff/error/relative keyword
+        low = s.lower()
+        if any(kw in low for kw in ("rel", "l2", "max abs", "max_abs", "max diff",
+                                     "mean diff", "mean rel", "abs err", "abs diff")):
+            candidates.append(s)
+    return candidates[-1] if candidates else None
 
 
 def _interpolate(args: list[str], ctx: dict[str, str]) -> list[str]:
@@ -151,11 +187,12 @@ def step_convert(model_cfg: DictConfig, ctx: dict[str, str], force: bool) -> int
     return _run(cmd)
 
 
-def step_compare(model_cfg: DictConfig, ctx: dict[str, str]) -> int:
+def step_compare(model_cfg: DictConfig, ctx: dict[str, str]) -> tuple[int, str]:
+    """Returns (exit_code, l2_metric_string_or_empty)."""
     name = model_cfg.name
     if not model_cfg.get("has_compare", True):
         print(f"  [compare] {name}: has_compare=false — skipping")
-        return 0
+        return 0, ""
 
     extra = _interpolate(list(model_cfg.get("compare_extra_args", [])), ctx)
 
@@ -165,7 +202,8 @@ def step_compare(model_cfg: DictConfig, ctx: dict[str, str]) -> int:
         cmd += ["--prose-variant", prose_variant]
     cmd += extra
 
-    return _run(cmd)
+    rc, output = _run_capture(cmd)
+    return rc, _extract_l2_metric(output) or ""
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -195,6 +233,7 @@ def main(cfg: DictConfig) -> None:
     models = [OmegaConf.load(conf_model_dir / f"{name}.yaml") for name in model_names]
 
     results: dict[str, dict[str, int]] = {}
+    l2_metrics: dict[str, str] = {}
 
     for model_cfg in models:
         name = model_cfg.name
@@ -232,8 +271,10 @@ def main(cfg: DictConfig) -> None:
             rc_map["convert"] = rc
 
         if "compare" in steps:
-            rc = step_compare(model_cfg, ctx)
+            rc, metric = step_compare(model_cfg, ctx)
             rc_map["compare"] = rc
+            if metric:
+                l2_metrics[name] = metric
 
         results[name] = rc_map
 
@@ -248,7 +289,9 @@ def main(cfg: DictConfig) -> None:
         if worst != 0:
             any_fail = True
         step_str = "  ".join(f"{s}={rc}" for s, rc in rc_map.items())
-        print(f"  {name:<14} {status}  [{step_str}]")
+        metric = l2_metrics.get(name, "")
+        suffix = f"  {metric}" if metric else ""
+        print(f"  {name:<14} {status}  [{step_str}]{suffix}")
 
     print()
     raise SystemExit(1 if any_fail else 0)
