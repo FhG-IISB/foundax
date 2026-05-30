@@ -35,6 +35,15 @@ from foundax.architectures.fno import (
 )
 from foundax.architectures.mlp import MLP
 from foundax.architectures.linear import Linear
+from foundax.architectures.ffno import (
+    FactorizedSpectralBlock2d,
+    FactorizedSpectralBlock3d,
+)
+from foundax.architectures.wno import (
+    WaveletBlock1d,
+    WaveletBlock2d,
+    WaveletBlock3d,
+)
 
 from foundax.architectures.kan import (
     KANLayer,
@@ -73,6 +82,12 @@ __all__ = [
     "SpectralConv3d",
     "MLP",
     "Linear",
+    # Flow-matching backbones
+    "FactorizedSpectralBlock2d",
+    "FactorizedSpectralBlock3d",
+    "WaveletBlock1d",
+    "WaveletBlock2d",
+    "WaveletBlock3d",
     # KAN layer primitives
     "KANLayer",
     "EfficientKANLayer",

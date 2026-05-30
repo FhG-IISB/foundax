@@ -7,7 +7,7 @@ jnp = pytest.importorskip("jax.numpy")
 eqx = pytest.importorskip("equinox")
 
 import foundax as fx
-from foundax.pipe import Block, Pipe, ShapeMismatchError
+from foundax.pipe import ShapeMismatchError
 from foundax.architectures.kan import (
     KANLayer, EfficientKANLayer, FastKANLayer, FourierKANLayer,
     ChebyshevKANLayer, JacobiKANLayer, LegendreKANLayer, WaveletKANLayer,

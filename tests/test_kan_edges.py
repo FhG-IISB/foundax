@@ -7,13 +7,10 @@ jnp = pytest.importorskip("jax.numpy")
 
 import foundax as fx
 from foundax.architectures.kan import (
-    BSplineBasis, RBFBasis, FourierBasis, ChebyshevBasis, JacobiBasis,
-    LegendreBasis, WaveletBasis, TaylorBasis, HermiteBasis, LaguerreBasis,
-    BernsteinBasis, ReLUKANBasis, RationalBasis, SincBasis, GramBasis,
-    BSRBFBasis,
+    FourierBasis, ChebyshevBasis, TaylorBasis, BernsteinBasis, BSRBFBasis,
     KANLayer, FastKANLayer, ChebyshevKANLayer, BernsteinKANLayer,
     TaylorKANLayer, ReLUKANLayer, FourierKANLayer,
-    KANConv1d, KANConv2d, KANConv3d,
+    KANConv1d, KANConv2d,
 )
 
 

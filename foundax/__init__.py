@@ -2,6 +2,12 @@ from . import bcat, dpot, morph, mpp, pdeformer2, poseidon, prose, walrus
 from . import layers
 from .pipe import block, Block, Pipe, ShapeMismatchError
 from .combinators import dot, add, cat
+from .architectures.time_embed import (
+    SinusoidalTimeEmbedding,
+    FiLMLayer,
+    AdaLayerNorm,
+    AdaLayerNormZero,
+)
 from .nn import (
     # non-foundation architectures
     linear,
@@ -74,6 +80,14 @@ from .nn import (
     prose_fd_2to1,
     prose_ode_2to1,
     prose_pde_2to1,
+    # flow-matching / diffusion backbones
+    dit2d,
+    dit3d,
+    ffno2d,
+    ffno3d,
+    wno1d,
+    wno2d,
+    wno3d,
 )
 
 __version__ = "0.2.0"
@@ -91,6 +105,11 @@ __all__ = [
     "cat",
     # composable layers subpackage
     "layers",
+    # time conditioning primitives
+    "SinusoidalTimeEmbedding",
+    "FiLMLayer",
+    "AdaLayerNorm",
+    "AdaLayerNormZero",
     # submodule namespaces
     "poseidon",
     "walrus",
@@ -171,4 +190,12 @@ __all__ = [
     "prose_fd_2to1",
     "prose_ode_2to1",
     "prose_pde_2to1",
+    # flow-matching / diffusion backbones
+    "dit2d",
+    "dit3d",
+    "ffno2d",
+    "ffno3d",
+    "wno1d",
+    "wno2d",
+    "wno3d",
 ]
