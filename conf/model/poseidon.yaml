@@ -1,13 +1,9 @@
 name: poseidon
 github_url: https://github.com/camlab-ethz/poseidon
-# No direct .pt download — poseidon uses HF model format (ScOT.from_pretrained)
 hf_checkpoint: null
 compare_needs_pt_repo: true
 compare_extra_args:
-  - "--model-path"
-  - "camlab-ethz/Poseidon-T"
+  - "--poseidon-root"
+  - "{repos_dir}/poseidon"
 has_compare: true
-convert_extra_args:
-  - "--model-path"
-  - "camlab-ethz/Poseidon-T"
-  - "--save"
+convert_extra_args: []
