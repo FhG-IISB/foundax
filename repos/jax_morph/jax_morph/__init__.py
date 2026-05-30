@@ -21,6 +21,13 @@ from jax_morph.configs import (
 )
 
 
+def load_pytorch_state_dict(path, **kwargs):
+    """Stub — weight loading not yet implemented for MORPH."""
+    raise NotImplementedError(
+        "load_pytorch_state_dict is not yet implemented for jax_morph."
+    )
+
+
 def convert_pytorch_to_jax_params(state_dict, model, **kwargs):
     """Stub — weight conversion not yet implemented for MORPH."""
     raise NotImplementedError(
@@ -36,4 +43,5 @@ __all__ = [
     "CHECKPOINT_NAMES",
     "HF_REPO_ID",
     "convert_pytorch_to_jax_params",
+    "load_pytorch_state_dict",
 ]

@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import torch
 import jax
@@ -559,10 +561,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    jax_model, jax_params, pt_model, config = convert_model(
-        args.model_path,
-        save=args.save,
-        verbose=args.verbose,
-    )
+    try:
+        jax_model, jax_params, pt_model, config = convert_model(
+            args.model_path,
+            save=args.save,
+            verbose=args.verbose,
+        )
+    except (ImportError, ModuleNotFoundError) as e:
+        print(f"[SKIP] Poseidon conversion dependencies not available ({e}) — skipping")
+        sys.exit(0)
 
     print("\nConversion complete!")

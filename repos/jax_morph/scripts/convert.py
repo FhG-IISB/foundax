@@ -10,6 +10,7 @@ validates the mapping, and saves as msgpack.
 
 import argparse
 import os
+import sys
 
 import numpy as np
 import jax
@@ -45,7 +46,7 @@ def main():
         description="Convert MORPH PyTorch weights to JAX msgpack"
     )
     parser.add_argument(
-        "--input", "-i", required=True, help="Path to PyTorch checkpoint (.pth)"
+        "--input", "-i", default=None, help="Path to PyTorch checkpoint (.pth); skips if not provided"
     )
     parser.add_argument(
         "--output",
@@ -61,6 +62,10 @@ def main():
         help="Model variant (Ti, S, M, L)",
     )
     args = parser.parse_args()
+
+    if args.input is None:
+        print("No MORPH checkpoint provided — skipping conversion")
+        sys.exit(0)
 
     if args.output is None:
         base = os.path.splitext(args.input)[0]

@@ -1,15 +1,13 @@
 name: poseidon
 github_url: https://github.com/camlab-ethz/poseidon
-hf_checkpoint:
-  repo_id: camlab-ethz/poseidon
-  filename: poseidonT.pt
-# compare needs scOT from the cloned repo; also needs a valid checkpoint download
+# No direct .pt download — poseidon uses HF model format (ScOT.from_pretrained)
+hf_checkpoint: null
 compare_needs_pt_repo: true
 compare_extra_args:
   - "--model-path"
-  - "{checkpoints_dir}/poseidon/poseidonT.pt"
+  - "camlab-ethz/Poseidon-T"
 has_compare: true
 convert_extra_args:
   - "--model-path"
-  - "{checkpoints_dir}/poseidon/poseidonT.pt"
+  - "camlab-ethz/Poseidon-T"
   - "--save"

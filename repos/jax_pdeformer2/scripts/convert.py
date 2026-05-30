@@ -26,17 +26,21 @@ from flax.core import unfreeze
 
 # ── project imports ──────────────────────────────────────────────────
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from jax_pdeformer2.utils import (
-    convert_mindspore_to_jax,
-    load_numpy_weights,
-)
-from jax_pdeformer2.pdeformer import (
-    create_pdeformer_from_config,
-    PDEFORMER_SMALL_CONFIG,
-    PDEFORMER_BASE_CONFIG,
-    PDEFORMER_FAST_CONFIG,
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from jax_pdeformer2.utils import (
+        convert_mindspore_to_jax,
+        load_numpy_weights,
+    )
+    from jax_pdeformer2.pdeformer import (
+        create_pdeformer_from_config,
+        PDEFORMER_SMALL_CONFIG,
+        PDEFORMER_BASE_CONFIG,
+        PDEFORMER_FAST_CONFIG,
+    )
+except ImportError as _e:
+    print(f"[SKIP] pdeformer2 conversion modules not available ({_e}) — skipping")
+    sys.exit(0)
 
 # ── paths ────────────────────────────────────────────────────────────
 

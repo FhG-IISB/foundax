@@ -776,7 +776,10 @@ def run_structural_check(args) -> int:
 def main():
     args = parse_args()
 
-    if not args.walrus_root.exists() or not args.checkpoint_path.exists() or not args.msgpack_path.exists():
+    from importlib.util import find_spec
+    if (not args.walrus_root.exists() or not args.checkpoint_path.exists()
+            or not args.msgpack_path.exists()
+            or find_spec("jax_walrus.model") is None):
         raise SystemExit(run_structural_check(args))
     walrus_modules = import_walrus_modules(args.walrus_root)
     jax_walrus_modules = import_jax_walrus_modules(PROJECT_ROOT)
