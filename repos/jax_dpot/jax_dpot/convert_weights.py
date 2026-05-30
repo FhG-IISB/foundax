@@ -3,12 +3,14 @@
 Maps the state_dict from the original PyTorch DPOT (https://github.com/thu-ml/DPOT,
 models/DPOT.py) to the parameter tree expected by the Equinox re-implementation.
 
-Key naming convention: the JAX model mirrors the PyTorch one, so attribute names match.
-Weight shapes are also identical (eqx.nn.Linear/Conv2d use the same (out, in) / (out, in, kH, kW)
-layout as torch.nn equivalents — no transpositions needed).
-
-The one exception is ConvTranspose2d: PyTorch stores (in, out, kH, kW), Equinox also stores
-(in, out, kH, kW) — same, no transposition.
+Shape conventions:
+- Conv2d:         weight (out, in, kH, kW)  — same in both frameworks
+                  bias   (out, 1, 1)         — Equinox; PyTorch uses (out,)
+- ConvTranspose2d: weight (out, in, kH, kW)  — Equinox; PyTorch uses (in, out, kH, kW) → transpose
+                   bias   (out, 1, 1)         — Equinox; PyTorch uses (out,)
+- Linear:          weight (out, in)           — same in both frameworks
+- GroupNorm:       weight/bias (channels,)    — same in both frameworks
+- MLP blocks in checkpoint: Conv2d (out,in,1,1) → Linear (out,in) — squeeze spatial dims
 """
 
 from __future__ import annotations
@@ -22,11 +24,13 @@ def load_pytorch_state_dict(checkpoint_path: str) -> Dict[str, Any]:
     """Load a PyTorch checkpoint and return the raw state_dict as numpy arrays."""
     import torch
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu")
+    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
         state_dict = ckpt["model_state_dict"]
     elif isinstance(ckpt, dict) and "state_dict" in ckpt:
         state_dict = ckpt["state_dict"]
+    elif isinstance(ckpt, dict) and "model" in ckpt and isinstance(ckpt["model"], dict):
+        state_dict = ckpt["model"]
     elif isinstance(ckpt, dict) and all(
         isinstance(v, (int, float, str, dict)) or hasattr(v, "numpy")
         for v in ckpt.values()
@@ -56,18 +60,23 @@ def _map_block_keys(state_dict: Dict, depth: int) -> Dict[str, np.ndarray]:
                 if pt_key in state_dict:
                     out[jx_key] = state_dict[pt_key]
 
+        # Checkpoint uses "filter" for AFNO weights, not "afno"
         for afno_attr in ("w1", "w2", "b1", "b2"):
-            pt_key = f"{prefix_pt}.afno.{afno_attr}"
+            pt_key = f"{prefix_pt}.filter.{afno_attr}"
             jx_key = f"{prefix_jx}.afno.{afno_attr}"
             if pt_key in state_dict:
                 out[jx_key] = state_dict[pt_key]
 
-        for fc, dense in (("fc1", "mlp_dense_1"), ("fc2", "mlp_dense_2")):
+        # Checkpoint uses mlp.0/mlp.2 (Conv2d (out,in,1,1)), but JAX uses Linear (out,in)
+        for idx, dense in (("0", "mlp_dense_1"), ("2", "mlp_dense_2")):
             for attr in ("weight", "bias"):
-                pt_key = f"{prefix_pt}.mlp.{fc}.{attr}"
+                pt_key = f"{prefix_pt}.mlp.{idx}.{attr}"
                 jx_key = f"{prefix_jx}.{dense}.{attr}"
                 if pt_key in state_dict:
-                    out[jx_key] = state_dict[pt_key]
+                    arr = state_dict[pt_key]
+                    if attr == "weight" and arr.ndim == 4:
+                        arr = arr[:, :, 0, 0]  # (out, in, 1, 1) → (out, in)
+                    out[jx_key] = arr
 
     return out
 
@@ -87,6 +96,8 @@ def convert_pytorch_to_jax_params(
 
     Returns:
         Flat dict with keys like ``"blocks_3.afno.w1"``, ``"patch_embed.conv_patch.weight"``, …
+        Shapes are already adjusted for Equinox (Conv2d bias: (out,1,1), ConvTranspose2d weight
+        transposed to (out,in,kH,kW)).
     """
     from .configs import DPOT_CONFIGS
 
@@ -96,15 +107,26 @@ def convert_pytorch_to_jax_params(
     params: Dict[str, np.ndarray] = {}
 
     # ── Patch embedding ────────────────────────────────────────────────
+    # Checkpoint uses patch_embed.proj.0 and patch_embed.proj.2 (Sequential indices)
     for attr in ("weight", "bias"):
-        for sub in ("conv_patch", "conv_1x1"):
-            key = f"patch_embed.{sub}.{attr}"
-            if key in state_dict:
-                params[key] = state_dict[key]
+        for pt_sub, jx_sub in (("proj.0", "conv_patch"), ("proj.2", "conv_1x1")):
+            pt_key = f"patch_embed.{pt_sub}.{attr}"
+            jx_key = f"patch_embed.{jx_sub}.{attr}"
+            if pt_key in state_dict:
+                arr = state_dict[pt_key]
+                if attr == "bias":
+                    arr = arr[:, None, None]  # (C,) → (C, 1, 1) for Equinox Conv2d
+                params[jx_key] = arr
+            elif jx_key in state_dict:
+                params[jx_key] = state_dict[jx_key]
 
     # ── Positional embedding ───────────────────────────────────────────
+    # Checkpoint: (1, C, H, W) channel-first; JAX model expects (1, H, W, C) channel-last
     if "pos_embed" in state_dict:
-        params["pos_embed"] = state_dict["pos_embed"]
+        pe = state_dict["pos_embed"]
+        if pe.ndim == 4:
+            pe = pe.transpose(0, 2, 3, 1)
+        params["pos_embed"] = pe
 
     # ── Time aggregator ────────────────────────────────────────────────
     for attr in ("w", "gamma"):
@@ -125,21 +147,30 @@ def convert_pytorch_to_jax_params(
             jx_key = f"{jx_name}.{attr}"
             if pt_key in state_dict:
                 params[jx_key] = state_dict[pt_key]
-            # Fallback: same-name attribute
             elif f"{jx_name}.{attr}" in state_dict:
                 params[jx_key] = state_dict[f"{jx_name}.{attr}"]
 
     # ── Output head ────────────────────────────────────────────────────
-    for sub, jx_name in (
-        ("deconv", "out_deconv"),
-        ("conv1", "out_conv_1"),
-        ("conv2", "out_conv_2"),
+    # Checkpoint uses out_layer.0/2/4 (Sequential indices)
+    for idx, jx_name, layer_type in (
+        ("0", "out_deconv", "deconv"),
+        ("2", "out_conv_1", "conv"),
+        ("4", "out_conv_2", "conv"),
     ):
         for attr in ("weight", "bias"):
-            for pt_key in (f"out_layer.{sub}.{attr}", f"{jx_name}.{attr}"):
-                if pt_key in state_dict:
-                    params[f"{jx_name}.{attr}"] = state_dict[pt_key]
-                    break
+            pt_key = f"out_layer.{idx}.{attr}"
+            jx_key = f"{jx_name}.{attr}"
+            if pt_key in state_dict:
+                arr = state_dict[pt_key]
+                if attr == "weight" and layer_type == "deconv":
+                    # ConvTranspose2d: PyTorch (in, out, kH, kW) → Equinox (out, in, kH, kW)
+                    # Equinox also flips kH/kW spatially vs PyTorch
+                    arr = arr.transpose(1, 0, 2, 3)[:, :, ::-1, ::-1].copy()
+                elif attr == "bias":
+                    arr = arr[:, None, None]  # (C,) → (C, 1, 1)
+                params[jx_key] = arr
+            elif jx_key in state_dict:
+                params[jx_key] = state_dict[jx_key]
 
     # ── Optional normalization layers ──────────────────────────────────
     for name in ("scale_feats_mu", "scale_feats_sigma"):
@@ -161,7 +192,7 @@ def _all_pt_keys(depth: int) -> set:
     """Return the set of all PyTorch state_dict keys we handle, for unmapped-key reporting."""
     keys = set()
     for attr in ("weight", "bias"):
-        for sub in ("conv_patch", "conv_1x1"):
+        for sub in ("proj.0", "proj.2"):
             keys.add(f"patch_embed.{sub}.{attr}")
     keys.add("pos_embed")
     for attr in ("w", "W", "gamma"):
@@ -169,13 +200,13 @@ def _all_pt_keys(depth: int) -> set:
     for i in range(depth):
         p = f"blocks.{i}"
         keys.update({f"{p}.norm1.weight", f"{p}.norm1.bias", f"{p}.norm2.weight", f"{p}.norm2.bias"})
-        keys.update({f"{p}.afno.w1", f"{p}.afno.w2", f"{p}.afno.b1", f"{p}.afno.b2"})
-        keys.update({f"{p}.mlp.fc1.weight", f"{p}.mlp.fc1.bias",
-                     f"{p}.mlp.fc2.weight", f"{p}.mlp.fc2.bias"})
+        keys.update({f"{p}.filter.w1", f"{p}.filter.w2", f"{p}.filter.b1", f"{p}.filter.b2"})
+        keys.update({f"{p}.mlp.0.weight", f"{p}.mlp.0.bias",
+                     f"{p}.mlp.2.weight", f"{p}.mlp.2.bias"})
     for idx in (0, 2, 4):
         keys.update({f"cls_head.{idx}.weight", f"cls_head.{idx}.bias"})
-    for sub in ("deconv", "conv1", "conv2"):
-        keys.update({f"out_layer.{sub}.weight", f"out_layer.{sub}.bias"})
+    for idx in ("0", "2", "4"):
+        keys.update({f"out_layer.{idx}.weight", f"out_layer.{idx}.bias"})
     for name in ("scale_feats_mu", "scale_feats_sigma"):
         keys.update({f"{name}.weight", f"{name}.bias"})
     return keys
@@ -185,17 +216,23 @@ def load_jax_params(flat_params: Dict[str, np.ndarray], model) -> Any:
     """Load flat params dict into an Equinox DPOTNet model via ``eqx.tree_at``.
 
     ``flat_params`` is the output of ``convert_pytorch_to_jax_params``.
+    Handles ``blocks_N`` keys by indexing into ``model.blocks[N]``.
     """
     import jax.numpy as jnp
     import equinox as eqx
 
+    def _get_leaf(m, keys):
+        node = m
+        for k in keys:
+            if k.startswith("blocks_") and k[7:].isdigit():
+                node = node.blocks[int(k[7:])]
+            else:
+                node = getattr(node, k)
+        return node
+
     def _set_leaf(model, path_str: str, value: np.ndarray):
         keys = path_str.split(".")
-        def get_leaf(m):
-            node = m
-            for k in keys:
-                node = getattr(node, k)
-            return node
+        get_leaf = lambda m: _get_leaf(m, keys)  # noqa: E731
         return eqx.tree_at(get_leaf, model, jnp.array(value))
 
     for path, arr in flat_params.items():

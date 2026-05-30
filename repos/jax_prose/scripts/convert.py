@@ -41,16 +41,17 @@ def main():
         print("[PROSE convert] No --input checkpoint provided — skipping.")
         return
 
-    ckpt = torch.load(args.input, map_location="cpu")
+    ckpt = torch.load(args.input, map_location="cpu", weights_only=False)
     state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
     state = {_strip_prefix(k): v for k, v in state.items()}
 
     n_words = int(state["symbol_encoder.word_embeddings.weight"].shape[0])
+    rng = jax.random.PRNGKey(0)
     model = PROSE2to1(
-        n_words=n_words, x_num=args.x_num, max_output_dim=args.max_output_dim
+        n_words=n_words, x_num=args.x_num, max_output_dim=args.max_output_dim,
+        key=rng,
     )
 
-    rng = jax.random.PRNGKey(0)
     dummy_x = jnp.ones(
         (1, args.input_len, args.x_num, args.x_num, args.max_output_dim),
         dtype=jnp.float32,

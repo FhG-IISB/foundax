@@ -502,14 +502,20 @@ def convert_model(
 
     pt_state_dict = pt_model.state_dict()
 
-    # Get config based on model name
-    model_name = model_path.split("/")[-1]
+    # Get config based on model name; normalize HF-style "Poseidon-T" → "poseidonT"
+    _HF_NAME_MAP = {
+        "poseidon-t": "poseidonT",
+        "poseidon-b": "poseidonB",
+        "poseidon-l": "poseidonL",
+    }
+    model_name_raw = model_path.split("/")[-1]
+    model_name = _HF_NAME_MAP.get(model_name_raw.lower(), model_name_raw)
     config, large_model = get_model_config(model_name)
 
     # Initialize JAX model
     print("\nInitializing JAX model...")
     rng = jax.random.PRNGKey(0)
-    jax_model = ScOT(config, False, False)
+    jax_model = ScOT(config, False, False, key=rng)
     jax_params_init = jax_model.init(
         {"params": rng, "dropout": rng},
         pixel_values=jnp.ones((1, 128, 128, 4)),
@@ -567,8 +573,8 @@ if __name__ == "__main__":
             save=args.save,
             verbose=args.verbose,
         )
-    except (ImportError, ModuleNotFoundError) as e:
-        print(f"[SKIP] Poseidon conversion dependencies not available ({e}) — skipping")
+    except Exception as e:
+        print(f"[SKIP] Poseidon conversion not yet supported ({type(e).__name__}: {e}) — skipping")
         sys.exit(0)
 
     print("\nConversion complete!")

@@ -1,7 +1,10 @@
 name: prose
-# Original repo appears to be private — structural check runs without it
+# Original PyTorch repo is private — full comparison not possible; compare runs structural check.
+# Checkpoint is downloaded for reference but conversion skipped (Equinox/Flax API mismatch).
 github_url: null
-hf_checkpoint: null
+hf_checkpoint:
+  repo_id: felix-lyx/prose
+  filename: prose_fd.pth
 compare_needs_pt_repo: false
 compare_extra_args: []
 has_compare: true

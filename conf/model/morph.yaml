@@ -1,6 +1,8 @@
 name: morph
 github_url: https://github.com/lanl/MORPH
-hf_checkpoint: null
+hf_checkpoint:
+  repo_id: mahindrautela/MORPH
+  filename: models/FM/morph-Ti-FM-max_ar1_ep225.pth
 compare_needs_pt_repo: true
 compare_extra_args:
   - "--model-size"
@@ -8,6 +10,7 @@ compare_extra_args:
   - "--morph-root"
   - "{repos_dir}/morph"
 has_compare: true
+# No --input in convert_extra_args: convert skips until weight converter is implemented
 convert_extra_args:
   - "--model-size"
   - "Ti"
