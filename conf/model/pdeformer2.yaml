@@ -2,18 +2,25 @@ name: pdeformer2
 github_url: https://github.com/functoreality/pdeformer-2
 hf_checkpoint: null
 compare_needs_pt_repo: true
+# Compare loads the MindSpore dump (produced by dump_mindspore.py in the
+# separate `mindspore` pixi env — see README) and verifies parameter-count
+# equivalence. The dump is generated lazily by the pipeline if missing.
 compare_extra_args:
+  - "--variant"
+  - "S"
+  - "--ms-dump"
+  - "{outdir}/pdeformer2_ms.npz"
+has_compare: true
+convert_extra_args: []
+# Custom step run before compare: dump MindSpore state in the separate env
+pre_compare_command:
+  - "pixi"
+  - "run"
+  - "-e"
+  - "mindspore"
+  - "python"
+  - "repos/jax_pdeformer2/scripts/dump_mindspore.py"
   - "--pdeformer2-root"
   - "{repos_dir}/pdeformer2"
-  - "--data-dir"
-  - "{checkpoints_dir}/pdeformer2"
-  - "--output-dir"
-  - "{outdir}/pdeformer2_plots"
-  - "--variants"
-  - "small"
-has_compare: true
-convert_extra_args:
-  - "--data-dir"
-  - "{checkpoints_dir}/pdeformer2"
-  - "--variants"
-  - "small"
+  - "--output"
+  - "{outdir}/pdeformer2_ms.npz"

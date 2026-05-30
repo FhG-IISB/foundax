@@ -48,6 +48,26 @@ foundax = { path = ".", editable = true }
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
+# Separate Python 3.11 env for MindSpore-based PDEformer2 conversion
+# (MindSpore wheels only support cp310 / cp311).
+mindspore = { features = ["mindspore"], no-default-feature = true }
+
+[tool.pixi.feature.mindspore.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.mindspore.pypi-dependencies]
+mindspore = ">=2.7"
+numpy = "*"
+omegaconf = "*"
+sympy = "*"
+pyyaml = "*"
+pandas = "*"
+scipy = "*"
+matplotlib = "*"
+h5py = "*"
+networkx = "*"
+imageio = "*"
+tqdm = "*"
 
 [tool.pixi.tasks]
 lint = "ruff check . --fix"

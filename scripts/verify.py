@@ -210,6 +210,17 @@ def step_compare(model_cfg: DictConfig, ctx: dict[str, str]) -> tuple[int, str]:
         print(f"  [compare] {name}: has_compare=false — skipping")
         return 0, ""
 
+    # Optional pre-compare command (e.g. MindSpore dump for pdeformer2 from a
+    # separate pixi env). Any non-zero exit is reported but does not block
+    # compare — compare itself should fall back to a structural-only check.
+    pre_cmd = model_cfg.get("pre_compare_command", None)
+    if pre_cmd:
+        pre_cmd = _interpolate(list(pre_cmd), ctx)
+        print(f"  [compare:pre] {' '.join(pre_cmd)}")
+        rc_pre = _run(pre_cmd)
+        if rc_pre != 0:
+            print(f"  [compare:pre] WARNING: exited {rc_pre} — continuing")
+
     extra = _interpolate(list(model_cfg.get("compare_extra_args", [])), ctx)
 
     prose_variant = model_cfg.get("prose_variant", None)
