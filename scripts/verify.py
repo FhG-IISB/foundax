@@ -81,21 +81,28 @@ def _run_capture(cmd: list[str], *, cwd: Path = REPO_ROOT) -> tuple[int, str]:
 
 
 def _extract_l2_metric(output: str) -> str | None:
-    """Return the last output line that looks like a numeric L2/rel-error summary."""
-    candidates = []
+    """Return a numeric diff/error summary line.
+
+    Prefers "max abs" / "max diff" for apples-to-apples comparison across models;
+    falls back to any rel/L2/abs metric if no max-abs line is found.
+    """
+    preferred = []  # max abs / max diff
+    fallback = []   # other diff/error/relative lines
     for line in output.splitlines():
         s = line.strip()
         if not s:
             continue
-        # Must contain a number in scientific notation
         if not re.search(r"\d\.\d+e[+-]\d+", s):
             continue
-        # Must mention a diff/error/relative keyword
         low = s.lower()
-        if any(kw in low for kw in ("rel", "l2", "max abs", "max_abs", "max diff",
-                                     "mean diff", "mean rel", "abs err", "abs diff")):
-            candidates.append(s)
-    return candidates[-1] if candidates else None
+        if any(kw in low for kw in ("max abs", "max_abs", "max diff", "max_diff")):
+            preferred.append(s)
+        elif any(kw in low for kw in ("rel", "l2", "mean diff", "mean rel",
+                                       "abs err", "abs diff")):
+            fallback.append(s)
+    if preferred:
+        return preferred[-1]
+    return fallback[-1] if fallback else None
 
 
 def _interpolate(args: list[str], ctx: dict[str, str]) -> list[str]:

@@ -18,6 +18,7 @@ from jax_mpp.convert_weights import (
     convert_pytorch_to_jax_params,
     load_pytorch_state_dict,
 )
+from jax_mpp.transfer_eqx import transfer_pt_to_eqx
 
 __all__ = [
     "__version__",
@@ -25,4 +26,5 @@ __all__ = [
     "AVIT_CONFIGS",
     "load_pytorch_state_dict",
     "convert_pytorch_to_jax_params",
+    "transfer_pt_to_eqx",
 ]
