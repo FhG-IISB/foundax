@@ -2397,3 +2397,232 @@ def prose_pde_2to1(
     from . import prose
 
     return prose.pde_2to1(**{k: v for k, v in locals().items() if k != "prose"})
+
+
+# =====================================================================
+# Flow-matching / diffusion backbones
+# =====================================================================
+
+
+def dit2d(
+    in_channels: int,
+    patch_size: int = 4,
+    hidden_size: int = 256,
+    depth: int = 6,
+    num_heads: int = 8,
+    mlp_ratio: float = 4.0,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 2-D Diffusion Transformer (DiT).
+
+    Processes unbatched 2-D PDE fields ``(H, W, C)`` conditioned on a
+    scalar timestep *t*.  H and W must be divisible by *patch_size*.
+
+    Args:
+        in_channels: Number of input (and output) channels.
+        patch_size: Spatial patch size (H and W must be divisible by this).
+        hidden_size: Transformer hidden dimension (must be divisible by 4).
+        depth: Number of DiT transformer blocks.
+        num_heads: Number of attention heads.
+        mlp_ratio: MLP hidden dimension multiplier inside each block.
+        key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
+
+    Returns:
+        An ``equinox.Module`` (DiT2d).
+    """
+    from .architectures.dit import DiT2d
+
+    return DiT2d(in_channels, patch_size, hidden_size, depth, num_heads, mlp_ratio,
+                 key=_resolve_key(key))
+
+
+def dit3d(
+    in_channels: int,
+    patch_size: int = 4,
+    hidden_size: int = 252,
+    depth: int = 4,
+    num_heads: int = 6,
+    mlp_ratio: float = 4.0,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 3-D Diffusion Transformer (DiT).
+
+    Processes unbatched volumetric fields ``(D, H, W, C)`` conditioned on
+    a scalar timestep *t*.  All spatial dims must be divisible by *patch_size*.
+
+    Args:
+        in_channels: Number of input (and output) channels.
+        patch_size: Cubic patch size (D, H, W must be divisible by this).
+        hidden_size: Transformer hidden dimension (must be divisible by 6).
+        depth: Number of DiT transformer blocks.
+        num_heads: Number of attention heads.
+        mlp_ratio: MLP hidden dimension multiplier.
+        key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
+
+    Returns:
+        An ``equinox.Module`` (DiT3d).
+    """
+    from .architectures.dit import DiT3d
+
+    return DiT3d(in_channels, patch_size, hidden_size, depth, num_heads, mlp_ratio,
+                 key=_resolve_key(key))
+
+
+def ffno2d(
+    in_channels: int,
+    hidden_channels: int = 32,
+    out_channels: int | None = None,
+    n_modes: int = 16,
+    n_layers: int = 4,
+    use_film: bool = False,
+    emb_dim: int = 64,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 2-D Factorized FNO (F-FNO).
+
+    Factorized spectral conv uses two 1-D spectral ops instead of one 2-D
+    op, reducing parameter count ~16× while preserving expressivity.
+
+    Args:
+        in_channels: Number of input channels.
+        hidden_channels: Width of the latent representation.
+        out_channels: Output channels (defaults to ``in_channels``).
+        n_modes: Number of Fourier modes retained per axis.
+        n_layers: Number of FactorizedSpectralBlock2d layers.
+        use_film: If True, blocks accept ``t_emb`` for FiLM time conditioning.
+        emb_dim: Embedding dimension expected by FiLM (only used if use_film).
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (FFNO2d).
+    """
+    from .architectures.ffno import FFNO2d
+
+    return FFNO2d(in_channels, hidden_channels, out_channels or in_channels,
+                  n_modes, n_layers, use_film, emb_dim, key=_resolve_key(key))
+
+
+def ffno3d(
+    in_channels: int,
+    hidden_channels: int = 16,
+    out_channels: int | None = None,
+    n_modes: int = 8,
+    n_layers: int = 4,
+    use_film: bool = False,
+    emb_dim: int = 64,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 3-D Factorized FNO (F-FNO).
+
+    Args:
+        in_channels: Number of input channels.
+        hidden_channels: Width of the latent representation.
+        out_channels: Output channels (defaults to ``in_channels``).
+        n_modes: Number of Fourier modes retained per axis.
+        n_layers: Number of FactorizedSpectralBlock3d layers.
+        use_film: If True, blocks accept ``t_emb`` for FiLM time conditioning.
+        emb_dim: Embedding dimension expected by FiLM (only used if use_film).
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (FFNO3d).
+    """
+    from .architectures.ffno import FFNO3d
+
+    return FFNO3d(in_channels, hidden_channels, out_channels or in_channels,
+                  n_modes, n_layers, use_film, emb_dim, key=_resolve_key(key))
+
+
+def wno1d(
+    in_channels: int,
+    hidden_channels: int = 32,
+    out_channels: int | None = None,
+    n_scales: int = 2,
+    depth: int = 4,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 1-D Wavelet Neural Operator (WNO).
+
+    Uses Daubechies-8 wavelet decomposition in a multi-scale architecture.
+    Spatial dimension W must be ≥ 16 and divisible by 2^n_scales.
+
+    Args:
+        in_channels: Number of input channels.
+        hidden_channels: Width of the latent representation.
+        out_channels: Output channels (defaults to ``in_channels``).
+        n_scales: Number of wavelet decomposition levels.
+        depth: Number of WaveletBlock1d layers.
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (WNO1d).
+    """
+    from .architectures.wno import WNO1d
+
+    return WNO1d(in_channels, hidden_channels, out_channels or in_channels,
+                 n_scales, depth, key=_resolve_key(key))
+
+
+def wno2d(
+    in_channels: int,
+    hidden_channels: int = 32,
+    out_channels: int | None = None,
+    n_scales: int = 2,
+    depth: int = 4,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 2-D Wavelet Neural Operator (WNO).
+
+    H and W must each be ≥ 16 and divisible by 2^n_scales.
+
+    Args:
+        in_channels: Number of input channels.
+        hidden_channels: Width of the latent representation.
+        out_channels: Output channels (defaults to ``in_channels``).
+        n_scales: Number of wavelet decomposition levels.
+        depth: Number of WaveletBlock2d layers.
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (WNO2d).
+    """
+    from .architectures.wno import WNO2d
+
+    return WNO2d(in_channels, hidden_channels, out_channels or in_channels,
+                 n_scales, depth, key=_resolve_key(key))
+
+
+def wno3d(
+    in_channels: int,
+    hidden_channels: int = 16,
+    out_channels: int | None = None,
+    n_scales: int = 2,
+    depth: int = 4,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 3-D Wavelet Neural Operator (WNO).
+
+    D, H, W must each be ≥ 16 and divisible by 2^n_scales.
+
+    Args:
+        in_channels: Number of input channels.
+        hidden_channels: Width of the latent representation.
+        out_channels: Output channels (defaults to ``in_channels``).
+        n_scales: Number of wavelet decomposition levels.
+        depth: Number of WaveletBlock3d layers.
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (WNO3d).
+    """
+    from .architectures.wno import WNO3d
+
+    return WNO3d(in_channels, hidden_channels, out_channels or in_channels,
+                 n_scales, depth, key=_resolve_key(key))
