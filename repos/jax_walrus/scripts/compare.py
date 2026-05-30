@@ -159,7 +159,7 @@ def import_walrus_modules(walrus_root: Path):
 def import_jax_walrus_modules(project_root: Path):
     sys.path.insert(0, str(project_root))
 
-    from jax_walrus.model import IsotropicModel as JaxIsotropicModel
+    from jax_walrus.model_eqx import IsotropicModel as JaxIsotropicModel, transfer_weights
     from jax_walrus.convert_weights import (
         convert_pytorch_to_jax_params,
         load_pytorch_state_dict,
@@ -168,6 +168,7 @@ def import_jax_walrus_modules(project_root: Path):
 
     return {
         "JaxIsotropicModel": JaxIsotropicModel,
+        "transfer_weights": transfer_weights,
         "convert_pytorch_to_jax_params": convert_pytorch_to_jax_params,
         "load_pytorch_state_dict": load_pytorch_state_dict,
         "torch_to_numpy": torch_to_numpy,
@@ -779,7 +780,7 @@ def main():
     from importlib.util import find_spec
     if (not args.walrus_root.exists() or not args.checkpoint_path.exists()
             or not args.msgpack_path.exists()
-            or find_spec("jax_walrus.model") is None):
+            or find_spec("jax_walrus.model_eqx") is None):
         raise SystemExit(run_structural_check(args))
     walrus_modules = import_walrus_modules(args.walrus_root)
     jax_walrus_modules = import_jax_walrus_modules(PROJECT_ROOT)
@@ -790,6 +791,7 @@ def main():
     TorchAxialTime = walrus_modules["TorchAxialTime"]
     TorchRMSGroupNorm = walrus_modules["TorchRMSGroupNorm"]
     JaxIsotropicModel = jax_walrus_modules["JaxIsotropicModel"]
+    transfer_weights = jax_walrus_modules["transfer_weights"]
     convert_pytorch_to_jax_params = jax_walrus_modules["convert_pytorch_to_jax_params"]
     load_pytorch_state_dict = jax_walrus_modules["load_pytorch_state_dict"]
 
@@ -1096,11 +1098,11 @@ def main():
         include_d=(2, 3),
         encoder_groups=groups,
         learned_pad=False,
-        jitter_patches=False,
+        key=jax.random.PRNGKey(0),
     )
+    jax_model = transfer_weights(jax_params, jax_model)
 
-    jax_out = jax_model.apply(
-        jax_params,
+    jax_out = jax_model(
         jnp.array(x_jax),
         jnp.array(state_labels_np),
         bcs,

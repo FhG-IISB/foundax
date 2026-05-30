@@ -19,21 +19,18 @@ from jax_morph.configs import (
     CHECKPOINT_NAMES,
     HF_REPO_ID,
 )
+from jax_morph.convert_weights import convert_pytorch_to_jax_params
 
 
 def load_pytorch_state_dict(path, **kwargs):
-    """Stub — weight loading not yet implemented for MORPH."""
-    raise NotImplementedError(
-        "load_pytorch_state_dict is not yet implemented for jax_morph."
-    )
-
-
-def convert_pytorch_to_jax_params(state_dict, model, **kwargs):
-    """Stub — weight conversion not yet implemented for MORPH."""
-    raise NotImplementedError(
-        "convert_pytorch_to_jax_params is not yet implemented for jax_morph. "
-        "Full numerical comparison requires a weight converter."
-    )
+    """Load a PyTorch MORPH checkpoint, returning the state_dict."""
+    import torch
+    sd = torch.load(path, map_location="cpu", weights_only=False)
+    if isinstance(sd, dict) and "model_state_dict" in sd:
+        sd = sd["model_state_dict"]
+    elif isinstance(sd, dict) and "state_dict" in sd:
+        sd = sd["state_dict"]
+    return sd
 
 
 __all__ = [

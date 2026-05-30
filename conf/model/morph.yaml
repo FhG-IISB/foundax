@@ -9,6 +9,8 @@ compare_extra_args:
   - "Ti"
   - "--morph-root"
   - "{repos_dir}/morph"
+  - "--checkpoint"
+  - "{checkpoints_dir}/morph/models/FM/morph-Ti-FM-max_ar1_ep225.pth"
 has_compare: true
 # No --input in convert_extra_args: convert skips until weight converter is implemented
 convert_extra_args:

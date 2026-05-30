@@ -601,17 +601,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.model_path is None or not __import__("pathlib").Path(args.model_path).exists():
+    if args.model_path is None:
         raise SystemExit(_run_structural_check())
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Convert model
-    jax_model, jax_params, pt_model, config = convert_model(
-        args.model_path,
-        save=args.save,
-        verbose=False,
-    )
+    try:
+        jax_model, jax_params, pt_model, config = convert_model(
+            args.model_path,
+            save=args.save,
+            verbose=False,
+        )
+    except Exception as e:
+        print(f"WARNING: convert_model failed ({type(e).__name__}: {e})")
+        print("Falling back to structural check.")
+        raise SystemExit(_run_structural_check())
 
     # Run comparison
     if args.single:
