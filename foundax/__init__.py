@@ -50,7 +50,7 @@ from .nn import (
     prose_pde_2to1,
 )
 
-__version__ = "0.1.6"
+__version__ = "0.2.0"
 
 __all__ = [
     "__version__",
