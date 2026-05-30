@@ -7,7 +7,7 @@ jnp = pytest.importorskip("jax.numpy")
 np = pytest.importorskip("numpy")
 
 import foundax as fx
-from foundax.architectures.kan import KANLayer, KAN, BSplineBasis, _bspline_basis
+from foundax.architectures.kan import KANLayer, BSplineBasis
 from tests._kan_helpers import (
     shape_checks, sniff_checks, jit_checks, grad_checks,
     pipe_checks, network_train_overfit_sin, dtype_checks, ks,

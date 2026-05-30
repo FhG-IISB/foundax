@@ -9,7 +9,7 @@ jnp = pytest.importorskip("jax.numpy")
 eqx = pytest.importorskip("equinox")
 
 import foundax as fx
-from foundax.pipe import Block, ShapeMismatchError
+from foundax.pipe import ShapeMismatchError
 
 
 def ks(n: int, seed: int = 0):

@@ -50,7 +50,6 @@ def test_gram_basis_is_normalised_legendre():
 
 def test_gram_orthonormal_on_minus1_1():
     """Integrals <phi_n, phi_m> ≈ delta_{nm} on [-1, 1] (the Gram polynomials are orthonormal)."""
-    basis = GramBasis(degree=4)
     xt = jnp.linspace(-1.0, 1.0, 4001).reshape(-1, 1)
     # We construct the basis directly on xt by skipping the tanh (use atanh-inverse trick).
     # Easier: build the polynomials directly using the recurrence on xt.

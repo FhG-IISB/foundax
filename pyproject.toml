@@ -30,6 +30,15 @@ where = [".", "repos/jax_bcat", "repos/jax_dpot", "repos/jax_morph", "repos/jax_
 [tool.ruff]
 exclude = ["og_repos", "build", "dist"]
 
+[tool.ruff.lint.per-file-ignores]
+# Tests use `pytest.importorskip` before module imports (E402), compact
+# single-line def shims for the test matrix (E702/E731), and short loop
+# counters `I`, `l` that are clear in context (E741).
+"tests/*" = ["E402", "E702", "E731", "E741"]
+# KAN code follows upstream KAN conventions (lambdas for basis functions,
+# `I` for identity matrices) that conflict with PEP8 style rules.
+"foundax/architectures/kan.py" = ["E731", "E741"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["repos", ".venv", "build", "dist"]

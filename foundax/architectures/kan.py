@@ -45,7 +45,7 @@ Each variant also has a corresponding multi-layer network class
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp

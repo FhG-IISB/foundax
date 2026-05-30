@@ -97,7 +97,6 @@ def run_structural_check(args: argparse.Namespace) -> int:
 
 def run_full_comparison(args: argparse.Namespace) -> int:
     import os
-    import os
     import torch
     from jax_bcat import transfer_pt_to_eqx
 
