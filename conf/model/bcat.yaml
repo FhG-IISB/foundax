@@ -1,8 +1,9 @@
 name: bcat
-# Original BCAT repo may be private; structural check runs without it
-github_url: null
+github_url: https://github.com/felix-lyx/bcat
 hf_checkpoint: null
-compare_needs_pt_repo: false
-compare_extra_args: []
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--bcat-root"
+  - "{repos_dir}/bcat"
 has_compare: true
 convert_extra_args: []

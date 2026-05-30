@@ -70,6 +70,9 @@ flax = ">=0.8"
 matplotlib = ">=3.7"
 timm = ">=1.0"
 transformers = ">=4.30"
+rotary-embedding-torch = ">=0.8.9, <0.9"
+torchtune = ">=0.6.1, <0.7"
+torchao = ">=0.17.0, <0.18"
 
 [tool.pixi.feature.dev.tasks]
 test-train = "pytest --tb=short -m train -v"

@@ -85,10 +85,13 @@ def run_structural_check(args: argparse.Namespace) -> int:
 
 def run_full_comparison(args: argparse.Namespace) -> int:
     import torch
+    from jax_prose import transfer_pt_to_eqx
 
-    print("\n[PROSE-FD] Full numerical comparison")
+    mode = "checkpoint" if args.checkpoint else "random-weight"
+    print(f"\n[PROSE-FD] {mode} comparison")
     print(f"  prose-root: {args.prose_root}")
-    print(f"  checkpoint: {args.checkpoint}")
+    if args.checkpoint:
+        print(f"  checkpoint: {args.checkpoint}")
 
     sys.path.insert(0, str(args.prose_root))
     from omegaconf import OmegaConf
@@ -99,21 +102,24 @@ def run_full_comparison(args: argparse.Namespace) -> int:
     symbol_cfg = OmegaConf.load(args.prose_root / "configs/symbol/symbol.yaml")
     symbol_env = SymbolicEnvironment(symbol_cfg)
 
-    ckpt = torch.load(args.checkpoint, map_location="cpu")
-    state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
-
-    def _strip(k: str) -> str:
-        for p in ("module._orig_mod.", "module."):
-            if k.startswith(p):
-                return k[len(p):]
-        return k
-
-    state = {_strip(k): v for k, v in state.items()}
-    n_words = int(state["symbol_encoder.word_embeddings.weight"].shape[0])
-
+    torch.manual_seed(args.seed)
     pt_model = PROSE_2to1(model_cfg, symbol_env, args.x_num, args.max_output_dim, args.output_len)
-    pt_model.load_state_dict(state, strict=True)
+
+    if args.checkpoint is not None:
+        ckpt = torch.load(args.checkpoint, map_location="cpu")
+        state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
+
+        def _strip(k: str) -> str:
+            for p in ("module._orig_mod.", "module."):
+                if k.startswith(p):
+                    return k[len(p):]
+            return k
+
+        state = {_strip(k): v for k, v in state.items()}
+        pt_model.load_state_dict(state, strict=True)
     pt_model.eval()
+    pt_state = pt_model.state_dict()
+    n_words = int(pt_state["symbol_encoder.word_embeddings.weight"].shape[0])
 
     data_input, input_times, output_times, symbol_input, symbol_mask = _make_inputs(args)
 
@@ -130,26 +136,7 @@ def run_full_comparison(args: argparse.Namespace) -> int:
     jax_model = PROSE2to1(
         n_words=n_words, x_num=args.x_num, max_output_dim=args.max_output_dim, key=key
     )
-
-    if args.msgpack is not None:
-        import msgpack
-
-        with open(args.msgpack, "rb") as f:
-            flat = msgpack.unpack(f, raw=False)
-
-        def _load(model, flat_params):
-            leaves, treedef = jax.tree_util.tree_flatten(model)
-            if len(flat_params) != len(leaves):
-                raise ValueError(
-                    f"Param count mismatch: msgpack has {len(flat_params)}, model has {len(leaves)}"
-                )
-            new_leaves = [
-                jnp.array(v) if v is not None else leaf
-                for leaf, v in zip(leaves, flat_params.values())
-            ]
-            return jax.tree_util.tree_unflatten(treedef, new_leaves)
-
-        jax_model = _load(jax_model, flat)
+    jax_model = transfer_pt_to_eqx(pt_state, jax_model)
 
     y_jax = np.asarray(
         jax_model(data_input, input_times, output_times, symbol_input, symbol_mask)
@@ -162,20 +149,19 @@ def run_full_comparison(args: argparse.Namespace) -> int:
         print(f"  FAIL: shape mismatch {y_pt.shape} vs {y_jax.shape}")
         return 1
 
+    max_d = float(np.max(np.abs(y_pt - y_jax)))
+    mean_d = float(np.mean(np.abs(y_pt - y_jax)))
     rel = float(np.linalg.norm((y_jax - y_pt).ravel()) / (np.linalg.norm(y_pt.ravel()) + 1e-8))
     status = "PASS" if rel < args.threshold else "FAIL"
-    print(f"  Relative L2: {rel:.2e}  → {status}  (threshold {args.threshold:.2e})")
+    print(f"  Max abs diff: {max_d:.2e}  Mean abs diff: {mean_d:.2e}  Rel L2: {rel:.2e}  → {status}")
     return 0 if status == "PASS" else 1
 
 
 def main() -> None:
     args = parse_args()
-    if args.prose_root is not None and args.checkpoint is not None:
+    if args.prose_root is not None:
         code = run_full_comparison(args)
     else:
-        if args.prose_root is not None or args.checkpoint is not None:
-            print("WARNING: both --prose-root and --checkpoint required for full comparison.")
-            print("         Falling back to structural check.")
         code = run_structural_check(args)
     raise SystemExit(code)
 
