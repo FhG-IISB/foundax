@@ -6,8 +6,12 @@ PDEs:
   1. Advection-Burgers: u_t + (u^2)_x + (-0.3*u)_y = 0
   2. Heat Equation: u_t - 0.1*(u_xx + u_yy) = 0
 
+Usage:
+    python compare.py --pdeformer2-root /path/to/pdeformer-2 --data-dir /path/to/checkpoints
+    python compare.py --pdeformer2-root /path/to/pdeformer-2 --data-dir /path/to/ckpts --variants small
 """
 
+import argparse
 import sys
 import os
 from pathlib import Path
@@ -21,17 +25,14 @@ import matplotlib.pyplot as plt
 
 # ============================================================================
 
-PDEFORMER2_ROOT = "/home/b8cl/pdeformer-2"
-DATA_DIR = "/home/b8cl/projects/DATA/pdeformer"
-OUTPUT_DIR = Path("./")
-
 # Checkpoint configurations: (name, config_file, uf_num_mod)
 
-CHECKPOINTS = [
+ALL_CHECKPOINTS = [
     ("small", "configs/inference/model-S.yaml", 11),
     ("base", "configs/inference/model-L.yaml", 11),
     ("fast", "configs/inference/model-M.yaml", 11),
 ]
+_CHECKPOINT_NAMES = {name for name, _, _ in ALL_CHECKPOINTS}
 
 # PDE configurations: (name, description, create_func_jax, create_func_ms)
 
@@ -447,11 +448,16 @@ def get_query_coords():
 # ============================================================================
 
 
-def run_mindspore_inference(ckpt_name, config_file, uf_num_mod, pde_config):
-    """Run MindSpore inference for a given checkpoint and PDE."""
-    sys.path.insert(0, PDEFORMER2_ROOT)
+def run_mindspore_inference(ckpt_name, config_file, uf_num_mod, pde_config, pdeformer2_root, data_dir):
+    """Run MindSpore inference for a given checkpoint and PDE.
+
+    Raises ImportError if MindSpore is not installed (caller handles gracefully).
+    """
+    import mindspore  # noqa: F401 — propagates ImportError to caller if absent
+
+    sys.path.insert(0, str(pdeformer2_root))
     original_dir = os.getcwd()
-    os.chdir(PDEFORMER2_ROOT)
+    os.chdir(str(pdeformer2_root))
 
     try:
         from mindspore import context
@@ -462,7 +468,7 @@ def run_mindspore_inference(ckpt_name, config_file, uf_num_mod, pde_config):
         from src.inference import inference_pde
 
         config = load_config(config_file)
-        config.model.load_ckpt = os.path.join(DATA_DIR, f"pdeformer2-{ckpt_name}.ckpt")
+        config.model.load_ckpt = os.path.join(str(data_dir), f"pdeformer2-{ckpt_name}.ckpt")
 
         model = get_model(config)
 
@@ -487,7 +493,7 @@ def run_mindspore_inference(ckpt_name, config_file, uf_num_mod, pde_config):
 # ============================================================================
 
 
-def run_jax_inference(ckpt_name, uf_num_mod, pde_config):
+def run_jax_inference(ckpt_name, uf_num_mod, pde_config, data_dir):
     """Run JAX inference for a given checkpoint and PDE."""
     import jax
     import jax.numpy as jnp
@@ -507,7 +513,7 @@ def run_jax_inference(ckpt_name, uf_num_mod, pde_config):
         "fast": PDEFORMER_FAST_CONFIG,
     }
 
-    ckpt_path = os.path.join(DATA_DIR, f"pdeformer2-{ckpt_name}.ckpt")
+    ckpt_path = os.path.join(str(data_dir), f"pdeformer2-{ckpt_name}.ckpt")
     model_config = config_map[ckpt_name]
 
     model = create_pdeformer_from_config({"model": model_config})
@@ -547,8 +553,9 @@ def run_jax_inference(ckpt_name, uf_num_mod, pde_config):
 # ============================================================================
 
 
-def plot_comparison(
-    ms_pred, jax_pred, abs_err, ckpt_name, pde_name, pde_latex, snap_t, x_plot, y_plot
+def _plot_comparison_to_dir(
+    ms_pred, jax_pred, abs_err, ckpt_name, pde_name, pde_latex, snap_t, x_plot, y_plot,
+    output_dir,
 ):
     """Create comparison plots for a single checkpoint and PDE."""
     n_times = len(snap_t)
@@ -611,7 +618,7 @@ def plot_comparison(
     plt.tight_layout()
 
     # Save figure
-    output_path = OUTPUT_DIR / f"comparison_{ckpt_name}_{pde_name}.png"
+    output_path = output_dir / f"comparison_{ckpt_name}_{pde_name}.png"
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -619,7 +626,7 @@ def plot_comparison(
     return output_path
 
 
-def plot_summary(results, snap_t, x_plot, y_plot):
+def _plot_summary_to_dir(results, snap_t, x_plot, y_plot, output_dir):
     """Create a summary plot comparing all checkpoints for each PDE.
 
     When MindSpore predictions are present the layout is:
@@ -762,13 +769,13 @@ def plot_summary(results, snap_t, x_plot, y_plot):
             fig.colorbar(im, ax=axes, shrink=0.6, label="u")
 
         plt.tight_layout()
-        output_path = OUTPUT_DIR / f"comparison_summary_{pde_name}.png"
+        output_path = output_dir / f"comparison_summary_{pde_name}.png"
         plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"[Plot] Saved summary: {output_path}")
 
 
-def plot_error_summary(results, snap_t):
+def _plot_error_summary_to_dir(results, snap_t, output_dir):
     """Create error comparison plot across checkpoints for each PDE."""
     if not results:
         return
@@ -824,7 +831,7 @@ def plot_error_summary(results, snap_t):
 
     plt.tight_layout()
 
-    output_path = OUTPUT_DIR / "error_summary.png"
+    output_path = output_dir / "error_summary.png"
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -871,10 +878,58 @@ def compare_predictions(ms_pred, jax_pred, ckpt_name, pde_name, snap_t):
 # ============================================================================
 
 
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description="Compare MindSpore and JAX PDEFormer2 predictions on synthetic PDEs"
+    )
+    parser.add_argument(
+        "--pdeformer2-root",
+        type=Path,
+        required=True,
+        help="Path to the cloned pdeformer-2 repository (for MindSpore model import)",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        required=True,
+        help="Directory containing pdeformer2-{small,base,fast}.ckpt checkpoint files",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("."),
+        help="Directory for output plots (default: current directory)",
+    )
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        choices=list(_CHECKPOINT_NAMES),
+        default=list(_CHECKPOINT_NAMES),
+        help="Which checkpoint variants to compare (default: all)",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=1e-3,
+        help="Maximum allowed relative L2 difference to consider passing (default: 1e-3)",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = _parse_args()
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    checkpoints = [c for c in ALL_CHECKPOINTS if c[0] in set(args.variants)]
+
     print("=" * 60)
     print("PDEFormer2: MindSpore vs JAX Comparison")
     print("=" * 60)
+    print(f"pdeformer2-root: {args.pdeformer2_root}")
+    print(f"data-dir:        {args.data_dir}")
+    print(f"output-dir:      {output_dir}")
+    print(f"variants:        {[c[0] for c in checkpoints]}")
     print("\nPDEs to test:")
     for pde in PDES:
         print(f"  - {pde['description']}: {pde['latex']}")
@@ -898,10 +953,10 @@ def main():
         pde_snap_t, pde_x_plot, pde_y_plot, _ = _get_coords()
         _coords_cache[pde_name] = (pde_snap_t, pde_x_plot, pde_y_plot)
 
-        for ckpt_name, config_file, uf_num_mod in CHECKPOINTS:
-            ckpt_path = os.path.join(DATA_DIR, f"pdeformer2-{ckpt_name}.ckpt")
+        for ckpt_name, config_file, uf_num_mod in checkpoints:
+            ckpt_path = args.data_dir / f"pdeformer2-{ckpt_name}.ckpt"
 
-            if not os.path.exists(ckpt_path):
+            if not ckpt_path.exists():
                 print(f"\n[SKIP] Checkpoint not found: {ckpt_path}")
                 continue
 
@@ -909,17 +964,11 @@ def main():
             print(f"Testing: pdeformer2-{ckpt_name} | {pde_desc}")
             print(f"{'=' * 60}")
 
-            # Skip PDEs with no MindSpore equivalent in MS-only mode
-            if pde_config.get("create_ms") is None:
-                print(
-                    f"[INFO] Skipping MindSpore inference for {pde_desc} (not supported)"
-                )
-
             # JAX inference
             print("\n[JAX] Running inference...")
             try:
                 jax_pred, n_params = run_jax_inference(
-                    ckpt_name, uf_num_mod, pde_config
+                    ckpt_name, uf_num_mod, pde_config, args.data_dir
                 )
                 print(f"[JAX] Model parameters: {n_params:,}")
                 print(f"[JAX] Prediction shape: {jax_pred.shape}")
@@ -938,12 +987,16 @@ def main():
                 print("\n[MindSpore] Running inference...")
                 try:
                     ms_pred = run_mindspore_inference(
-                        ckpt_name, config_file, uf_num_mod, pde_config
+                        ckpt_name, config_file, uf_num_mod, pde_config,
+                        args.pdeformer2_root, args.data_dir,
                     )
                     print(f"[MindSpore] Prediction shape: {ms_pred.shape}")
                     print(
                         f"[MindSpore] Value range: [{ms_pred.min():.6f}, {ms_pred.max():.6f}]"
                     )
+                except ImportError:
+                    print("[MindSpore] Not installed — running JAX-only validation")
+                    ms_pred = None
                 except Exception as e:
                     print(f"[MindSpore] Error: {e}")
                     import traceback
@@ -967,16 +1020,11 @@ def main():
                     "pde_latex": pde_latex,
                 }
                 # Generate individual comparison plot
-                plot_comparison(
-                    ms_pred,
-                    jax_pred,
-                    abs_err,
-                    ckpt_name,
-                    pde_name,
-                    pde_latex,
-                    pde_snap_t,
-                    pde_x_plot,
-                    pde_y_plot,
+                _plot_comparison_to_dir(
+                    ms_pred, jax_pred, abs_err,
+                    ckpt_name, pde_name, pde_latex,
+                    pde_snap_t, pde_x_plot, pde_y_plot,
+                    output_dir,
                 )
             else:
                 # JAX-only result
@@ -991,6 +1039,7 @@ def main():
     print("SUMMARY")
     print("=" * 60)
 
+    any_fail = False
     for pde_config in PDES:
         pde_name = pde_config["name"]
         pde_results = all_results[pde_name]
@@ -1007,9 +1056,13 @@ def main():
             print("-" * 72)
             for name, data in pde_results.items():
                 if "abs_err" in data:
+                    max_rel = data['rel_err'].max()
+                    status = "PASS" if max_rel < args.threshold else "FAIL"
+                    if status == "FAIL":
+                        any_fail = True
                     print(
                         f"{name:<12} {data['n_params']:<15,} {data['abs_err'].max():<15.2e} "
-                        f"{data['abs_err'].mean():<15.2e} {data['rel_err'].max():<15.2e}"
+                        f"{data['abs_err'].mean():<15.2e} {max_rel:<15.2e} {status}"
                     )
         else:
             print(f"{'Checkpoint':<12} {'Params':<15} {'Output range'}")
@@ -1027,15 +1080,15 @@ def main():
         if pde_name not in _coords_cache:
             continue
         pde_snap_t, pde_x_plot, pde_y_plot = _coords_cache[pde_name]
-        plot_summary(
-            {pde_name: all_results[pde_name]}, pde_snap_t, pde_x_plot, pde_y_plot
+        _plot_summary_to_dir(
+            {pde_name: all_results[pde_name]}, pde_snap_t, pde_x_plot, pde_y_plot, output_dir
         )
-        # Only plot error comparison when MindSpore results are available
         if any("abs_err" in d for d in all_results[pde_name].values()):
-            plot_error_summary({pde_name: all_results[pde_name]}, pde_snap_t)
+            _plot_error_summary_to_dir({pde_name: all_results[pde_name]}, pde_snap_t, output_dir)
 
     print("\nDone.")
-    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Output directory: {output_dir}")
+    raise SystemExit(1 if any_fail else 0)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+name: mpp
+github_url: https://github.com/PolymathicAI/multiple_physics_pretraining
+hf_checkpoint:
+  repo_id: polymathic-ai/multiple_physics_pretraining
+  filename: MPP_AViT_Ti.pt
+compare_needs_pt_repo: false
+compare_extra_args:
+  - "--checkpoint"
+  - "{checkpoints_dir}/mpp/MPP_AViT_Ti.pt"
+has_compare: true
+convert_extra_args:
+  - "--checkpoint"
+  - "{checkpoints_dir}/mpp/MPP_AViT_Ti.pt"
+  - "--output"
+  - "{checkpoints_dir}/mpp/mpp_Ti.msgpack"

@@ -1,0 +1,10 @@
+name: dpot
+github_url: https://github.com/thu-ml/DPOT
+hf_checkpoint: null
+compare_needs_pt_repo: false
+# Structural check only when no checkpoint is provided
+compare_extra_args:
+  - "--variant"
+  - "Ti"
+has_compare: true
+convert_extra_args: []

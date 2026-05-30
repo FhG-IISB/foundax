@@ -100,13 +100,9 @@ def main() -> None:
             args.projects_root, "jax_dpot", "scripts/compare.py", extra
         )
     elif args.model == "bcat":
-        print(
-            "ERROR: compare is not implemented for bcat (no upstream compare script available)."
+        code = _dispatch_script(
+            args.projects_root, "jax_bcat", "scripts/compare.py", extra
         )
-        print(
-            "Use convert for bcat, or add a dedicated comparison implementation in jax_bcat."
-        )
-        code = 2
     else:
         print(f"Unsupported model: {args.model}")
         code = 2

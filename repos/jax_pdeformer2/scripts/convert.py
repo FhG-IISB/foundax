@@ -144,16 +144,45 @@ def npz_to_msgpack(npz_path: Path, msgpack_path: Path, config: dict) -> None:
 
 # ── main ─────────────────────────────────────────────────────────────
 
+def _parse_args():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Convert PDEFormer2 MindSpore checkpoints to JAX msgpack format"
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        required=True,
+        help="Directory containing pdeformer2-{small,base,fast}.ckpt files and where .npz/.msgpack will be written",
+    )
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        choices=list(CHECKPOINTS.keys()),
+        default=list(CHECKPOINTS.keys()),
+        help="Which variants to convert (default: all)",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
     import jax  # imported here so top-level stays light
 
+    args = _parse_args()
+    data_dir = args.data_dir
+    data_dir.mkdir(parents=True, exist_ok=True)
+
     for stem, config in CHECKPOINTS.items():
-        ckpt_path = Path(f"/home/b8cl/projects/DATA/pdeformer/{stem}.ckpt")
-        npz_path = Path(f"/home/b8cl/projects/DATA/pdeformer/{stem}.npz")
-        msgpack_path = Path(f"/home/b8cl/projects/DATA/pdeformer/{stem}.msgpack")
+        if stem not in set(args.variants):
+            continue
+
+        ckpt_path = data_dir / f"{stem}.ckpt"
+        npz_path = data_dir / f"{stem}.npz"
+        msgpack_path = data_dir / f"{stem}.msgpack"
 
         if not ckpt_path.exists():
-            print(f"[skip] {ckpt_path.name} not found")
+            print(f"[skip] {ckpt_path.name} not found in {data_dir}")
             continue
 
         print(f"\n{'=' * 60}")
@@ -165,5 +194,7 @@ if __name__ == "__main__":
 
         # Stage 2: .npz → .msgpack  (JAX / Flax)
         npz_to_msgpack(npz_path, msgpack_path, config)
+
+    print("\n✓ All conversions complete.")
 
     print("\n✓ All conversions complete.")

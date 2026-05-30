@@ -1,0 +1,14 @@
+name: morph
+github_url: https://github.com/lanl/MORPH
+hf_checkpoint: null
+compare_needs_pt_repo: true
+# morph compare.py auto-downloads from HuggingFace when --checkpoint is omitted
+compare_extra_args:
+  - "--model-size"
+  - "Ti"
+has_compare: true
+convert_extra_args:
+  - "--model-size"
+  - "Ti"
+  - "--output"
+  - "{checkpoints_dir}/morph/morph_Ti.msgpack"

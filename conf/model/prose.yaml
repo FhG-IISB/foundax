@@ -1,0 +1,10 @@
+name: prose
+github_url: https://github.com/BaratiLab/PROSE
+hf_checkpoint: null
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--prose-root"
+  - "{repos_dir}/prose"
+has_compare: true
+convert_extra_args: []
+prose_variant: fd

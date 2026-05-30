@@ -1,0 +1,19 @@
+name: pdeformer2
+github_url: https://github.com/functoreality/pdeformer-2
+hf_checkpoint: null
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--pdeformer2-root"
+  - "{repos_dir}/pdeformer2"
+  - "--data-dir"
+  - "{checkpoints_dir}/pdeformer2"
+  - "--output-dir"
+  - "{outdir}/pdeformer2_plots"
+  - "--variants"
+  - "small"
+has_compare: true
+convert_extra_args:
+  - "--data-dir"
+  - "{checkpoints_dir}/pdeformer2"
+  - "--variants"
+  - "small"

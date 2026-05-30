@@ -1,0 +1,9 @@
+name: bcat
+github_url: https://github.com/BaratiLab/BCAT
+hf_checkpoint: null
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--bcat-root"
+  - "{repos_dir}/bcat"
+has_compare: true
+convert_extra_args: []
