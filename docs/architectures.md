@@ -12,12 +12,12 @@ Direct Equinox implementations in `foundax/architectures/`, exposed via `foundax
 | `fx.fno1d`, `fx.fno2d`, `fx.fno3d` | Fourier Neural Operator | Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895) | Spectral mixing on structured grids |
 | `fx.unet1d`, `fx.unet2d`, `fx.unet3d` | U-Net | Ronneberger et al. 2015 — [arXiv:1505.04597](https://arxiv.org/abs/1505.04597) | Encoder-decoder with skip connections |
 | `fx.transformer` | Generic transformer | Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762); JAX port from [voyager-jhk/JaxTransformer](https://github.com/voyager-jhk/JaxTransformer) | Sequence-to-sequence baseline |
-| `fx.deeponet` | Deep Operator Network | Lu et al. 2021 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Branch / trunk factorisation; configurable sub-networks |
+| `fx.deeponet` | Deep Operator Network | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Branch / trunk factorisation; configurable sub-networks |
 | `fx.cno2d` | Continuous Neural Operator | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178); code from [bogdanraonic3/AI_Science_Engineering](https://github.com/bogdanraonic3/AI_Science_Engineering) | Hierarchical convolutional operator on 2D fields |
-| `fx.mgno1d`, `fx.mgno2d` | Multigrid Neural Operator | He et al. 2024 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Restriction / prolongation inspired by multigrid solvers |
+| `fx.mgno1d`, `fx.mgno2d` | Multigrid Neural Operator | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Restriction / prolongation inspired by multigrid solvers |
 | `fx.geofno` | Geometry-aware FNO | Li et al. 2022 — [arXiv:2207.05209](https://arxiv.org/abs/2207.05209) | FNO with learned deformations for non-uniform layouts |
 | `fx.pcno` | Point-Cloud Neural Operator | [PKU-CMEGroup/NeuralOperator](https://github.com/PKU-CMEGroup/NeuralOperator) | Operator learning on point clouds |
-| `fx.pit` | Position-induced Transformer | Chen et al. 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) | Coordinate-aware attention with distance-based weights |
+| `fx.pit` | Position-induced Transformer | Chen & Wu 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) | Coordinate-aware attention with distance-based weights |
 | `fx.pointnet` | PointNet | Qi et al. 2017 — [arXiv:1612.00593](https://arxiv.org/abs/1612.00593) | Unordered point-set encoder–decoder |
 | `fx.gnot`, `fx.cgptno`, `fx.moegptno` | GNOT family | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) | Transformer-style operator learning on irregular domains, with optional mixture-of-experts routing |
 | `fx.dit2d`, `fx.dit3d` | Diffusion Transformer (DiT) | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) | Patch + sinusoidal positional embedding; flow-matching backbone |
@@ -74,11 +74,11 @@ Each namespace wraps a vendored JAX implementation in `repos/jax_*`. Pretrained 
 | `fx.poseidon` | `T`, `B`, `L` | ScOT (Swin-style hierarchical operator transformer) | Herde et al. 2024 — [arXiv:2405.19101](https://arxiv.org/abs/2405.19101) | CC-BY-NC-4.0 |
 | `fx.morph` | `Ti`, `S`, `M`, `L` | ViT3D regression | Rautela et al. 2025 — [arXiv:2509.21670](https://arxiv.org/abs/2509.21670) | MIT |
 | `fx.mpp` | `Ti`, `S`, `B`, `L` | AViT (axial vision transformer) | McCabe et al., NeurIPS 2024 — [openreview/DKSI3bULiZ](https://openreview.net/forum?id=DKSI3bULiZ) | MIT |
-| `fx.walrus` | `base` | Isotropic encoder–processor–decoder (1.29B params) | Bodner et al. 2024 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) | MIT |
+| `fx.walrus` | `base` | Isotropic encoder–processor–decoder (1.29B params) | McCabe et al. 2025 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) | MIT |
 | `fx.bcat` | `base` | Block-causal transformer (patched spatio-temporal) | Liu et al. 2025 — [arXiv:2501.18972](https://arxiv.org/abs/2501.18972) | MIT |
-| `fx.pdeformer2` | `small`, `base`, `fast` | Graphormer encoder + INR decoder with hypernetwork | Shi et al. 2025 — [arXiv:2502.14844](https://arxiv.org/abs/2502.14844) | Apache-2.0 |
+| `fx.pdeformer2` | `small`, `base`, `fast` | Graphormer encoder + INR decoder with hypernetwork | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) | Apache-2.0 |
 | `fx.dpot` | `Ti`, `S`, `M`, `L`, `H` | DPOTNet (AFNO / Fourier-style mixing) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) | Apache-2.0 |
-| `fx.prose` | `fd_1to1`, `fd_2to1`, `ode_2to1`, `pde_2to1` | Transformer sequence-to-sequence (FD / ODE / PDE tasks) | Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) | MIT |
+| `fx.prose` | `fd_1to1`, `fd_2to1`, `ode_2to1`, `pde_2to1` | Transformer sequence-to-sequence (FD / ODE / PDE tasks) | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) | MIT |
 
 > Weights keep their upstream licenses — see [THIRD_PARTY_LICENSES](https://github.com/FhG-IISB/foundax/blob/main/THIRD_PARTY_LICENSES); Poseidon weights are non-commercial.
 

@@ -14,9 +14,9 @@ For the full list with paper references — including the foundation-model wrapp
 | Fourier Neural Operators | `fno1d`, `fno2d`, `fno3d` | Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895) | Structured-grid operator learning |
 | UNet | `unet1d`, `unet2d`, `unet3d` | Ronneberger et al. 2015 — [arXiv:1505.04597](https://arxiv.org/abs/1505.04597) | Encoder-decoder baselines on regular grids |
 | Generic Transformer | `transformer` | Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) | Sequence-to-sequence baselines |
-| DeepONet | `deeponet` | Lu et al. 2021 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Operator learning with branch/trunk factorization |
+| DeepONet | `deeponet` | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Operator learning with branch/trunk factorization |
 | CNO | `cno2d` | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178) | Continuous neural operator on image-like fields |
-| MgNO | `mgno1d`, `mgno2d` | He et al. 2024 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Multigrid-inspired operator learning |
+| MgNO | `mgno1d`, `mgno2d` | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Multigrid-inspired operator learning |
 | Geometry-aware operators | `geofno`, `pcno`, `pit`, `pointnet` | GeoFNO: [arXiv:2207.05209](https://arxiv.org/abs/2207.05209); PiT: [arXiv:2405.09285](https://arxiv.org/abs/2405.09285); PointNet: [arXiv:1612.00593](https://arxiv.org/abs/1612.00593); PCNO: [github](https://github.com/PKU-CMEGroup/NeuralOperator) | Irregular meshes, coordinates, point clouds |
 | GNOT family | `cgptno`, `gnot`, `moegptno` | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) | Transformer-based operator learning on irregular domains |
 | Diffusion / flow backbones | `dit2d/3d`, `ffno2d/3d`, `wno1d/2d/3d` | DiT: [arXiv:2212.09748](https://arxiv.org/abs/2212.09748); F-FNO: [arXiv:2111.13802](https://arxiv.org/abs/2111.13802); WNO: [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) | Time-conditioned backbones for flow-matching and diffusion training |

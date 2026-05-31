@@ -38,12 +38,12 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | Fourier Neural Operator | `fx.fno1d/2d/3d` | Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895) |
 | U-Net | `fx.unet1d/2d/3d` | Ronneberger et al. 2015 — [arXiv:1505.04597](https://arxiv.org/abs/1505.04597) |
 | Generic transformer | `fx.transformer` | Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) |
-| DeepONet | `fx.deeponet` | Lu et al. 2021 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) |
+| DeepONet | `fx.deeponet` | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) |
 | Continuous Neural Operator | `fx.cno2d` | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178) |
-| Multigrid Neural Operator | `fx.mgno1d/2d` | He et al. 2024 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) |
+| Multigrid Neural Operator | `fx.mgno1d/2d` | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) |
 | Geometry-aware FNO | `fx.geofno` | Li et al. 2022 — [arXiv:2207.05209](https://arxiv.org/abs/2207.05209) |
 | Point-Cloud Neural Operator | `fx.pcno` | [PKU-CMEGroup/NeuralOperator](https://github.com/PKU-CMEGroup/NeuralOperator) |
-| Position-induced Transformer | `fx.pit` | Chen et al. 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) |
+| Position-induced Transformer | `fx.pit` | Chen & Wu 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) |
 | PointNet | `fx.pointnet` | Qi et al. 2017 — [arXiv:1612.00593](https://arxiv.org/abs/1612.00593) |
 | GNOT family | `fx.gnot`, `fx.cgptno`, `fx.moegptno` | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) |
 | Diffusion Transformer (DiT) | `fx.dit2d/3d` | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) |
@@ -61,11 +61,11 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | `fx.poseidon` | T, B, L | ScOT (Swin operator transformer) | Herde et al. 2024 — [arXiv:2405.19101](https://arxiv.org/abs/2405.19101) |
 | `fx.morph` | Ti, S, M, L | ViT3D regression | Rautela et al. 2025 — [arXiv:2509.21670](https://arxiv.org/abs/2509.21670) |
 | `fx.mpp` | Ti, S, B, L | AViT (axial ViT) | McCabe et al., NeurIPS 2024 — [openreview/DKSI3bULiZ](https://openreview.net/forum?id=DKSI3bULiZ) |
-| `fx.walrus` | base | Encoder-processor-decoder (1.29B) | Bodner et al. 2024 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) |
+| `fx.walrus` | base | Encoder-processor-decoder (1.29B) | McCabe et al. 2025 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) |
 | `fx.bcat` | base | Block-causal transformer | Liu et al. 2025 — [arXiv:2501.18972](https://arxiv.org/abs/2501.18972) |
-| `fx.pdeformer2` | small, base, fast | Graphormer + INR | Shi et al. 2025 — [arXiv:2502.14844](https://arxiv.org/abs/2502.14844) |
+| `fx.pdeformer2` | small, base, fast | Graphormer + INR | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) |
 | `fx.dpot` | Ti, S, M, L, H | DPOTNet (AFNO) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) |
-| `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Seq-to-seq transformer | Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) |
+| `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Seq-to-seq transformer | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) |
 
 Pretrained weights keep their upstream licenses — see [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
 
