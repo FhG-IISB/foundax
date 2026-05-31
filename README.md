@@ -7,7 +7,7 @@
         <img src="https://img.shields.io/github/actions/workflow/status/FhG-IISB/foundax/ci.yml?branch=main&label=tests" alt="Tests"/>
     </a>
     <a href="LICENSE">
-        <img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="License"/>
+        <img src="https://img.shields.io/badge/license-EPL_2.0-2ea44f" alt="License"/>
     </a>
     <a href="https://huggingface.co/FhG-IISB/foundax">
         <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-FhG--IISB%2Ffoundax-ff9d00" alt="Hugging Face"/>
