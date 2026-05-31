@@ -16,6 +16,9 @@ jobs:
         with:
           cache: true
 
+      - name: Format check
+        run: pixi run ci-fmt
+
       - name: Lint
         run: pixi run ci-lint
 

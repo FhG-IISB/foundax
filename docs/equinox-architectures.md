@@ -4,6 +4,23 @@ This page documents the **Equinox foundation-model wrappers** exposed by `founda
 
 These wrappers are the large-model side of the repository. Each namespace provides a small public API over a vendored JAX implementation under `repos/`, while keeping the package-level import surface consistent.
 
+## Summary
+
+For the full architectures matrix (including core models and KAN variants), see [Architectures Overview](architectures.md).
+
+| Namespace | Variants | Backbone | Reference | Weights license |
+|---|---|---|---|---|
+| `fx.poseidon` | T, B, L | ScOT (Swin-style hierarchical operator transformer) | Herde et al. 2024 — [arXiv:2405.19101](https://arxiv.org/abs/2405.19101) | CC-BY-NC-4.0 |
+| `fx.morph` | Ti, S, M, L | ViT3D regression | Rautela et al. 2025 — [arXiv:2509.21670](https://arxiv.org/abs/2509.21670) | MIT |
+| `fx.mpp` | Ti, S, B, L | AViT (axial vision transformer) | McCabe et al., NeurIPS 2024 — [openreview/DKSI3bULiZ](https://openreview.net/forum?id=DKSI3bULiZ) | MIT |
+| `fx.walrus` | base | Isotropic encoder–processor–decoder (1.29B params) | Bodner et al. 2024 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) | MIT |
+| `fx.bcat` | base | Block-causal transformer | Liu et al. 2025 — [arXiv:2501.18972](https://arxiv.org/abs/2501.18972) | MIT |
+| `fx.pdeformer2` | small, base, fast | Graphormer encoder + INR decoder | Shi et al. 2025 — [arXiv:2502.14844](https://arxiv.org/abs/2502.14844) | Apache-2.0 |
+| `fx.dpot` | Ti, S, M, L, H | DPOTNet (AFNO-style mixing) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) | Apache-2.0 |
+| `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Transformer sequence-to-sequence | Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) | MIT |
+
+Weights remain subject to their upstream licenses — see [THIRD_PARTY_LICENSES](https://github.com/FhG-IISB/foundax/blob/main/THIRD_PARTY_LICENSES).
+
 ## API pattern
 
 The preferred entry points are the namespace modules:
@@ -263,6 +280,7 @@ Repository mapping:
 
 References:
 
+- Paper: Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355)
 - Vendored JAX repository: `repos/jax_prose`
 
 ## Notes On Package Surface

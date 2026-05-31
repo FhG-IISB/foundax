@@ -5,15 +5,41 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "foundax"
 version = "0.2.0"
-description = "One-stop JAX foundation model repository"
+description = "Unified JAX model zoo for operator learning, KAN variants, and PDE foundation-model wrappers"
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    { name = "Leon Armbruster", email = "leon.armbruster@iisb.fraunhofer.de" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+# License is expressed via the SPDX `license` field above (PEP 639);
+# do not duplicate it as a classifier — modern setuptools rejects that.
+
 dependencies = [
     "jax>=0.4",
     "equinox>=0.11",
     "einops",
 ]
+
+[project.urls]
+Homepage = "https://github.com/FhG-IISB/foundax"
+Documentation = "https://fhg-iisb.github.io/foundax/"
+Source = "https://github.com/FhG-IISB/foundax"
+Issues = "https://github.com/FhG-IISB/foundax/issues"
 
 [project.scripts]
 foundax-convert = "foundax.cli:convert_entry"
@@ -22,6 +48,9 @@ foundax-verify = "foundax.cli:verify_entry"
 
 [tool.setuptools]
 include-package-data = false
+
+[tool.setuptools.package-data]
+foundax = ["py.typed"]
 
 [tool.setuptools.packages.find]
 include = ["foundax*", "jax_bcat*", "jax_dpot*", "jax_morph*", "jax_mpp*", "jax_pdeformer2*", "jax_poseidon*", "jax_prose*", "jax_walrus*"]
@@ -79,8 +108,10 @@ imageio = "*"
 tqdm = "*"
 
 [tool.pixi.tasks]
+fmt = "ruff format ."
 lint = "ruff check . --fix"
 test = "pytest -x --tb=short"
+all = "ruff format . && ruff check . --fix && pytest -x --tb=short"
 # CI tasks: read-only (no auto-fix) and skip slow tests
 ci-fmt = "ruff format --check ."
 ci-lint = "ruff check ."
@@ -89,6 +120,10 @@ ci-test = "pytest -x --tb=short -m 'not slow'"
 [tool.pixi.dependencies]
 pytest = ">=9.0.3,<10"
 ruff = ">=0.9.0"
+pre-commit = ">=4.0"
+mkdocs = ">=1.6,<2"
+mkdocs-material = ">=9.0,<10"
+pymdown-extensions = ">=10.0"
 
 [tool.pixi.feature.dev.pypi-dependencies]
 optax = ">=0.2"

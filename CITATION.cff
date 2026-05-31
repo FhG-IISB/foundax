@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: "If you use foundax in academic work, please cite the accompanying paper."
+title: "foundax: A Unified JAX Model Zoo for Operator Learning and PDE Foundation Models"
+version: "0.2.0"
+date-released: 2026-05-31
+license: MIT
+repository-code: "https://github.com/FhG-IISB/foundax"
+url: "https://github.com/FhG-IISB/foundax"
+
+abstract: >
+  A small Equinox-based collection of JAX models for operator learning and PDE surrogates:
+  core architectures (FNO, U-Net, DeepONet, transformer, GNOT family, …), the KAN family,
+  and wrappers around eight vendored foundation models (Poseidon, MORPH, MPP, Walrus,
+  BCAT, PDEformer-2, DPOT, PROSE). Integrates with the jNO library for physics-informed
+  training.
+
+keywords:
+  - JAX
+  - Equinox
+  - neural operators
+  - Kolmogorov-Arnold Networks
+  - foundation models
+  - PDE surrogates
+  - scientific machine learning
+
+authors:
+  - family-names: Armbruster
+    given-names: Leon
+    affiliation: "Fraunhofer IISB, Germany"
+    orcid: "https://orcid.org/0009-0007-7602-362X"
+
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Armbruster
+      given-names: Leon
+    - family-names: Ramesh
+      given-names: Rathan
+    - family-names: Kruse
+      given-names: Georg
+    - family-names: Straub
+      given-names: Christopher
+  title: "jNO: A JAX Library for Neural Operator and Foundation Model Training"
+  year: 2026
+  doi: "10.48550/arXiv.2605.10159"
+  url: "https://arxiv.org/abs/2605.10159"
+  note: "Preprint on arXiv (arXiv:2605.10159). foundax is the model-zoo component described in this paper."

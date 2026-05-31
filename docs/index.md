@@ -4,6 +4,7 @@ Build and reuse neural-operator models in JAX with an Equinox-first API surface,
 
 <div class="hero-actions" markdown>
 [Getting Started](getting-started.md){ .md-button .md-button--primary }
+[Architectures Overview](architectures.md){ .md-button }
 [Core Models](core-models.md){ .md-button }
 [Foundation Models](equinox-architectures.md){ .md-button }
 [Model Examples](model-examples.md){ .md-button }
@@ -44,6 +45,7 @@ If you are new to foundax, follow this path:
 
 | Guide | Focus |
 |---|---|
+| [Architectures Overview](architectures.md) | Single-page reference of every model family with paper citations |
 | [Core Models](core-models.md) | Direct Equinox architectures in `foundax/architectures` and exposed via `foundax.nn` |
 | [Kolmogorov–Arnold Networks](kan.md) | 17 KAN variants + convolutional / spectral / residual / attention blocks |
 | [Foundation Models](equinox-architectures.md) | Namespace wrappers for Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, and PROSE |
