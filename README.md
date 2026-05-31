@@ -197,4 +197,4 @@ If you use foundax in academic work, the accompanying paper is the [jNO preprint
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Vendored foundation-model code and pretrained weights keep their original licenses (see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES)); Poseidon weights are non-commercial.
+EPL-2.0 — see [LICENSE](LICENSE). Vendored foundation-model code and pretrained weights keep their original licenses (see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES)); Poseidon weights are non-commercial.
