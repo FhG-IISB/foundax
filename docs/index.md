@@ -71,6 +71,8 @@ morph = fx.morph.S()
 
 ## Integration With jNO
 
+[**jNO**](https://github.com/FhG-IISB/jNO) is the sister library for training neural operators and physics-informed networks. Wrap any foundax model with `jno.nn.wrap` to plug it into a jNO training loop:
+
 ```python
 import foundax as fx
 import jno
