@@ -196,6 +196,10 @@ def step(model, state, u, y, target):
 
 If you use foundax in academic work, the accompanying paper is the [jNO preprint](https://arxiv.org/abs/2605.10159) (`arXiv:2605.10159`). A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 
+## AI Disclosure
+
+Parts of this codebase — including model ports, tests, and documentation — were developed with the assistance of AI coding tools. All contributions are reviewed and tested to the best of our ability, but mistakes may remain; please open an issue if you spot one.
+
 ## License
 
 EPL-2.0 — see [LICENSE](LICENSE). Vendored foundation-model code and pretrained weights keep their original licenses (see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES)); Poseidon weights are non-commercial.
