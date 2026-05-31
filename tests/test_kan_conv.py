@@ -11,13 +11,23 @@ from foundax.architectures.kan import KANConv2d
 from tests._kan_helpers import ks
 
 
-@pytest.mark.parametrize("basis", [
-    "bspline", "rbf", "fourier", "chebyshev",
-    "jacobi", "legendre", "wavelet", "taylor",
-])
+@pytest.mark.parametrize(
+    "basis",
+    [
+        "bspline",
+        "rbf",
+        "fourier",
+        "chebyshev",
+        "jacobi",
+        "legendre",
+        "wavelet",
+        "taylor",
+    ],
+)
 def test_kan_conv2d_shape(basis):
-    conv = KANConv2d(in_channels=3, out_channels=6, kernel_size=3,
-                     basis=basis, key=ks(1)[0])
+    conv = KANConv2d(
+        in_channels=3, out_channels=6, kernel_size=3, basis=basis, key=ks(1)[0]
+    )
     y = conv(jnp.ones((8, 8, 3)))
     assert y.shape == (8, 8, 6)
 
@@ -59,6 +69,8 @@ def test_kan_conv2d_unknown_basis_raises():
 
 
 def test_kan_conv2d_factory():
-    m = fx.kan_conv2d(3, 6, kernel_size=3, basis="fourier", num_frequencies=4, key=ks(1)[0])
+    m = fx.kan_conv2d(
+        3, 6, kernel_size=3, basis="fourier", num_frequencies=4, key=ks(1)[0]
+    )
     y = m(jnp.ones((8, 8, 3)))
     assert y.shape == (8, 8, 6)

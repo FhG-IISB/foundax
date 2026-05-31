@@ -1,30 +1,73 @@
-# foundax
-
 <p align="center">
   <img src="assets/logo.png" alt="foundax logo" width="400">
 </p>
 
 <p align="center">
+    <a href="https://github.com/FhG-IISB/foundax/actions/workflows/ci.yml">
+        <img src="https://img.shields.io/github/actions/workflow/status/FhG-IISB/foundax/ci.yml?branch=main&label=tests" alt="Tests"/>
+    </a>
     <a href="LICENSE">
-        <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=for-the-badge" alt="License"/>
+        <img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="License"/>
     </a>
     <a href="https://huggingface.co/FhG-IISB/foundax">
-        <img src="https://img.shields.io/badge/🤗%20Hugging%20Face-FhG--IISB%2Ffoundax-ff9d00?style=for-the-badge" alt="Hugging Face"/>
+        <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-FhG--IISB%2Ffoundax-ff9d00" alt="Hugging Face"/>
     </a>
 </p>
 
-Unified JAX model zoo for operator learning, PDE surrogates, and Equinox foundation-model wrappers.
+A small Equinox-based collection of JAX models for operator learning and PDE surrogates: a handful of core architectures, the KAN family, and wrappers around eight vendored foundation models. Plays nicely with [jNO](https://github.com/FhG-IISB/jNO).
 
-```
+> Early days — APIs may shift between minor versions.
+
+## Install
+
+```bash
 pip install foundax
 ```
 
-## Overview
+Development setup uses pixi — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-`foundax` provides two main model groups:
+## Supported architectures
 
-- Core Equinox architectures in `foundax/architectures/` (FNO, UNet, DeepONet, GNOT family, and others)
-- Equinox wrappers for larger vendored model families (Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, PROSE)
+Full list with paper references: [`docs/architectures.md`](docs/architectures.md).
+
+### Core architectures
+
+| Family | Constructors | Reference |
+|---|---|---|
+| Linear / MLP | `fx.linear`, `fx.mlp` | — |
+| Fourier Neural Operator | `fx.fno1d/2d/3d` | Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895) |
+| U-Net | `fx.unet1d/2d/3d` | Ronneberger et al. 2015 — [arXiv:1505.04597](https://arxiv.org/abs/1505.04597) |
+| Generic transformer | `fx.transformer` | Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) |
+| DeepONet | `fx.deeponet` | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) |
+| Continuous Neural Operator | `fx.cno2d` | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178) |
+| Multigrid Neural Operator | `fx.mgno1d/2d` | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) |
+| Geometry-aware FNO | `fx.geofno` | Li et al. 2022 — [arXiv:2207.05209](https://arxiv.org/abs/2207.05209) |
+| Point-Cloud Neural Operator | `fx.pcno` | [PKU-CMEGroup/NeuralOperator](https://github.com/PKU-CMEGroup/NeuralOperator) |
+| Position-induced Transformer | `fx.pit` | Chen & Wu 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) |
+| PointNet | `fx.pointnet` | Qi et al. 2017 — [arXiv:1612.00593](https://arxiv.org/abs/1612.00593) |
+| GNOT family | `fx.gnot`, `fx.cgptno`, `fx.moegptno` | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) |
+| Diffusion Transformer (DiT) | `fx.dit2d/3d` | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) |
+| Factorized FNO | `fx.ffno2d/3d` | Tran et al. 2023 — [arXiv:2111.13802](https://arxiv.org/abs/2111.13802) |
+| Wavelet Neural Operator | `fx.wno1d/2d/3d` | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) |
+
+### Kolmogorov–Arnold Networks
+
+17 KAN variants (B-spline, RBF, Fourier, Chebyshev, Jacobi, Legendre, wavelet, Taylor, Hermite, Laguerre, Bernstein, ReLU, rational, sinc, Gram, BSRBF) plus convolutional / spectral / residual / attention blocks. Per-variant paper table in [`docs/kan.md`](docs/kan.md).
+
+### Foundation-model wrappers
+
+| Namespace | Variants | Backbone | Reference |
+|---|---|---|---|
+| `fx.poseidon` | T, B, L | ScOT (Swin operator transformer) | Herde et al. 2024 — [arXiv:2405.19101](https://arxiv.org/abs/2405.19101) |
+| `fx.morph` | Ti, S, M, L | ViT3D regression | Rautela et al. 2025 — [arXiv:2509.21670](https://arxiv.org/abs/2509.21670) |
+| `fx.mpp` | Ti, S, B, L | AViT (axial ViT) | McCabe et al., NeurIPS 2024 — [openreview/DKSI3bULiZ](https://openreview.net/forum?id=DKSI3bULiZ) |
+| `fx.walrus` | base | Encoder-processor-decoder (1.29B) | McCabe et al. 2025 — [arXiv:2511.15684](https://arxiv.org/abs/2511.15684) |
+| `fx.bcat` | base | Block-causal transformer | Liu et al. 2025 — [arXiv:2501.18972](https://arxiv.org/abs/2501.18972) |
+| `fx.pdeformer2` | small, base, fast | Graphormer + INR | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) |
+| `fx.dpot` | Ti, S, M, L, H | DPOTNet (AFNO) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) |
+| `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Seq-to-seq transformer | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) |
+
+Pretrained weights keep their upstream licenses — see [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
 
 ## Quick Start
 
@@ -37,14 +80,17 @@ model = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
 model = fx.unet2d(in_channels=1, out_channels=1)
 model = fx.deeponet(branch_type="mlp", trunk_type="mlp")
 
+# KAN family (one of 17 variants)
+model = fx.fastkan(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
+
 # Foundation wrappers (namespace style)
-model = fx.poseidon.T()   # T/B/L
-model = fx.morph.S()      # Ti/S/M/L
-model = fx.mpp.B(n_states=12)  # Ti/S/B/L
+model = fx.poseidon.T()           # T/B/L
+model = fx.morph.S()              # Ti/S/M/L
+model = fx.mpp.B(n_states=12)     # Ti/S/B/L
 model = fx.walrus.base()
 model = fx.bcat.base()
-model = fx.pdeformer2.small()  # small/base/fast
-model = fx.dpot.Ti()      # Ti/S/M/L/H
+model = fx.pdeformer2.small()     # small/base/fast
+model = fx.dpot.Ti()              # Ti/S/M/L/H
 model, variables = fx.prose.fd_1to1()
 ```
 
@@ -128,15 +174,10 @@ net.initialize('./poseidonT.eqx')
 net.mask(param_mask).lora(rank=4)
 ```
 
-## Notes
+## Citation
 
-- Top-level convenience aliases are still available (for example `fx.poseidonT()`), but namespace-style access is recommended for readability.
-- Foundation-model wrappers are documented in detail in `docs/equinox-architectures.md`.
+If you use foundax in academic work, the accompanying paper is the [jNO preprint](https://arxiv.org/abs/2605.10159) (`arXiv:2605.10159`). A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
-Foundation models remain subject to their original licenses.
-See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for details.
-Some pretrained weights (for example Poseidon) are released under non-commercial terms.
+MIT — see [LICENSE](LICENSE). Vendored foundation-model code and pretrained weights keep their original licenses (see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES)); Poseidon weights are non-commercial.

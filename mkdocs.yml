@@ -11,6 +11,7 @@ use_directory_urls: true
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Architectures Overview: architectures.md
   - Models:
       - Core Models: core-models.md
       - Kolmogorov–Arnold Networks: kan.md

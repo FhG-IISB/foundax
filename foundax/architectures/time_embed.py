@@ -40,9 +40,7 @@ class SinusoidalTimeEmbedding(eqx.Module):
         """t: scalar → (dim,)."""
         half = self.dim // 2
         freqs = jnp.exp(
-            -jnp.log(10000.0)
-            * jnp.arange(half, dtype=jnp.float32)
-            / (half - 1)
+            -jnp.log(10000.0) * jnp.arange(half, dtype=jnp.float32) / (half - 1)
         )
         emb = jnp.concatenate([jnp.sin(t * freqs), jnp.cos(t * freqs)])
         emb = jax.nn.gelu(self.linear1(emb))

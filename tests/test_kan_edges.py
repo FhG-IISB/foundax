@@ -7,10 +7,20 @@ jnp = pytest.importorskip("jax.numpy")
 
 import foundax as fx
 from foundax.architectures.kan import (
-    FourierBasis, ChebyshevBasis, TaylorBasis, BernsteinBasis, BSRBFBasis,
-    KANLayer, FastKANLayer, ChebyshevKANLayer, BernsteinKANLayer,
-    TaylorKANLayer, ReLUKANLayer, FourierKANLayer,
-    KANConv1d, KANConv2d,
+    FourierBasis,
+    ChebyshevBasis,
+    TaylorBasis,
+    BernsteinBasis,
+    BSRBFBasis,
+    KANLayer,
+    FastKANLayer,
+    ChebyshevKANLayer,
+    BernsteinKANLayer,
+    TaylorKANLayer,
+    ReLUKANLayer,
+    FourierKANLayer,
+    KANConv1d,
+    KANConv2d,
 )
 
 
@@ -21,14 +31,17 @@ def _k(seed=0):
 # ── Single-feature layers (in_features=1) ─────────────────────────────────
 
 
-@pytest.mark.parametrize("cls,kw", [
-    (KANLayer, dict(grid_size=4, spline_order=2)),
-    (FastKANLayer, dict(grid_size=4)),
-    (ChebyshevKANLayer, dict(degree=3)),
-    (TaylorKANLayer, dict(degree=3)),
-    (FourierKANLayer, dict(num_frequencies=3)),
-    (BernsteinKANLayer, dict(degree=3)),
-])
+@pytest.mark.parametrize(
+    "cls,kw",
+    [
+        (KANLayer, dict(grid_size=4, spline_order=2)),
+        (FastKANLayer, dict(grid_size=4)),
+        (ChebyshevKANLayer, dict(degree=3)),
+        (TaylorKANLayer, dict(degree=3)),
+        (FourierKANLayer, dict(num_frequencies=3)),
+        (BernsteinKANLayer, dict(degree=3)),
+    ],
+)
 def test_layer_in_features_one(cls, kw):
     layer = cls(1, 4, key=_k(), **kw)
     y = layer(jnp.linspace(-1, 1, 10).reshape(-1, 1))
@@ -108,27 +121,27 @@ def test_squashed_layers_finite_at_magnitude(magnitude):
         layer = cls(3, 4, key=_k(), **kw)
         x = jnp.full((3, 3), magnitude, dtype=jnp.float32)
         y = layer(x)
-        assert jnp.all(jnp.isfinite(y)), \
+        assert jnp.all(jnp.isfinite(y)), (
             f"{cls.__name__} produced non-finite at magnitude={magnitude}"
+        )
 
 
 # ── ReLU-KAN compact-support corner: out-of-grid all-zero behaviour ───────
 
 
 def test_relu_kan_out_of_grid_is_zero():
-    layer = ReLUKANLayer(2, 4, grid_size=8, order=2,
-                         grid_range=(-1.0, 1.0), key=_k())
+    layer = ReLUKANLayer(2, 4, grid_size=8, order=2, grid_range=(-1.0, 1.0), key=_k())
     # x = 100 is far outside every grid interval, so basis = 0 everywhere.
     # The layer still has a SiLU skip (Linear), so output need not be exactly
     # zero — but it equals exactly `skip(silu(x))`, not the spline term.
     x = jnp.full((1, 2), 100.0)
     # Force the skip to zero to verify the spline contribution alone.
     import equinox as eqx
+
     layer_no_skip = eqx.tree_at(
         lambda m: (m.skip.weight, m.skip.bias),
         layer,
-        (jnp.zeros_like(layer.skip.weight),
-         jnp.zeros_like(layer.skip.bias)),
+        (jnp.zeros_like(layer.skip.weight), jnp.zeros_like(layer.skip.bias)),
     )
     y = layer_no_skip(x)
     assert jnp.allclose(y, 0.0, atol=1e-6)
@@ -139,16 +152,18 @@ def test_relu_kan_out_of_grid_is_zero():
 
 @pytest.mark.parametrize("k", [1, 3, 5])
 def test_kan_conv2d_kernel_sizes(k):
-    conv = KANConv2d(in_channels=2, out_channels=3, kernel_size=k,
-                     basis="rbf", key=_k())
+    conv = KANConv2d(
+        in_channels=2, out_channels=3, kernel_size=k, basis="rbf", key=_k()
+    )
     y = conv(jnp.ones((8, 8, 2)))
     assert y.shape == (8, 8, 3)
 
 
 @pytest.mark.parametrize("k", [1, 3, 5])
 def test_kan_conv1d_kernel_sizes(k):
-    conv = KANConv1d(in_channels=2, out_channels=3, kernel_size=k,
-                     basis="rbf", key=_k())
+    conv = KANConv1d(
+        in_channels=2, out_channels=3, kernel_size=k, basis="rbf", key=_k()
+    )
     y = conv(jnp.ones((16, 2)))
     assert y.shape == (16, 3)
 
@@ -158,8 +173,9 @@ def test_kan_conv1d_kernel_sizes(k):
 
 def test_kan_network_single_layer():
     """num_layers=1 → just (in_features → output_dim) with no hidden layers."""
-    model = fx.fastkan(in_features=3, output_dim=2, hidden_dims=4,
-                       num_layers=1, key=_k())
+    model = fx.fastkan(
+        in_features=3, output_dim=2, hidden_dims=4, num_layers=1, key=_k()
+    )
     y = model(jnp.ones((5, 3)))
     assert y.shape == (5, 2)
 
@@ -169,8 +185,7 @@ def test_kan_network_single_layer():
 
 @pytest.mark.parametrize("gs,k,rgs", [(3, 2, 4), (5, 3, 8), (8, 4, 16)])
 def test_bsrbf_size_invariant(gs, k, rgs):
-    b = BSRBFBasis(in_features=1, grid_size=gs, spline_order=k,
-                   rbf_grid_size=rgs)
+    b = BSRBFBasis(in_features=1, grid_size=gs, spline_order=k, rbf_grid_size=rgs)
     assert b.size == (gs + k) + rgs
 
 

@@ -6,18 +6,21 @@ These models are the lighter-weight part of the repository: they are intended fo
 
 ## Summary
 
-| Family | Constructors | Typical use |
-| --- | --- | --- |
-| Linear / MLP | `linear`, `mlp` | Simple regression and coordinate networks |
-| Fourier Neural Operators | `fno1d`, `fno2d`, `fno3d` | Structured-grid operator learning |
-| UNet | `unet1d`, `unet2d`, `unet3d` | Encoder-decoder baselines on regular grids |
-| Generic Transformer | `transformer` | Sequence-to-sequence baselines |
-| DeepONet | `deeponet` | Operator learning with branch/trunk factorization |
-| CNO | `cno2d` | Continuous neural operator on image-like fields |
-| MgNO | `mgno1d`, `mgno2d` | Multigrid-inspired operator learning |
-| Geometry-aware operators | `geofno`, `pcno`, `pit`, `pointnet` | Irregular meshes, coordinates, point clouds |
-| GNOT family | `cgptno`, `gnot`, `moegptno` | Transformer-based operator learning on irregular domains |
-| Kolmogorov–Arnold Networks | `kan`, `fastkan`, `chebyshev_kan`, `fourier_kan`, … (17 variants) | MLP alternative with learnable univariate edges — see the [KAN page](kan.md) |
+For the full list with paper references — including the foundation-model wrappers — see [Architectures Overview](architectures.md).
+
+| Family | Constructors | Reference | Typical use |
+| --- | --- | --- | --- |
+| Linear / MLP | `linear`, `mlp` | — | Simple regression and coordinate networks |
+| Fourier Neural Operators | `fno1d`, `fno2d`, `fno3d` | Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895) | Structured-grid operator learning |
+| UNet | `unet1d`, `unet2d`, `unet3d` | Ronneberger et al. 2015 — [arXiv:1505.04597](https://arxiv.org/abs/1505.04597) | Encoder-decoder baselines on regular grids |
+| Generic Transformer | `transformer` | Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) | Sequence-to-sequence baselines |
+| DeepONet | `deeponet` | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Operator learning with branch/trunk factorization |
+| CNO | `cno2d` | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178) | Continuous neural operator on image-like fields |
+| MgNO | `mgno1d`, `mgno2d` | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Multigrid-inspired operator learning |
+| Geometry-aware operators | `geofno`, `pcno`, `pit`, `pointnet` | GeoFNO: [arXiv:2207.05209](https://arxiv.org/abs/2207.05209); PiT: [arXiv:2405.09285](https://arxiv.org/abs/2405.09285); PointNet: [arXiv:1612.00593](https://arxiv.org/abs/1612.00593); PCNO: [github](https://github.com/PKU-CMEGroup/NeuralOperator) | Irregular meshes, coordinates, point clouds |
+| GNOT family | `cgptno`, `gnot`, `moegptno` | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) | Transformer-based operator learning on irregular domains |
+| Diffusion / flow backbones | `dit2d/3d`, `ffno2d/3d`, `wno1d/2d/3d` | DiT: [arXiv:2212.09748](https://arxiv.org/abs/2212.09748); F-FNO: [arXiv:2111.13802](https://arxiv.org/abs/2111.13802); WNO: [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) | Time-conditioned backbones for flow-matching and diffusion training |
+| Kolmogorov–Arnold Networks | `kan`, `fastkan`, `chebyshev_kan`, `fourier_kan`, … (17 variants) | Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) (and others) | MLP alternative with learnable univariate edges — see the [KAN page](kan.md) |
 
 ## Linear And MLP
 
@@ -169,6 +172,37 @@ Use them when:
 Reference:
 
 - GNOT paper: https://arxiv.org/abs/2302.14376
+
+## Diffusion And Flow-Matching Backbones
+
+These models are channel-last, time-conditioned backbones designed to drop into a diffusion or flow-matching training loop. They share the foundax pipe API and the standard `SinusoidalTimeEmbedding` / `FiLMLayer` / `AdaLayerNorm` / `AdaLayerNormZero` primitives exposed at package level.
+
+### `dit2d`, `dit3d` — Diffusion Transformer
+
+ViT-style backbone with patch embedding and fixed sin/cos positional encoding. Time conditioning is injected via `AdaLayerNormZero`, following the original DiT formulation.
+
+- Paper: Peebles & Xie, *Scalable Diffusion Models with Transformers* — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748)
+- PyTorch reference: [facebookresearch/DiT](https://github.com/facebookresearch/DiT)
+
+Use them when you want a transformer backbone for image-like or volumetric flow-matching targets at moderate resolution.
+
+### `ffno2d`, `ffno3d` — Factorized Fourier Neural Operator
+
+Replaces the O(m^d · C²) full d-dimensional spectral convolution with `d` independent 1-D spectral convolutions summed together. Reduces cost to O(d · m · C²) while preserving most of the expressivity of FNO.
+
+- Paper: Tran et al., *Factorized Fourier Neural Operators* — [arXiv:2111.13802](https://arxiv.org/abs/2111.13802)
+- PyTorch reference: [alasdairtran/fourierflow](https://github.com/alasdairtran/fourierflow)
+
+Use them when you want FNO's spectral mixing at higher channel counts or higher dimensions, where the full d-D variant becomes prohibitive.
+
+### `wno1d`, `wno2d`, `wno3d` — Wavelet Neural Operator
+
+Multi-scale discrete wavelet transform with a hardcoded Daubechies-8 (16-tap) low-pass filter; the high-pass is derived via the quadrature mirror. Learned linear mixing in the wavelet domain; `jax.image.resize` restores spatial resolution. Spatial dimensions must be divisible by `2^n_scales`.
+
+- Paper: Tripura & Chakraborty, *Wavelet Neural Operator for solving parametric PDEs* — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191)
+- PyTorch reference: [tapas-tripura/Wavelet-Neural-Operator](https://github.com/tapas-tripura/Wavelet-Neural-Operator)
+
+Use them when the target signal has localised or multi-scale structure that a wavelet decomposition captures better than Fourier mixing.
 
 ## Kolmogorov–Arnold Networks
 

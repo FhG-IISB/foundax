@@ -8,18 +8,44 @@ eqx = pytest.importorskip("equinox")
 
 import foundax as fx
 from foundax.architectures.kan import (
-    KANLayer, EfficientKANLayer, FastKANLayer, FourierKANLayer,
-    ChebyshevKANLayer, JacobiKANLayer, LegendreKANLayer, WaveletKANLayer,
-    TaylorKANLayer, HermiteKANLayer, LaguerreKANLayer, BernsteinKANLayer,
-    ReLUKANLayer, RationalKANLayer, SincKANLayer, GramKANLayer, BSRBFKANLayer,
+    KANLayer,
+    EfficientKANLayer,
+    FastKANLayer,
+    FourierKANLayer,
+    ChebyshevKANLayer,
+    JacobiKANLayer,
+    LegendreKANLayer,
+    WaveletKANLayer,
+    TaylorKANLayer,
+    HermiteKANLayer,
+    LaguerreKANLayer,
+    BernsteinKANLayer,
+    ReLUKANLayer,
+    RationalKANLayer,
+    SincKANLayer,
+    GramKANLayer,
+    BSRBFKANLayer,
 )
 
 
 ALL_LAYERS = [
-    KANLayer, EfficientKANLayer, FastKANLayer, FourierKANLayer,
-    ChebyshevKANLayer, JacobiKANLayer, LegendreKANLayer, WaveletKANLayer,
-    TaylorKANLayer, HermiteKANLayer, LaguerreKANLayer, BernsteinKANLayer,
-    ReLUKANLayer, RationalKANLayer, SincKANLayer, GramKANLayer, BSRBFKANLayer,
+    KANLayer,
+    EfficientKANLayer,
+    FastKANLayer,
+    FourierKANLayer,
+    ChebyshevKANLayer,
+    JacobiKANLayer,
+    LegendreKANLayer,
+    WaveletKANLayer,
+    TaylorKANLayer,
+    HermiteKANLayer,
+    LaguerreKANLayer,
+    BernsteinKANLayer,
+    ReLUKANLayer,
+    RationalKANLayer,
+    SincKANLayer,
+    GramKANLayer,
+    BSRBFKANLayer,
 ]
 NAMES = [c.__name__ for c in ALL_LAYERS]
 

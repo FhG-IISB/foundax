@@ -67,10 +67,18 @@ class FactorizedSpectralConv2d(eqx.Module):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         shape_x = (in_channels, out_channels, n_modes_x)
         shape_y = (in_channels, out_channels, n_modes_y)
-        self.weight_x_real = jax.random.uniform(k1, shape_x, minval=-scale, maxval=scale)
-        self.weight_x_imag = jax.random.uniform(k2, shape_x, minval=-scale, maxval=scale)
-        self.weight_y_real = jax.random.uniform(k3, shape_y, minval=-scale, maxval=scale)
-        self.weight_y_imag = jax.random.uniform(k4, shape_y, minval=-scale, maxval=scale)
+        self.weight_x_real = jax.random.uniform(
+            k1, shape_x, minval=-scale, maxval=scale
+        )
+        self.weight_x_imag = jax.random.uniform(
+            k2, shape_x, minval=-scale, maxval=scale
+        )
+        self.weight_y_real = jax.random.uniform(
+            k3, shape_y, minval=-scale, maxval=scale
+        )
+        self.weight_y_imag = jax.random.uniform(
+            k4, shape_y, minval=-scale, maxval=scale
+        )
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         H, W, _ = x.shape
@@ -78,20 +86,24 @@ class FactorizedSpectralConv2d(eqx.Module):
         W_y = self.weight_y_real + 1j * self.weight_y_imag
 
         # Branch 1: 1-D FFT along W (axis=1)
-        X_w = jnp.fft.rfft(x, axis=1, norm="ortho")          # (H, W//2+1, C_in)
+        X_w = jnp.fft.rfft(x, axis=1, norm="ortho")  # (H, W//2+1, C_in)
         nx = min(self.n_modes_x, W // 2 + 1)
-        out1 = jnp.einsum("hmi,iom->hmo", X_w[:, :nx, :], W_x[:, :, :nx])  # (H, nx, C_out)
+        out1 = jnp.einsum(
+            "hmi,iom->hmo", X_w[:, :nx, :], W_x[:, :, :nx]
+        )  # (H, nx, C_out)
         out1_pad = jnp.zeros((H, W // 2 + 1, self.out_channels), dtype=jnp.complex64)
         out1_pad = out1_pad.at[:, :nx, :].set(out1)
-        branch1 = jnp.fft.irfft(out1_pad, n=W, axis=1, norm="ortho")        # (H, W, C_out)
+        branch1 = jnp.fft.irfft(out1_pad, n=W, axis=1, norm="ortho")  # (H, W, C_out)
 
         # Branch 2: 1-D FFT along H (axis=0)
-        X_h = jnp.fft.rfft(x, axis=0, norm="ortho")          # (H//2+1, W, C_in)
+        X_h = jnp.fft.rfft(x, axis=0, norm="ortho")  # (H//2+1, W, C_in)
         ny = min(self.n_modes_y, H // 2 + 1)
-        out2 = jnp.einsum("mwi,iom->mwo", X_h[:ny, :, :], W_y[:, :, :ny])  # (ny, W, C_out)
+        out2 = jnp.einsum(
+            "mwi,iom->mwo", X_h[:ny, :, :], W_y[:, :, :ny]
+        )  # (ny, W, C_out)
         out2_pad = jnp.zeros((H // 2 + 1, W, self.out_channels), dtype=jnp.complex64)
         out2_pad = out2_pad.at[:ny, :, :].set(out2)
-        branch2 = jnp.fft.irfft(out2_pad, n=H, axis=0, norm="ortho")        # (H, W, C_out)
+        branch2 = jnp.fft.irfft(out2_pad, n=H, axis=0, norm="ortho")  # (H, W, C_out)
 
         return branch1 + branch2
 
@@ -134,12 +146,24 @@ class FactorizedSpectralConv3d(eqx.Module):
 
         scale = 1.0 / (in_channels * out_channels)
         keys = jax.random.split(key, 6)
-        self.weight_d_real = jax.random.uniform(keys[0], (in_channels, out_channels, n_modes_d), minval=-scale, maxval=scale)
-        self.weight_d_imag = jax.random.uniform(keys[1], (in_channels, out_channels, n_modes_d), minval=-scale, maxval=scale)
-        self.weight_h_real = jax.random.uniform(keys[2], (in_channels, out_channels, n_modes_h), minval=-scale, maxval=scale)
-        self.weight_h_imag = jax.random.uniform(keys[3], (in_channels, out_channels, n_modes_h), minval=-scale, maxval=scale)
-        self.weight_w_real = jax.random.uniform(keys[4], (in_channels, out_channels, n_modes_w), minval=-scale, maxval=scale)
-        self.weight_w_imag = jax.random.uniform(keys[5], (in_channels, out_channels, n_modes_w), minval=-scale, maxval=scale)
+        self.weight_d_real = jax.random.uniform(
+            keys[0], (in_channels, out_channels, n_modes_d), minval=-scale, maxval=scale
+        )
+        self.weight_d_imag = jax.random.uniform(
+            keys[1], (in_channels, out_channels, n_modes_d), minval=-scale, maxval=scale
+        )
+        self.weight_h_real = jax.random.uniform(
+            keys[2], (in_channels, out_channels, n_modes_h), minval=-scale, maxval=scale
+        )
+        self.weight_h_imag = jax.random.uniform(
+            keys[3], (in_channels, out_channels, n_modes_h), minval=-scale, maxval=scale
+        )
+        self.weight_w_real = jax.random.uniform(
+            keys[4], (in_channels, out_channels, n_modes_w), minval=-scale, maxval=scale
+        )
+        self.weight_w_imag = jax.random.uniform(
+            keys[5], (in_channels, out_channels, n_modes_w), minval=-scale, maxval=scale
+        )
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         D, H, W, _ = x.shape
@@ -148,7 +172,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         W_w = self.weight_w_real + 1j * self.weight_w_imag
 
         # Branch D: FFT along axis=0
-        X_d = jnp.fft.rfft(x, axis=0, norm="ortho")          # (D//2+1, H, W, C)
+        X_d = jnp.fft.rfft(x, axis=0, norm="ortho")  # (D//2+1, H, W, C)
         nd = min(self.n_modes_d, D // 2 + 1)
         o_d = jnp.einsum("mhwi,iom->mhwo", X_d[:nd], W_d[:, :, :nd])
         p_d = jnp.zeros((D // 2 + 1, H, W, self.out_channels), dtype=jnp.complex64)
@@ -156,7 +180,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         br_d = jnp.fft.irfft(p_d, n=D, axis=0, norm="ortho")  # (D, H, W, C_out)
 
         # Branch H: FFT along axis=1
-        X_h = jnp.fft.rfft(x, axis=1, norm="ortho")          # (D, H//2+1, W, C)
+        X_h = jnp.fft.rfft(x, axis=1, norm="ortho")  # (D, H//2+1, W, C)
         nh = min(self.n_modes_h, H // 2 + 1)
         o_h = jnp.einsum("dmwi,iom->dmwo", X_h[:, :nh], W_h[:, :, :nh])
         p_h = jnp.zeros((D, H // 2 + 1, W, self.out_channels), dtype=jnp.complex64)
@@ -164,7 +188,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         br_h = jnp.fft.irfft(p_h, n=H, axis=1, norm="ortho")  # (D, H, W, C_out)
 
         # Branch W: FFT along axis=2
-        X_w = jnp.fft.rfft(x, axis=2, norm="ortho")          # (D, H, W//2+1, C)
+        X_w = jnp.fft.rfft(x, axis=2, norm="ortho")  # (D, H, W//2+1, C)
         nw = min(self.n_modes_w, W // 2 + 1)
         o_w = jnp.einsum("dhmi,iom->dhmo", X_w[:, :, :nw], W_w[:, :, :nw])
         p_w = jnp.zeros((D, H, W // 2 + 1, self.out_channels), dtype=jnp.complex64)
@@ -311,8 +335,12 @@ class FFNO2d(eqx.Module):
         self.lift = Linear(in_channels, hidden_channels, key=keys[0])
         self.blocks = [
             FactorizedSpectralBlock2d(
-                hidden_channels, hidden_channels, n_modes,
-                use_film=use_film, emb_dim=emb_dim, key=keys[1 + i]
+                hidden_channels,
+                hidden_channels,
+                n_modes,
+                use_film=use_film,
+                emb_dim=emb_dim,
+                key=keys[1 + i],
             )
             for i in range(n_layers)
         ]
@@ -356,8 +384,12 @@ class FFNO3d(eqx.Module):
         self.lift = Linear(in_channels, hidden_channels, key=keys[0])
         self.blocks = [
             FactorizedSpectralBlock3d(
-                hidden_channels, hidden_channels, n_modes,
-                use_film=use_film, emb_dim=emb_dim, key=keys[1 + i]
+                hidden_channels,
+                hidden_channels,
+                n_modes,
+                use_film=use_film,
+                emb_dim=emb_dim,
+                key=keys[1 + i],
             )
             for i in range(n_layers)
         ]
