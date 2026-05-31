@@ -31,12 +31,18 @@ def _sincos_pos_embed_2d(H_p: int, W_p: int, d: int) -> jnp.ndarray:
     h_idx = jnp.arange(H_p)
     w_idx = jnp.arange(W_p)
     h_enc = jnp.concatenate(
-        [jnp.sin(h_idx[:, None] * freqs[None, :]),
-         jnp.cos(h_idx[:, None] * freqs[None, :])], axis=1
+        [
+            jnp.sin(h_idx[:, None] * freqs[None, :]),
+            jnp.cos(h_idx[:, None] * freqs[None, :]),
+        ],
+        axis=1,
     )  # (H_p, d//2)
     w_enc = jnp.concatenate(
-        [jnp.sin(w_idx[:, None] * freqs[None, :]),
-         jnp.cos(w_idx[:, None] * freqs[None, :])], axis=1
+        [
+            jnp.sin(w_idx[:, None] * freqs[None, :]),
+            jnp.cos(w_idx[:, None] * freqs[None, :]),
+        ],
+        axis=1,
     )  # (W_p, d//2)
     # Broadcast to 2-D grid
     h_grid = jnp.tile(h_enc[:, None, :], (1, W_p, 1))  # (H_p, W_p, d//2)
@@ -49,18 +55,25 @@ def _sincos_pos_embed_3d(D_p: int, H_p: int, W_p: int, d: int) -> jnp.ndarray:
     assert d % 6 == 0, "hidden_size must be divisible by 6 for 3-D pos embed"
     third = d // 6
     freqs = 1.0 / (10000.0 ** (jnp.arange(third) / third))
+
     def _enc(idx):
         return jnp.concatenate(
-            [jnp.sin(idx[:, None] * freqs[None, :]),
-             jnp.cos(idx[:, None] * freqs[None, :])], axis=1
+            [
+                jnp.sin(idx[:, None] * freqs[None, :]),
+                jnp.cos(idx[:, None] * freqs[None, :]),
+            ],
+            axis=1,
         )  # (N, d//3)
+
     d_enc = _enc(jnp.arange(D_p))  # (D_p, d//3)
     h_enc = _enc(jnp.arange(H_p))  # (H_p, d//3)
     w_enc = _enc(jnp.arange(W_p))  # (W_p, d//3)
     d_grid = jnp.tile(d_enc[:, None, None, :], (1, H_p, W_p, 1))
     h_grid = jnp.tile(h_enc[None, :, None, :], (D_p, 1, W_p, 1))
     w_grid = jnp.tile(w_enc[None, None, :, :], (D_p, H_p, 1, 1))
-    return jnp.concatenate([d_grid, h_grid, w_grid], axis=-1).reshape(D_p * H_p * W_p, d)
+    return jnp.concatenate([d_grid, h_grid, w_grid], axis=-1).reshape(
+        D_p * H_p * W_p, d
+    )
 
 
 # ── patch embedding ───────────────────────────────────────────────────────────
@@ -103,13 +116,13 @@ class PatchEmbed3d(eqx.Module):
     def __init__(self, patch_size: int, in_channels: int, hidden_size: int, *, key):
         self.patch_size = patch_size
         self.in_channels = in_channels
-        self.proj = Linear(patch_size ** 3 * in_channels, hidden_size, key=key)
+        self.proj = Linear(patch_size**3 * in_channels, hidden_size, key=key)
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         D, H, W, C = x.shape
         p = self.patch_size
         x = x.reshape(D // p, p, H // p, p, W // p, p, C).transpose(0, 2, 4, 1, 3, 5, 6)
-        x = x.reshape(D // p * H // p * W // p, p ** 3 * C)
+        x = x.reshape(D // p * H // p * W // p, p**3 * C)
         return self.proj(x)
 
 
@@ -158,7 +171,7 @@ class DiTBlock(eqx.Module):
         # shift/scale still produce non-zero conditioning from the first forward pass.
         ada = Linear(emb_dim, 6 * hidden_size, key=k4)
         d = hidden_size
-        w = ada.weight.at[2*d:3*d, :].set(0.0).at[5*d:, :].set(0.0)
+        w = ada.weight.at[2 * d : 3 * d, :].set(0.0).at[5 * d :, :].set(0.0)
         ada = eqx.tree_at(lambda m: m.weight, ada, w)
         self.adaLN_proj = ada
 
@@ -166,8 +179,12 @@ class DiTBlock(eqx.Module):
         """x: (N, hidden_size), emb: (emb_dim,) → (N, hidden_size)."""
         d = self.hidden_size
         cond = self.adaLN_proj(emb)
-        shift_msa, scale_msa, gate_msa = cond[:d], cond[d:2*d], cond[2*d:3*d]
-        shift_mlp, scale_mlp, gate_mlp = cond[3*d:4*d], cond[4*d:5*d], cond[5*d:]
+        shift_msa, scale_msa, gate_msa = cond[:d], cond[d : 2 * d], cond[2 * d : 3 * d]
+        shift_mlp, scale_mlp, gate_mlp = (
+            cond[3 * d : 4 * d],
+            cond[4 * d : 5 * d],
+            cond[5 * d :],
+        )
 
         # Attention path with adaLN modulation
         x_a = jax.vmap(self.norm1)(x) * (1.0 + scale_msa) + shift_msa
@@ -246,14 +263,19 @@ class DiT2d(eqx.Module):
         self.hidden_size = hidden_size
 
         keys = jax.random.split(key, depth + 3)
-        self.patch_embed = PatchEmbed2d(patch_size, in_channels, hidden_size, key=keys[0])
+        self.patch_embed = PatchEmbed2d(
+            patch_size, in_channels, hidden_size, key=keys[0]
+        )
         self.time_embed = SinusoidalTimeEmbedding(hidden_size, key=keys[1])
         self.blocks = [
             DiTBlock(hidden_size, num_heads, mlp_ratio, hidden_size, key=keys[2 + i])
             for i in range(depth)
         ]
         self.final_layer = FinalLayer(
-            hidden_size, patch_size * patch_size * in_channels, hidden_size, key=keys[-1]
+            hidden_size,
+            patch_size * patch_size * in_channels,
+            hidden_size,
+            key=keys[-1],
         )
 
     def __call__(self, x: jnp.ndarray, t, **kwargs) -> jnp.ndarray:
@@ -313,21 +335,25 @@ class DiT3d(eqx.Module):
         *,
         key,
     ):
-        assert hidden_size % 6 == 0, "hidden_size must be divisible by 6 for 3-D pos embed"
+        assert hidden_size % 6 == 0, (
+            "hidden_size must be divisible by 6 for 3-D pos embed"
+        )
         self.in_channels = in_channels
         self.out_channels = in_channels
         self.patch_size = patch_size
         self.hidden_size = hidden_size
 
         keys = jax.random.split(key, depth + 3)
-        self.patch_embed = PatchEmbed3d(patch_size, in_channels, hidden_size, key=keys[0])
+        self.patch_embed = PatchEmbed3d(
+            patch_size, in_channels, hidden_size, key=keys[0]
+        )
         self.time_embed = SinusoidalTimeEmbedding(hidden_size, key=keys[1])
         self.blocks = [
             DiTBlock(hidden_size, num_heads, mlp_ratio, hidden_size, key=keys[2 + i])
             for i in range(depth)
         ]
         self.final_layer = FinalLayer(
-            hidden_size, patch_size ** 3 * in_channels, hidden_size, key=keys[-1]
+            hidden_size, patch_size**3 * in_channels, hidden_size, key=keys[-1]
         )
 
     def __call__(self, x: jnp.ndarray, t, **kwargs) -> jnp.ndarray:

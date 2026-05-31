@@ -107,30 +107,34 @@ class TestTimeEmbedding:
 class TestDiT:
     # Use hidden_size divisible by 4 (2D) and 6 (3D)
     def test_dit2d_shape(self):
-        model = fx.dit2d(in_channels=2, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit2d(
+            in_channels=2, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 2))
         out = model(x, t=0.5)
         assert out.shape == (16, 16, 2)
 
     def test_dit2d_different_t(self):
-        model = fx.dit2d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit2d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 1))
         o1 = model(x, t=0.1)
         o2 = model(x, t=0.9)
         assert not jnp.allclose(o1, o2)
 
     def test_dit2d_jit(self):
-        model = fx.dit2d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit2d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 1))
         out = eqx.filter_jit(model)(x, t=0.5)
         assert out.shape == (16, 16, 1)
 
     def test_dit2d_gradients_finite(self):
-        model = fx.dit2d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit2d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 1))
 
         def loss(m):
@@ -141,31 +145,35 @@ class TestDiT:
         assert all(jnp.all(jnp.isfinite(g)) for g in leaves)
 
     def test_dit2d_pipe_sniffable(self):
-        model = fx.dit2d(in_channels=2, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit2d(
+            in_channels=2, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         blk = fx.block(model)
         assert blk._in_channels == 2
         assert blk._out_channels == 2
 
     def test_dit3d_shape(self):
         # hidden_size must be divisible by 6
-        model = fx.dit3d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit3d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 16, 1))
         out = model(x, t=0.5)
         assert out.shape == (16, 16, 16, 1)
 
     def test_dit3d_different_t(self):
-        model = fx.dit3d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit3d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 16, 1))
         o1 = model(x, t=0.1)
         o2 = model(x, t=0.9)
         assert not jnp.allclose(o1, o2)
 
     def test_dit3d_jit(self):
-        model = fx.dit3d(in_channels=1, patch_size=4, hidden_size=48,
-                         depth=2, num_heads=4, key=KEY)
+        model = fx.dit3d(
+            in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 16, 1))
         out = eqx.filter_jit(model)(x, t=0.5)
         assert out.shape == (16, 16, 16, 1)
@@ -190,7 +198,9 @@ class TestFFNO:
         assert wrapped._out_channels == 8
 
     def test_block2d_film_conditioning(self):
-        blk = FactorizedSpectralBlock2d(4, 4, n_modes=4, use_film=True, emb_dim=16, key=KEY)
+        blk = FactorizedSpectralBlock2d(
+            4, 4, n_modes=4, use_film=True, emb_dim=16, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 4))
         emb = jax.random.normal(KEY, (16,))
         out_cond = blk(x, t_emb=emb)
@@ -211,27 +221,40 @@ class TestFFNO:
         assert wrapped._out_channels == 4
 
     def test_ffno2d_shape(self):
-        model = fx.ffno2d(in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY)
+        model = fx.ffno2d(
+            in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 2))
         out = model(x)
         assert out.shape == (16, 16, 2)
 
     def test_ffno2d_with_film(self):
-        model = fx.ffno2d(in_channels=2, hidden_channels=8, n_modes=4, n_layers=2,
-                          use_film=True, emb_dim=16, key=KEY)
+        model = fx.ffno2d(
+            in_channels=2,
+            hidden_channels=8,
+            n_modes=4,
+            n_layers=2,
+            use_film=True,
+            emb_dim=16,
+            key=KEY,
+        )
         x = jax.random.normal(KEY, (16, 16, 2))
         emb = jax.random.normal(KEY, (16,))
         out = model(x, t_emb=emb)
         assert out.shape == (16, 16, 2)
 
     def test_ffno2d_jit(self):
-        model = fx.ffno2d(in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY)
+        model = fx.ffno2d(
+            in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 2))
         out = eqx.filter_jit(model)(x)
         assert out.shape == (16, 16, 2)
 
     def test_ffno2d_gradients_finite(self):
-        model = fx.ffno2d(in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY)
+        model = fx.ffno2d(
+            in_channels=2, hidden_channels=8, n_modes=4, n_layers=2, key=KEY
+        )
         x = jax.random.normal(KEY, (16, 16, 2))
 
         def loss(m):
@@ -242,17 +265,27 @@ class TestFFNO:
         assert all(jnp.all(jnp.isfinite(g)) for g in leaves)
 
     def test_ffno3d_shape(self):
-        model = fx.ffno3d(in_channels=1, hidden_channels=4, n_modes=4, n_layers=2, key=KEY)
+        model = fx.ffno3d(
+            in_channels=1, hidden_channels=4, n_modes=4, n_layers=2, key=KEY
+        )
         x = jax.random.normal(KEY, (8, 8, 8, 1))
         out = model(x)
         assert out.shape == (8, 8, 8, 1)
 
     def test_ffno2d_fewer_params_than_fno2d(self):
         # F-FNO should have fewer parameters than standard FNO2d with same hidden_channels
-        ffno = fx.ffno2d(in_channels=1, hidden_channels=16, n_modes=8, n_layers=4, key=KEY)
-        fno = fx.fno2d(in_features=1, hidden_channels=16, n_modes=8, n_layers=4, key=KEY)
+        ffno = fx.ffno2d(
+            in_channels=1, hidden_channels=16, n_modes=8, n_layers=4, key=KEY
+        )
+        fno = fx.fno2d(
+            in_features=1, hidden_channels=16, n_modes=8, n_layers=4, key=KEY
+        )
+
         def count_params(m):
-            return sum(x.size for x in jax.tree_util.tree_leaves(eqx.filter(m, eqx.is_array)))
+            return sum(
+                x.size for x in jax.tree_util.tree_leaves(eqx.filter(m, eqx.is_array))
+            )
+
         assert count_params(ffno) < count_params(fno)
 
 
@@ -264,8 +297,8 @@ class TestFFNO:
 class TestWNO:
     def test_filter_coefficients(self):
         # Filters should be near unit energy
-        assert abs(float(jnp.sum(_DB8_LO ** 2)) - 1.0) < 0.1
-        assert abs(float(jnp.sum(_DB8_HI ** 2)) - 1.0) < 0.1
+        assert abs(float(jnp.sum(_DB8_LO**2)) - 1.0) < 0.1
+        assert abs(float(jnp.sum(_DB8_HI**2)) - 1.0) < 0.1
 
     def test_dwt_axis_shape_1d(self):
         x = jax.random.normal(KEY, (32, 4))  # (W, C)
@@ -369,8 +402,16 @@ class TestPipeIntegration:
     def test_ffno_pipe_film_forwarding(self):
         # t_emb kwarg forwarded to FiLM-enabled blocks via pipe
         ks = jax.random.split(KEY, 2)
-        b1 = fx.block(FactorizedSpectralBlock2d(4, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[0]))
-        b2 = fx.block(FactorizedSpectralBlock2d(4, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[1]))
+        b1 = fx.block(
+            FactorizedSpectralBlock2d(
+                4, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[0]
+            )
+        )
+        b2 = fx.block(
+            FactorizedSpectralBlock2d(
+                4, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[1]
+            )
+        )
         pipe = b1 | b2
         x = jax.random.normal(KEY, (16, 16, 4))
         emb = jax.random.normal(KEY, (16,))
@@ -382,9 +423,17 @@ class TestPipeIntegration:
     def test_heterogeneous_pipe_ffno_wno(self):
         # Mixed FFNO + WNO pipe: t_emb forwarded to FFNO, ignored by WNO
         ks = jax.random.split(KEY, 3)
-        b1 = fx.block(FactorizedSpectralBlock2d(4, 8, n_modes=4, use_film=True, emb_dim=16, key=ks[0]))
+        b1 = fx.block(
+            FactorizedSpectralBlock2d(
+                4, 8, n_modes=4, use_film=True, emb_dim=16, key=ks[0]
+            )
+        )
         b2 = fx.block(WaveletBlock2d(8, 8, n_scales=2, key=ks[1]))
-        b3 = fx.block(FactorizedSpectralBlock2d(8, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[2]))
+        b3 = fx.block(
+            FactorizedSpectralBlock2d(
+                8, 4, n_modes=4, use_film=True, emb_dim=16, key=ks[2]
+            )
+        )
         pipe = b1 | b2 | b3
         x = jax.random.normal(KEY, (32, 32, 4))
         emb = jax.random.normal(KEY, (16,))
@@ -409,7 +458,9 @@ class TestPipeIntegration:
             _ = b1 | b2
 
     def test_ffno2d_full_model_pipe_sniffable(self):
-        model = fx.ffno2d(in_channels=3, hidden_channels=8, n_modes=4, n_layers=2, key=KEY)
+        model = fx.ffno2d(
+            in_channels=3, hidden_channels=8, n_modes=4, n_layers=2, key=KEY
+        )
         blk = fx.block(model)
         assert blk._in_channels == 3
         assert blk._out_channels == 3

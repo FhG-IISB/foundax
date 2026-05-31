@@ -89,14 +89,19 @@ def _bspline_basis(x: jnp.ndarray, grid: jnp.ndarray, k: int) -> jnp.ndarray:
         right_num = grid[..., p + 1 :] - x_
         right_den = grid[..., p + 1 :] - grid[..., 1:-p]
         # Avoid division by zero on degenerate knots.
-        left = jnp.where(left_den > 0, left_num / jnp.where(left_den > 0, left_den, 1.0), 0.0)
-        right = jnp.where(right_den > 0, right_num / jnp.where(right_den > 0, right_den, 1.0), 0.0)
+        left = jnp.where(
+            left_den > 0, left_num / jnp.where(left_den > 0, left_den, 1.0), 0.0
+        )
+        right = jnp.where(
+            right_den > 0, right_num / jnp.where(right_den > 0, right_den, 1.0), 0.0
+        )
         bases = left * bases[..., :-1] + right * bases[..., 1:]
     return bases
 
 
-def _make_bspline_grid(in_features: int, grid_size: int, k: int,
-                      grid_range: tuple[float, float]) -> jnp.ndarray:
+def _make_bspline_grid(
+    in_features: int, grid_size: int, k: int, grid_range: tuple[float, float]
+) -> jnp.ndarray:
     """Build a (in_features, grid_size + 2k + 1) extended uniform knot vector."""
     lo, hi = grid_range
     h = (hi - lo) / grid_size
@@ -117,8 +122,13 @@ class BSplineBasis(eqx.Module):
     grid_size: int = eqx.field(static=True)
     spline_order: int = eqx.field(static=True)
 
-    def __init__(self, in_features: int, grid_size: int = 5, spline_order: int = 3,
-                 grid_range: tuple[float, float] = (-1.0, 1.0)):
+    def __init__(
+        self,
+        in_features: int,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+    ):
         self.in_features = in_features
         self.grid_size = grid_size
         self.spline_order = spline_order
@@ -139,7 +149,9 @@ class RBFBasis(eqx.Module):
     inv_h: jnp.ndarray  # scalar
     grid_size: int = eqx.field(static=True)
 
-    def __init__(self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)):
+    def __init__(
+        self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
+    ):
         self.grid_size = grid_size
         self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
@@ -152,7 +164,7 @@ class RBFBasis(eqx.Module):
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         # (..., I, G)
         z = (x[..., None] - self.centers) * self.inv_h
-        return jnp.exp(-(z ** 2))
+        return jnp.exp(-(z**2))
 
 
 class FourierBasis(eqx.Module):
@@ -361,16 +373,16 @@ class BernsteinBasis(eqx.Module):
         # Compute log-coefficients once, evaluate in log-space for numerical safety.
         ks = jnp.arange(n + 1, dtype=u.dtype)
         # log C(n, k) via lgamma
-        log_binom = (jax.lax.lgamma(n + 1.0)
-                     - jax.lax.lgamma(ks + 1.0)
-                     - jax.lax.lgamma(n - ks + 1.0))
+        log_binom = (
+            jax.lax.lgamma(n + 1.0)
+            - jax.lax.lgamma(ks + 1.0)
+            - jax.lax.lgamma(n - ks + 1.0)
+        )
         eps = jnp.asarray(1e-30, dtype=u.dtype)
         log_u = jnp.log(jnp.clip(u, eps, 1.0))
         log_1mu = jnp.log(jnp.clip(1.0 - u, eps, 1.0))
         # (..., I, K) = log_binom[K] + k*log(u) + (n-k)*log(1-u)
-        log_basis = (log_binom
-                     + ks * log_u[..., None]
-                     + (n - ks) * log_1mu[..., None])
+        log_basis = log_binom + ks * log_u[..., None] + (n - ks) * log_1mu[..., None]
         return jnp.exp(log_basis)
 
 
@@ -388,8 +400,12 @@ class ReLUKANBasis(eqx.Module):
     grid_b: jnp.ndarray
     norm: jnp.ndarray  # scalar
 
-    def __init__(self, grid_size: int = 8, order: int = 2,
-                 grid_range: tuple[float, float] = (-1.0, 1.0)):
+    def __init__(
+        self,
+        grid_size: int = 8,
+        order: int = 2,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+    ):
         self.grid_size = grid_size
         self.order = order
         lo, hi = grid_range
@@ -445,7 +461,9 @@ class SincBasis(eqx.Module):
     centers: jnp.ndarray
     inv_h: jnp.ndarray  # scalar
 
-    def __init__(self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)):
+    def __init__(
+        self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
+    ):
         self.grid_size = grid_size
         self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
@@ -499,10 +517,15 @@ class BSRBFBasis(eqx.Module):
     bspline: BSplineBasis
     rbf: RBFBasis
 
-    def __init__(self, in_features: int, grid_size: int = 5, spline_order: int = 3,
-                 rbf_grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 rbf_grid_range: tuple[float, float] = (-2.0, 2.0)):
+    def __init__(
+        self,
+        in_features: int,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        rbf_grid_size: int = 8,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        rbf_grid_range: tuple[float, float] = (-2.0, 2.0),
+    ):
         self.bspline = BSplineBasis(in_features, grid_size, spline_order, grid_range)
         self.rbf = RBFBasis(rbf_grid_size, rbf_grid_range)
 
@@ -558,7 +581,9 @@ class _BasisKANLayer(eqx.Module):
         k1, k2 = jax.random.split(key)
         # Match a Linear-style init: std ~ scale / sqrt(in_features * size).
         std = scale / jnp.sqrt(jnp.asarray(in_features * size, dtype=jnp.float32))
-        self.spline_weight = jax.random.normal(k1, (out_features, in_features, size)) * std
+        self.spline_weight = (
+            jax.random.normal(k1, (out_features, in_features, size)) * std
+        )
         if skip:
             self.skip = Linear(in_features, out_features, key=k2)
             self.skip_activation = skip_activation
@@ -599,8 +624,15 @@ class KANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = BSplineBasis(in_features, grid_size, spline_order, grid_range)
-        super().__init__(in_features, out_features, basis, skip=True,
-                         skip_activation=jax.nn.silu, scale=scale, key=key)
+        super().__init__(
+            in_features,
+            out_features,
+            basis,
+            skip=True,
+            skip_activation=jax.nn.silu,
+            scale=scale,
+            key=key,
+        )
 
 
 class EfficientKANLayer(_BasisKANLayer):
@@ -629,8 +661,15 @@ class EfficientKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = BSplineBasis(in_features, grid_size, spline_order, grid_range)
-        super().__init__(in_features, out_features, basis, skip=True,
-                         skip_activation=jax.nn.silu, scale=scale, key=key)
+        super().__init__(
+            in_features,
+            out_features,
+            basis,
+            skip=True,
+            skip_activation=jax.nn.silu,
+            scale=scale,
+            key=key,
+        )
 
 
 class FastKANLayer(_BasisKANLayer):
@@ -653,8 +692,15 @@ class FastKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = RBFBasis(grid_size, grid_range)
-        super().__init__(in_features, out_features, basis, skip=use_skip,
-                         skip_activation=jax.nn.silu, scale=scale, key=key)
+        super().__init__(
+            in_features,
+            out_features,
+            basis,
+            skip=use_skip,
+            skip_activation=jax.nn.silu,
+            scale=scale,
+            key=key,
+        )
 
 
 class FourierKANLayer(_BasisKANLayer):
@@ -676,8 +722,9 @@ class FourierKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = FourierBasis(num_frequencies)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class ChebyshevKANLayer(_BasisKANLayer):
@@ -700,8 +747,9 @@ class ChebyshevKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = ChebyshevBasis(degree)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class JacobiKANLayer(_BasisKANLayer):
@@ -725,8 +773,9 @@ class JacobiKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = JacobiBasis(degree, alpha, beta)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class LegendreKANLayer(_BasisKANLayer):
@@ -750,8 +799,9 @@ class LegendreKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = LegendreBasis(degree)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class WaveletKANLayer(_BasisKANLayer):
@@ -774,8 +824,9 @@ class WaveletKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = WaveletBasis(num_scales, wavelet_type)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class TaylorKANLayer(_BasisKANLayer):
@@ -797,8 +848,9 @@ class TaylorKANLayer(_BasisKANLayer):
         key: jax.Array,
     ):
         basis = TaylorBasis(degree)
-        super().__init__(in_features, out_features, basis, skip=False,
-                         scale=scale, key=key)
+        super().__init__(
+            in_features, out_features, basis, skip=False, scale=scale, key=key
+        )
 
 
 class HermiteKANLayer(_BasisKANLayer):
@@ -810,10 +862,23 @@ class HermiteKANLayer(_BasisKANLayer):
         Code: github.com/seydi1370/Basis_Functions.
     """
 
-    def __init__(self, in_features: int, out_features: int, degree: int = 5,
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features, HermiteBasis(degree),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        degree: int = 5,
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            HermiteBasis(degree),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class LaguerreKANLayer(_BasisKANLayer):
@@ -824,10 +889,23 @@ class LaguerreKANLayer(_BasisKANLayer):
         Functions in Kolmogorov-Arnold Networks*. arXiv:2406.02583.
     """
 
-    def __init__(self, in_features: int, out_features: int, degree: int = 5,
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features, LaguerreBasis(degree),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        degree: int = 5,
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            LaguerreBasis(degree),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class BernsteinKANLayer(_BasisKANLayer):
@@ -838,10 +916,23 @@ class BernsteinKANLayer(_BasisKANLayer):
         Functions in Kolmogorov-Arnold Networks*. arXiv:2406.02583.
     """
 
-    def __init__(self, in_features: int, out_features: int, degree: int = 5,
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features, BernsteinBasis(degree),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        degree: int = 5,
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            BernsteinBasis(degree),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class ReLUKANLayer(_BasisKANLayer):
@@ -854,14 +945,26 @@ class ReLUKANLayer(_BasisKANLayer):
         Related: Delis, A. *FasterKAN* (2024) — github.com/AthanasiosDelis/faster-kan.
     """
 
-    def __init__(self, in_features: int, out_features: int, grid_size: int = 8,
-                 order: int = 2,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features,
-                         ReLUKANBasis(grid_size, order, grid_range),
-                         skip=True, skip_activation=jax.nn.silu,
-                         scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        grid_size: int = 8,
+        order: int = 2,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            ReLUKANBasis(grid_size, order, grid_range),
+            skip=True,
+            skip_activation=jax.nn.silu,
+            scale=scale,
+            key=key,
+        )
 
 
 class RationalKANLayer(_BasisKANLayer):
@@ -872,10 +975,23 @@ class RationalKANLayer(_BasisKANLayer):
         arXiv:2406.14495. Code: github.com/alirezaafzalaghaei/rKAN.
     """
 
-    def __init__(self, in_features: int, out_features: int, degree: int = 5,
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features, RationalBasis(degree),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        degree: int = 5,
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            RationalBasis(degree),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class SincKANLayer(_BasisKANLayer):
@@ -888,12 +1004,24 @@ class SincKANLayer(_BasisKANLayer):
         underlying basis).
     """
 
-    def __init__(self, in_features: int, out_features: int, grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-2.0, 2.0),
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features,
-                         SincBasis(grid_size, grid_range),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        grid_size: int = 8,
+        grid_range: tuple[float, float] = (-2.0, 2.0),
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            SincBasis(grid_size, grid_range),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class GramKANLayer(_BasisKANLayer):
@@ -906,10 +1034,23 @@ class GramKANLayer(_BasisKANLayer):
         (arXiv:2406.02583).
     """
 
-    def __init__(self, in_features: int, out_features: int, degree: int = 5,
-                 scale: float = 1.0, *, key: jax.Array):
-        super().__init__(in_features, out_features, GramBasis(degree),
-                         skip=False, scale=scale, key=key)
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        degree: int = 5,
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
+        super().__init__(
+            in_features,
+            out_features,
+            GramBasis(degree),
+            skip=False,
+            scale=scale,
+            key=key,
+        )
 
 
 class BSRBFKANLayer(_BasisKANLayer):
@@ -921,18 +1062,34 @@ class BSRBFKANLayer(_BasisKANLayer):
         Code: github.com/hoangthangta/BSRBF_KAN.
     """
 
-    def __init__(self, in_features: int, out_features: int,
-                 grid_size: int = 5, spline_order: int = 3,
-                 rbf_grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 rbf_grid_range: tuple[float, float] = (-2.0, 2.0),
-                 scale: float = 1.0, *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        rbf_grid_size: int = 8,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        rbf_grid_range: tuple[float, float] = (-2.0, 2.0),
+        scale: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
         super().__init__(
-            in_features, out_features,
-            BSRBFBasis(in_features, grid_size, spline_order, rbf_grid_size,
-                       grid_range, rbf_grid_range),
-            skip=True, skip_activation=jax.nn.silu,
-            scale=scale, key=key,
+            in_features,
+            out_features,
+            BSRBFBasis(
+                in_features,
+                grid_size,
+                spline_order,
+                rbf_grid_size,
+                grid_range,
+                rbf_grid_range,
+            ),
+            skip=True,
+            skip_activation=jax.nn.silu,
+            scale=scale,
+            key=key,
         )
 
 
@@ -960,8 +1117,9 @@ class _StackedKAN(eqx.Module):
         return x
 
 
-def _build_stack(layer_cls, in_features, output_dim, hidden_dims, num_layers,
-                 key, **layer_kwargs):
+def _build_stack(
+    layer_cls, in_features, output_dim, hidden_dims, num_layers, key, **layer_kwargs
+):
     widths = _resolve_hidden(in_features, hidden_dims, num_layers)
     dims = [in_features] + widths + [output_dim]
     keys = jax.random.split(key, len(dims) - 1)
@@ -974,62 +1132,113 @@ def _build_stack(layer_cls, in_features, output_dim, hidden_dims, num_layers,
 class KAN(_StackedKAN):
     """Stacked B-spline KAN (original)."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 5, spline_order: int = 3,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            KANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, spline_order=spline_order, grid_range=grid_range,
+            KANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            spline_order=spline_order,
+            grid_range=grid_range,
         )
 
 
 class EfficientKAN(_StackedKAN):
     """Stacked EfficientKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 5, spline_order: int = 3,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            EfficientKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, spline_order=spline_order, grid_range=grid_range,
+            EfficientKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            spline_order=spline_order,
+            grid_range=grid_range,
         )
 
 
 class FastKAN(_StackedKAN):
     """Stacked FastKAN (RBF)."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-2.0, 2.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 8,
+        grid_range: tuple[float, float] = (-2.0, 2.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            FastKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, grid_range=grid_range,
+            FastKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            grid_range=grid_range,
         )
 
 
 class FourierKAN(_StackedKAN):
     """Stacked FourierKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 num_frequencies: int = 8,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        num_frequencies: int = 8,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            FourierKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            FourierKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             num_frequencies=num_frequencies,
         )
 
@@ -1037,14 +1246,25 @@ class FourierKAN(_StackedKAN):
 class ChebyshevKAN(_StackedKAN):
     """Stacked ChebyshevKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            ChebyshevKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            ChebyshevKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1052,29 +1272,55 @@ class ChebyshevKAN(_StackedKAN):
 class JacobiKAN(_StackedKAN):
     """Stacked JacobiKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 degree: int = 5, alpha: float = 1.0, beta: float = 1.0,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        alpha: float = 1.0,
+        beta: float = 1.0,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            JacobiKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            degree=degree, alpha=alpha, beta=beta,
+            JacobiKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            degree=degree,
+            alpha=alpha,
+            beta=beta,
         )
 
 
 class LegendreKAN(_StackedKAN):
     """Stacked LegendreKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            LegendreKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            LegendreKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1082,29 +1328,53 @@ class LegendreKAN(_StackedKAN):
 class WaveletKAN(_StackedKAN):
     """Stacked WaveletKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 num_scales: int = 6, wavelet_type: str = "mexican_hat",
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        num_scales: int = 6,
+        wavelet_type: str = "mexican_hat",
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            WaveletKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            num_scales=num_scales, wavelet_type=wavelet_type,
+            WaveletKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            num_scales=num_scales,
+            wavelet_type=wavelet_type,
         )
 
 
 class TaylorKAN(_StackedKAN):
     """Stacked TaylorKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 degree: int = 4,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 4,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            TaylorKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            TaylorKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1112,13 +1382,25 @@ class TaylorKAN(_StackedKAN):
 class HermiteKAN(_StackedKAN):
     """Stacked HermiteKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2, degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            HermiteKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            HermiteKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1126,13 +1408,25 @@ class HermiteKAN(_StackedKAN):
 class LaguerreKAN(_StackedKAN):
     """Stacked LaguerreKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2, degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            LaguerreKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            LaguerreKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1140,13 +1434,25 @@ class LaguerreKAN(_StackedKAN):
 class BernsteinKAN(_StackedKAN):
     """Stacked BernsteinKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2, degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            BernsteinKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            BernsteinKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1154,29 +1460,55 @@ class BernsteinKAN(_StackedKAN):
 class ReLUKAN(_StackedKAN):
     """Stacked ReLU-KAN / FasterKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 8, order: int = 2,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 8,
+        order: int = 2,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            ReLUKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, order=order, grid_range=grid_range,
+            ReLUKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            order=order,
+            grid_range=grid_range,
         )
 
 
 class RationalKAN(_StackedKAN):
     """Stacked RationalKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2, degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            RationalKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            RationalKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1184,29 +1516,53 @@ class RationalKAN(_StackedKAN):
 class SincKAN(_StackedKAN):
     """Stacked SincKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-2.0, 2.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 8,
+        grid_range: tuple[float, float] = (-2.0, 2.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            SincKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, grid_range=grid_range,
+            SincKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            grid_range=grid_range,
         )
 
 
 class GramKAN(_StackedKAN):
     """Stacked GramKAN."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2, degree: int = 5,
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        degree: int = 5,
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            GramKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
+            GramKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
             degree=degree,
         )
 
@@ -1214,20 +1570,34 @@ class GramKAN(_StackedKAN):
 class BSRBFKAN(_StackedKAN):
     """Stacked BSRBFKAN (B-spline + RBF hybrid)."""
 
-    def __init__(self, in_features: int, output_dim: int = 1,
-                 hidden_dims=64, num_layers: int = 2,
-                 grid_size: int = 5, spline_order: int = 3,
-                 rbf_grid_size: int = 8,
-                 grid_range: tuple[float, float] = (-1.0, 1.0),
-                 rbf_grid_range: tuple[float, float] = (-2.0, 2.0),
-                 *, key: jax.Array):
+    def __init__(
+        self,
+        in_features: int,
+        output_dim: int = 1,
+        hidden_dims=64,
+        num_layers: int = 2,
+        grid_size: int = 5,
+        spline_order: int = 3,
+        rbf_grid_size: int = 8,
+        grid_range: tuple[float, float] = (-1.0, 1.0),
+        rbf_grid_range: tuple[float, float] = (-2.0, 2.0),
+        *,
+        key: jax.Array,
+    ):
         self.in_features = in_features
         self.output_dim = output_dim
         self.layers = _build_stack(
-            BSRBFKANLayer, in_features, output_dim, hidden_dims, num_layers, key,
-            grid_size=grid_size, spline_order=spline_order,
+            BSRBFKANLayer,
+            in_features,
+            output_dim,
+            hidden_dims,
+            num_layers,
+            key,
+            grid_size=grid_size,
+            spline_order=spline_order,
             rbf_grid_size=rbf_grid_size,
-            grid_range=grid_range, rbf_grid_range=rbf_grid_range,
+            grid_range=grid_range,
+            rbf_grid_range=rbf_grid_range,
         )
 
 
@@ -1240,35 +1610,44 @@ class BSRBFKAN(_StackedKAN):
 
 
 _BASIS_FACTORIES = {
-    "bspline": lambda I, **kw: BSplineBasis(I, kw.get("grid_size", 5),
-                                            kw.get("spline_order", 3),
-                                            kw.get("grid_range", (-1.0, 1.0))),
-    "rbf": lambda I, **kw: RBFBasis(kw.get("grid_size", 8),
-                                    kw.get("grid_range", (-2.0, 2.0))),
+    "bspline": lambda I, **kw: BSplineBasis(
+        I,
+        kw.get("grid_size", 5),
+        kw.get("spline_order", 3),
+        kw.get("grid_range", (-1.0, 1.0)),
+    ),
+    "rbf": lambda I, **kw: RBFBasis(
+        kw.get("grid_size", 8), kw.get("grid_range", (-2.0, 2.0))
+    ),
     "fourier": lambda I, **kw: FourierBasis(kw.get("num_frequencies", 8)),
     "chebyshev": lambda I, **kw: ChebyshevBasis(kw.get("degree", 5)),
-    "jacobi": lambda I, **kw: JacobiBasis(kw.get("degree", 5),
-                                          kw.get("alpha", 1.0),
-                                          kw.get("beta", 1.0)),
+    "jacobi": lambda I, **kw: JacobiBasis(
+        kw.get("degree", 5), kw.get("alpha", 1.0), kw.get("beta", 1.0)
+    ),
     "legendre": lambda I, **kw: LegendreBasis(kw.get("degree", 5)),
-    "wavelet": lambda I, **kw: WaveletBasis(kw.get("num_scales", 6),
-                                            kw.get("wavelet_type", "mexican_hat")),
+    "wavelet": lambda I, **kw: WaveletBasis(
+        kw.get("num_scales", 6), kw.get("wavelet_type", "mexican_hat")
+    ),
     "taylor": lambda I, **kw: TaylorBasis(kw.get("degree", 4)),
     "hermite": lambda I, **kw: HermiteBasis(kw.get("degree", 5)),
     "laguerre": lambda I, **kw: LaguerreBasis(kw.get("degree", 5)),
     "bernstein": lambda I, **kw: BernsteinBasis(kw.get("degree", 5)),
-    "relu": lambda I, **kw: ReLUKANBasis(kw.get("grid_size", 8),
-                                         kw.get("order", 2),
-                                         kw.get("grid_range", (-1.0, 1.0))),
+    "relu": lambda I, **kw: ReLUKANBasis(
+        kw.get("grid_size", 8), kw.get("order", 2), kw.get("grid_range", (-1.0, 1.0))
+    ),
     "rational": lambda I, **kw: RationalBasis(kw.get("degree", 5)),
-    "sinc": lambda I, **kw: SincBasis(kw.get("grid_size", 8),
-                                      kw.get("grid_range", (-2.0, 2.0))),
+    "sinc": lambda I, **kw: SincBasis(
+        kw.get("grid_size", 8), kw.get("grid_range", (-2.0, 2.0))
+    ),
     "gram": lambda I, **kw: GramBasis(kw.get("degree", 5)),
-    "bsrbf": lambda I, **kw: BSRBFBasis(I, kw.get("grid_size", 5),
-                                        kw.get("spline_order", 3),
-                                        kw.get("rbf_grid_size", 8),
-                                        kw.get("grid_range", (-1.0, 1.0)),
-                                        kw.get("rbf_grid_range", (-2.0, 2.0))),
+    "bsrbf": lambda I, **kw: BSRBFBasis(
+        I,
+        kw.get("grid_size", 5),
+        kw.get("spline_order", 3),
+        kw.get("rbf_grid_size", 8),
+        kw.get("grid_range", (-1.0, 1.0)),
+        kw.get("rbf_grid_range", (-2.0, 2.0)),
+    ),
 }
 
 
@@ -1315,7 +1694,9 @@ class KANConv2d(eqx.Module):
         in_features = in_channels * kernel_size * kernel_size
         b = _BASIS_FACTORIES[basis](in_features, **basis_kwargs)
         self.kan = _BasisKANLayer(
-            in_features, out_channels, b,
+            in_features,
+            out_channels,
+            b,
             skip=(basis in ("bspline",)),  # original-KAN style only for bspline
             skip_activation=jax.nn.silu,
             key=key,
@@ -1345,8 +1726,9 @@ class KANConv2d(eqx.Module):
         return y
 
 
-def _build_kan_conv(basis: str, in_features: int, out_channels: int,
-                   key: jax.Array, **basis_kwargs) -> "_BasisKANLayer":
+def _build_kan_conv(
+    basis: str, in_features: int, out_channels: int, key: jax.Array, **basis_kwargs
+) -> "_BasisKANLayer":
     """Shared constructor for KAN-conv layers: select basis, build inner KAN."""
     if basis not in _BASIS_FACTORIES:
         raise ValueError(
@@ -1354,7 +1736,9 @@ def _build_kan_conv(basis: str, in_features: int, out_channels: int,
         )
     b = _BASIS_FACTORIES[basis](in_features, **basis_kwargs)
     return _BasisKANLayer(
-        in_features, out_channels, b,
+        in_features,
+        out_channels,
+        b,
         skip=(basis in ("bspline", "bsrbf", "relu")),
         skip_activation=jax.nn.silu,
         key=key,
@@ -1378,14 +1762,24 @@ class KANConv1d(eqx.Module):
     basis_name: str = eqx.field(static=True)
     kan: _BasisKANLayer
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
-                 basis: str = "bspline", *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        basis: str = "bspline",
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.basis_name = basis
         in_features = in_channels * kernel_size
-        self.kan = _build_kan_conv(basis, in_features, out_channels, key, **basis_kwargs)
+        self.kan = _build_kan_conv(
+            basis, in_features, out_channels, key, **basis_kwargs
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         # x: (W, C)
@@ -1413,14 +1807,24 @@ class KANConv3d(eqx.Module):
     basis_name: str = eqx.field(static=True)
     kan: _BasisKANLayer
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
-                 basis: str = "bspline", *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        basis: str = "bspline",
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.basis_name = basis
-        in_features = in_channels * kernel_size ** 3
-        self.kan = _build_kan_conv(basis, in_features, out_channels, key, **basis_kwargs)
+        in_features = in_channels * kernel_size**3
+        self.kan = _build_kan_conv(
+            basis, in_features, out_channels, key, **basis_kwargs
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         D, H, W, C = x.shape
@@ -1428,11 +1832,15 @@ class KANConv3d(eqx.Module):
         pad = k // 2
         xp = jnp.pad(x, ((pad, pad), (pad, pad), (pad, pad), (0, 0)))
         patches = jnp.stack(
-            [xp[dd : dd + D, di : di + H, dj : dj + W, :]
-             for dd in range(k) for di in range(k) for dj in range(k)],
+            [
+                xp[dd : dd + D, di : di + H, dj : dj + W, :]
+                for dd in range(k)
+                for di in range(k)
+                for dj in range(k)
+            ],
             axis=-2,
         )  # (D, H, W, k^3, C)
-        return self.kan(patches.reshape(D, H, W, k ** 3 * C))
+        return self.kan(patches.reshape(D, H, W, k**3 * C))
 
 
 # =====================================================================
@@ -1440,8 +1848,9 @@ class KANConv3d(eqx.Module):
 # =====================================================================
 
 
-def _resolve_basis_layer(in_features: int, out_features: int,
-                        basis: str, key: jax.Array, **basis_kwargs) -> _BasisKANLayer:
+def _resolve_basis_layer(
+    in_features: int, out_features: int, basis: str, key: jax.Array, **basis_kwargs
+) -> _BasisKANLayer:
     """Build a ``_BasisKANLayer`` from a basis name + kwargs (no convolution)."""
     if basis not in _BASIS_FACTORIES:
         raise ValueError(
@@ -1449,7 +1858,9 @@ def _resolve_basis_layer(in_features: int, out_features: int,
         )
     b = _BASIS_FACTORIES[basis](in_features, **basis_kwargs)
     return _BasisKANLayer(
-        in_features, out_features, b,
+        in_features,
+        out_features,
+        b,
         skip=(basis in ("bspline", "bsrbf", "relu")),
         skip_activation=jax.nn.silu,
         key=key,
@@ -1475,10 +1886,16 @@ class KANResBlock(eqx.Module):
     kan2: _BasisKANLayer
     norm_layer: Optional[eqx.Module]
 
-    def __init__(self, features: int, basis: str = "bspline",
-                 activation: Callable = jax.nn.silu,
-                 use_layer_norm: bool = False,
-                 *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        features: int,
+        basis: str = "bspline",
+        activation: Callable = jax.nn.silu,
+        use_layer_norm: bool = False,
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         self.in_features = features
         self.out_features = features
         self.activation = activation
@@ -1524,9 +1941,17 @@ class KANSpectralBlock1d(eqx.Module):
     spectral_conv: eqx.Module
     kan: _BasisKANLayer
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes: int,
-                 basis: str = "rbf", activation: Callable = jax.nn.gelu,
-                 *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes: int,
+        basis: str = "rbf",
+        activation: Callable = jax.nn.gelu,
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         from .fno import SpectralConv1d
 
         self.in_channels = in_channels
@@ -1535,8 +1960,12 @@ class KANSpectralBlock1d(eqx.Module):
         self.activation = activation
         self.basis_name = basis
         k1, k2 = jax.random.split(key)
-        self.spectral_conv = SpectralConv1d(in_channels, out_channels, n_modes, True, key=k1)
-        self.kan = _resolve_basis_layer(in_channels, out_channels, basis, k2, **basis_kwargs)
+        self.spectral_conv = SpectralConv1d(
+            in_channels, out_channels, n_modes, True, key=k1
+        )
+        self.kan = _resolve_basis_layer(
+            in_channels, out_channels, basis, k2, **basis_kwargs
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         return self.activation(self.spectral_conv(x) + self.kan(x))
@@ -1558,9 +1987,17 @@ class KANSpectralBlock2d(eqx.Module):
     spectral_conv: eqx.Module
     kan: _BasisKANLayer
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes: int,
-                 basis: str = "rbf", activation: Callable = jax.nn.gelu,
-                 *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes: int,
+        basis: str = "rbf",
+        activation: Callable = jax.nn.gelu,
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         from .fno import SpectralConv2d
 
         self.in_channels = in_channels
@@ -1572,7 +2009,9 @@ class KANSpectralBlock2d(eqx.Module):
         self.spectral_conv = SpectralConv2d(
             in_channels, out_channels, n_modes, n_modes, True, key=k1
         )
-        self.kan = _resolve_basis_layer(in_channels, out_channels, basis, k2, **basis_kwargs)
+        self.kan = _resolve_basis_layer(
+            in_channels, out_channels, basis, k2, **basis_kwargs
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         return self.activation(self.spectral_conv(x) + self.kan(x))
@@ -1594,9 +2033,17 @@ class KANSpectralBlock3d(eqx.Module):
     spectral_conv: eqx.Module
     kan: _BasisKANLayer
 
-    def __init__(self, in_channels: int, out_channels: int, n_modes: int,
-                 basis: str = "rbf", activation: Callable = jax.nn.gelu,
-                 *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_modes: int,
+        basis: str = "rbf",
+        activation: Callable = jax.nn.gelu,
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         from .fno import SpectralConv3d
 
         self.in_channels = in_channels
@@ -1608,7 +2055,9 @@ class KANSpectralBlock3d(eqx.Module):
         self.spectral_conv = SpectralConv3d(
             in_channels, out_channels, n_modes, n_modes, n_modes, True, key=k1
         )
-        self.kan = _resolve_basis_layer(in_channels, out_channels, basis, k2, **basis_kwargs)
+        self.kan = _resolve_basis_layer(
+            in_channels, out_channels, basis, k2, **basis_kwargs
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         return self.activation(self.spectral_conv(x) + self.kan(x))
@@ -1636,14 +2085,23 @@ class KANAttentionBlock(eqx.Module):
     norm2: eqx.nn.LayerNorm
     kan: _BasisKANLayer
 
-    def __init__(self, features: int, num_heads: int = 4,
-                 basis: str = "rbf", *, key: jax.Array, **basis_kwargs):
+    def __init__(
+        self,
+        features: int,
+        num_heads: int = 4,
+        basis: str = "rbf",
+        *,
+        key: jax.Array,
+        **basis_kwargs,
+    ):
         self.in_features = features
         self.out_features = features
         self.num_heads = num_heads
         self.basis_name = basis
         k1, k2 = jax.random.split(key)
-        self.attn = eqx.nn.MultiheadAttention(num_heads=num_heads, query_size=features, key=k1)
+        self.attn = eqx.nn.MultiheadAttention(
+            num_heads=num_heads, query_size=features, key=k1
+        )
         self.norm1 = eqx.nn.LayerNorm(features)
         self.norm2 = eqx.nn.LayerNorm(features)
         self.kan = _resolve_basis_layer(features, features, basis, k2, **basis_kwargs)

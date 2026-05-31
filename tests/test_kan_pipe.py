@@ -9,11 +9,23 @@ eqx = pytest.importorskip("equinox")
 import foundax as fx
 from foundax.pipe import ShapeMismatchError
 from foundax.architectures.kan import (
-    KANLayer, EfficientKANLayer, FastKANLayer, FourierKANLayer,
-    ChebyshevKANLayer, JacobiKANLayer, LegendreKANLayer, WaveletKANLayer,
+    KANLayer,
+    EfficientKANLayer,
+    FastKANLayer,
+    FourierKANLayer,
+    ChebyshevKANLayer,
+    JacobiKANLayer,
+    LegendreKANLayer,
+    WaveletKANLayer,
     TaylorKANLayer,
-    HermiteKANLayer, LaguerreKANLayer, BernsteinKANLayer, ReLUKANLayer,
-    RationalKANLayer, SincKANLayer, GramKANLayer, BSRBFKANLayer,
+    HermiteKANLayer,
+    LaguerreKANLayer,
+    BernsteinKANLayer,
+    ReLUKANLayer,
+    RationalKANLayer,
+    SincKANLayer,
+    GramKANLayer,
+    BSRBFKANLayer,
 )
 
 
@@ -22,11 +34,23 @@ def _ks(n, seed=0):
 
 
 ALL_LAYERS = [
-    KANLayer, EfficientKANLayer, FastKANLayer, FourierKANLayer,
-    ChebyshevKANLayer, JacobiKANLayer, LegendreKANLayer, WaveletKANLayer,
+    KANLayer,
+    EfficientKANLayer,
+    FastKANLayer,
+    FourierKANLayer,
+    ChebyshevKANLayer,
+    JacobiKANLayer,
+    LegendreKANLayer,
+    WaveletKANLayer,
     TaylorKANLayer,
-    HermiteKANLayer, LaguerreKANLayer, BernsteinKANLayer, ReLUKANLayer,
-    RationalKANLayer, SincKANLayer, GramKANLayer, BSRBFKANLayer,
+    HermiteKANLayer,
+    LaguerreKANLayer,
+    BernsteinKANLayer,
+    ReLUKANLayer,
+    RationalKANLayer,
+    SincKANLayer,
+    GramKANLayer,
+    BSRBFKANLayer,
 ]
 
 
@@ -98,11 +122,9 @@ def test_add_combinator_kan_branches():
 
 def test_kan_mlp_hybrid():
     k = _ks(2)
-    pipe = (
-        fx.block(fx.fastkan(in_features=2, output_dim=16, hidden_dims=16,
-                            num_layers=2, key=k[0]))
-        | fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=16, key=k[1]))
-    )
+    pipe = fx.block(
+        fx.fastkan(in_features=2, output_dim=16, hidden_dims=16, num_layers=2, key=k[0])
+    ) | fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=16, key=k[1]))
     y = pipe(jnp.ones((4, 2)))
     assert y.shape == (4, 1)
 
@@ -110,17 +132,31 @@ def test_kan_mlp_hybrid():
 def test_all_factories_exposed():
     """Every documented factory must be importable from foundax."""
     for name in (
-        "kan", "efficient_kan", "fastkan", "fourier_kan",
-        "chebyshev_kan", "jacobi_kan", "legendre_kan", "wavelet_kan",
-        "taylor_kan", "kan_conv2d",
+        "kan",
+        "efficient_kan",
+        "fastkan",
+        "fourier_kan",
+        "chebyshev_kan",
+        "jacobi_kan",
+        "legendre_kan",
+        "wavelet_kan",
+        "taylor_kan",
+        "kan_conv2d",
     ):
         assert hasattr(fx, name), f"foundax missing factory '{name}'"
 
 
 def test_all_layers_exposed():
     for name in (
-        "KANLayer", "EfficientKANLayer", "FastKANLayer", "FourierKANLayer",
-        "ChebyshevKANLayer", "JacobiKANLayer", "LegendreKANLayer",
-        "WaveletKANLayer", "TaylorKANLayer", "KANConv2d",
+        "KANLayer",
+        "EfficientKANLayer",
+        "FastKANLayer",
+        "FourierKANLayer",
+        "ChebyshevKANLayer",
+        "JacobiKANLayer",
+        "LegendreKANLayer",
+        "WaveletKANLayer",
+        "TaylorKANLayer",
+        "KANConv2d",
     ):
         assert hasattr(fx.layers, name), f"fx.layers missing '{name}'"

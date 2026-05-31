@@ -67,9 +67,12 @@ def _run_capture(cmd: list[str], *, cwd: Path = REPO_ROOT) -> tuple[int, str]:
     """Run cmd, stream output to stdout in real-time, and return (rc, captured_text)."""
     print("  $", " ".join(shlex.quote(str(c)) for c in cmd))
     proc = subprocess.Popen(
-        cmd, cwd=str(cwd),
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1,
+        cmd,
+        cwd=str(cwd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
     lines: list[str] = []
     assert proc.stdout is not None
@@ -87,7 +90,7 @@ def _extract_l2_metric(output: str) -> str | None:
     falls back to any rel/L2/abs metric if no max-abs line is found.
     """
     preferred = []  # max abs / max diff
-    fallback = []   # other diff/error/relative lines
+    fallback = []  # other diff/error/relative lines
     for line in output.splitlines():
         s = line.strip()
         if not s:
@@ -97,8 +100,10 @@ def _extract_l2_metric(output: str) -> str | None:
         low = s.lower()
         if any(kw in low for kw in ("max abs", "max_abs", "max diff", "max_diff")):
             preferred.append(s)
-        elif any(kw in low for kw in ("rel", "l2", "mean diff", "mean rel",
-                                       "abs err", "abs diff")):
+        elif any(
+            kw in low
+            for kw in ("rel", "l2", "mean diff", "mean rel", "abs err", "abs diff")
+        ):
             fallback.append(s)
     if preferred:
         return preferred[-1]
@@ -127,12 +132,15 @@ def step_install(model_cfg: DictConfig, repos_dir: Path) -> int:
     # into site-packages so the repo root lands on sys.path instead.
     try:
         import site
+
         site_pkgs = site.getsitepackages()
         pth_path = Path(site_pkgs[0]) / f"_foundax_og_{model_cfg.name}.pth"
         existing = pth_path.read_text() if pth_path.exists() else ""
         if str(dest) not in existing:
             pth_path.write_text(existing + str(dest) + "\n")
-        print(f"  [install] {model_cfg.name}: added {dest} to Python path via {pth_path.name}")
+        print(
+            f"  [install] {model_cfg.name}: added {dest} to Python path via {pth_path.name}"
+        )
         return 0
     except Exception as e:
         print(f"  [install] {model_cfg.name}: WARNING — {e} (non-fatal)")
@@ -142,7 +150,7 @@ def step_install(model_cfg: DictConfig, repos_dir: Path) -> int:
 def _to_ssh_url(url: str) -> str:
     """Convert https://github.com/owner/repo to git@github.com:owner/repo."""
     if url.startswith("https://github.com/"):
-        path = url[len("https://github.com/"):]
+        path = url[len("https://github.com/") :]
         return f"git@github.com:{path}"
     return url
 
@@ -163,7 +171,9 @@ def step_clone(model_cfg: DictConfig, repos_dir: Path) -> int:
 def step_download(model_cfg: DictConfig, checkpoints_dir: Path, force: bool) -> int:
     hf = model_cfg.get("hf_checkpoint")
     if not hf:
-        print(f"  [download] {model_cfg.name}: no HuggingFace checkpoint configured — skipping")
+        print(
+            f"  [download] {model_cfg.name}: no HuggingFace checkpoint configured — skipping"
+        )
         return 0
 
     dest_dir = checkpoints_dir / model_cfg.name
@@ -186,7 +196,9 @@ def step_download(model_cfg: DictConfig, checkpoints_dir: Path, force: bool) -> 
         print(f"  [download] {model_cfg.name}: saved to {path}")
         return 0
     except Exception as e:
-        print(f"  [download] {model_cfg.name}: WARNING — {e} (checkpoint unavailable; compare will run structural check)")
+        print(
+            f"  [download] {model_cfg.name}: WARNING — {e} (checkpoint unavailable; compare will run structural check)"
+        )
         return 0
 
 

@@ -1162,9 +1162,13 @@ def kan(
     from .architectures.kan import KAN
 
     return KAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
-        grid_size=grid_size, spline_order=spline_order, grid_range=grid_range,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        grid_range=grid_range,
         key=_resolve_key(key),
     )
 
@@ -1184,9 +1188,13 @@ def efficient_kan(
     from .architectures.kan import EfficientKAN
 
     return EfficientKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
-        grid_size=grid_size, spline_order=spline_order, grid_range=grid_range,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        grid_range=grid_range,
         key=_resolve_key(key),
     )
 
@@ -1205,9 +1213,12 @@ def fastkan(
     from .architectures.kan import FastKAN
 
     return FastKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
-        grid_size=grid_size, grid_range=grid_range,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        grid_range=grid_range,
         key=_resolve_key(key),
     )
 
@@ -1225,8 +1236,10 @@ def fourier_kan(
     from .architectures.kan import FourierKAN
 
     return FourierKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
         num_frequencies=num_frequencies,
         key=_resolve_key(key),
     )
@@ -1245,8 +1258,11 @@ def chebyshev_kan(
     from .architectures.kan import ChebyshevKAN
 
     return ChebyshevKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers, degree=degree,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
         key=_resolve_key(key),
     )
 
@@ -1266,9 +1282,13 @@ def jacobi_kan(
     from .architectures.kan import JacobiKAN
 
     return JacobiKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
-        degree=degree, alpha=alpha, beta=beta,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        alpha=alpha,
+        beta=beta,
         key=_resolve_key(key),
     )
 
@@ -1286,8 +1306,11 @@ def legendre_kan(
     from .architectures.kan import LegendreKAN
 
     return LegendreKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers, degree=degree,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
         key=_resolve_key(key),
     )
 
@@ -1309,9 +1332,12 @@ def wavelet_kan(
     from .architectures.kan import WaveletKAN
 
     return WaveletKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers,
-        num_scales=num_scales, wavelet_type=wavelet_type,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        num_scales=num_scales,
+        wavelet_type=wavelet_type,
         key=_resolve_key(key),
     )
 
@@ -1329,8 +1355,11 @@ def taylor_kan(
     from .architectures.kan import TaylorKAN
 
     return TaylorKAN(
-        in_features=in_features, output_dim=output_dim,
-        hidden_dims=hidden_dims, num_layers=num_layers, degree=degree,
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
         key=_resolve_key(key),
     )
 
@@ -1355,219 +1384,361 @@ def kan_conv2d(
     from .architectures.kan import KANConv2d
 
     return KANConv2d(
-        in_channels=in_channels, out_channels=out_channels,
-        kernel_size=kernel_size, basis=basis,
-        key=_resolve_key(key), **basis_kwargs,
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        basis=basis,
+        key=_resolve_key(key),
+        **basis_kwargs,
     )
 
 
 def hermite_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    degree: int = 5, *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    degree: int = 5,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a HermiteKAN (probabilist Hermite polynomial edges)."""
     from .architectures.kan import HermiteKAN
 
-    return HermiteKAN(in_features=in_features, output_dim=output_dim,
-                      hidden_dims=hidden_dims, num_layers=num_layers,
-                      degree=degree, key=_resolve_key(key))
+    return HermiteKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        key=_resolve_key(key),
+    )
 
 
 def laguerre_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    degree: int = 5, *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    degree: int = 5,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a LaguerreKAN (Laguerre polynomial edges)."""
     from .architectures.kan import LaguerreKAN
 
-    return LaguerreKAN(in_features=in_features, output_dim=output_dim,
-                       hidden_dims=hidden_dims, num_layers=num_layers,
-                       degree=degree, key=_resolve_key(key))
+    return LaguerreKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        key=_resolve_key(key),
+    )
 
 
 def bernstein_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    degree: int = 5, *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    degree: int = 5,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a BernsteinKAN (Bernstein polynomial edges on [0, 1])."""
     from .architectures.kan import BernsteinKAN
 
-    return BernsteinKAN(in_features=in_features, output_dim=output_dim,
-                        hidden_dims=hidden_dims, num_layers=num_layers,
-                        degree=degree, key=_resolve_key(key))
+    return BernsteinKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        key=_resolve_key(key),
+    )
 
 
 def relu_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    grid_size: int = 8, order: int = 2,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    grid_size: int = 8,
+    order: int = 2,
     grid_range: tuple = (-1.0, 1.0),
-    *, key: jax.Array | None = None,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a ReLU-KAN / FasterKAN ((relu*relu)^order basis)."""
     from .architectures.kan import ReLUKAN
 
-    return ReLUKAN(in_features=in_features, output_dim=output_dim,
-                   hidden_dims=hidden_dims, num_layers=num_layers,
-                   grid_size=grid_size, order=order, grid_range=grid_range,
-                   key=_resolve_key(key))
+    return ReLUKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        order=order,
+        grid_range=grid_range,
+        key=_resolve_key(key),
+    )
 
 
 def rational_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    degree: int = 5, *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    degree: int = 5,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a RationalKAN (rational-Chebyshev / Padé-style edges)."""
     from .architectures.kan import RationalKAN
 
-    return RationalKAN(in_features=in_features, output_dim=output_dim,
-                       hidden_dims=hidden_dims, num_layers=num_layers,
-                       degree=degree, key=_resolve_key(key))
+    return RationalKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        key=_resolve_key(key),
+    )
 
 
 def sinc_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    grid_size: int = 8, grid_range: tuple = (-2.0, 2.0),
-    *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    grid_size: int = 8,
+    grid_range: tuple = (-2.0, 2.0),
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a SincKAN (sinc basis on a uniform grid)."""
     from .architectures.kan import SincKAN
 
-    return SincKAN(in_features=in_features, output_dim=output_dim,
-                   hidden_dims=hidden_dims, num_layers=num_layers,
-                   grid_size=grid_size, grid_range=grid_range,
-                   key=_resolve_key(key))
+    return SincKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        grid_range=grid_range,
+        key=_resolve_key(key),
+    )
 
 
 def gram_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    degree: int = 5, *, key: jax.Array | None = None,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    degree: int = 5,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a GramKAN (orthonormal Legendre / continuous-Gram basis)."""
     from .architectures.kan import GramKAN
 
-    return GramKAN(in_features=in_features, output_dim=output_dim,
-                   hidden_dims=hidden_dims, num_layers=num_layers,
-                   degree=degree, key=_resolve_key(key))
+    return GramKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        degree=degree,
+        key=_resolve_key(key),
+    )
 
 
 def bsrbf_kan(
-    in_features: int, output_dim: int = 1,
-    hidden_dims: int | Sequence[int] = 64, num_layers: int = 2,
-    grid_size: int = 5, spline_order: int = 3, rbf_grid_size: int = 8,
+    in_features: int,
+    output_dim: int = 1,
+    hidden_dims: int | Sequence[int] = 64,
+    num_layers: int = 2,
+    grid_size: int = 5,
+    spline_order: int = 3,
+    rbf_grid_size: int = 8,
     grid_range: tuple = (-1.0, 1.0),
     rbf_grid_range: tuple = (-2.0, 2.0),
-    *, key: jax.Array | None = None,
+    *,
+    key: jax.Array | None = None,
 ) -> eqx.Module:
     """Create a BSRBFKAN (concatenated B-spline + Gaussian-RBF basis)."""
     from .architectures.kan import BSRBFKAN
 
-    return BSRBFKAN(in_features=in_features, output_dim=output_dim,
-                    hidden_dims=hidden_dims, num_layers=num_layers,
-                    grid_size=grid_size, spline_order=spline_order,
-                    rbf_grid_size=rbf_grid_size,
-                    grid_range=grid_range, rbf_grid_range=rbf_grid_range,
-                    key=_resolve_key(key))
+    return BSRBFKAN(
+        in_features=in_features,
+        output_dim=output_dim,
+        hidden_dims=hidden_dims,
+        num_layers=num_layers,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        rbf_grid_size=rbf_grid_size,
+        grid_range=grid_range,
+        rbf_grid_range=rbf_grid_range,
+        key=_resolve_key(key),
+    )
 
 
 def kan_conv1d(
-    in_channels: int, out_channels: int, kernel_size: int = 3,
+    in_channels: int,
+    out_channels: int,
+    kernel_size: int = 3,
     basis: str = "bspline",
-    *, key: jax.Array | None = None, **basis_kwargs,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """Create a KAN-convolutional 1D layer (channel-last ``(W, C)``)."""
     from .architectures.kan import KANConv1d
 
-    return KANConv1d(in_channels=in_channels, out_channels=out_channels,
-                     kernel_size=kernel_size, basis=basis,
-                     key=_resolve_key(key), **basis_kwargs)
+    return KANConv1d(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        basis=basis,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_conv3d(
-    in_channels: int, out_channels: int, kernel_size: int = 3,
+    in_channels: int,
+    out_channels: int,
+    kernel_size: int = 3,
     basis: str = "bspline",
-    *, key: jax.Array | None = None, **basis_kwargs,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """Create a KAN-convolutional 3D layer (channel-last ``(D, H, W, C)``)."""
     from .architectures.kan import KANConv3d
 
-    return KANConv3d(in_channels=in_channels, out_channels=out_channels,
-                     kernel_size=kernel_size, basis=basis,
-                     key=_resolve_key(key), **basis_kwargs)
+    return KANConv3d(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        basis=basis,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_res_block(
-    features: int, basis: str = "bspline",
+    features: int,
+    basis: str = "bspline",
     activation: Callable = jax.nn.silu,
     use_layer_norm: bool = False,
-    *, key: jax.Array | None = None, **basis_kwargs,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """Create a residual KAN block: ``out = x + kan2(act(kan1(x)))``."""
     from .architectures.kan import KANResBlock
 
-    return KANResBlock(features=features, basis=basis, activation=activation,
-                       use_layer_norm=use_layer_norm,
-                       key=_resolve_key(key), **basis_kwargs)
+    return KANResBlock(
+        features=features,
+        basis=basis,
+        activation=activation,
+        use_layer_norm=use_layer_norm,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_spectral_block1d(
-    in_channels: int, out_channels: int, n_modes: int,
-    basis: str = "rbf", activation: Callable = jax.nn.gelu,
-    *, key: jax.Array | None = None, **basis_kwargs,
+    in_channels: int,
+    out_channels: int,
+    n_modes: int,
+    basis: str = "rbf",
+    activation: Callable = jax.nn.gelu,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """FNO-style 1-D block with KAN channel mixing."""
     from .architectures.kan import KANSpectralBlock1d
 
-    return KANSpectralBlock1d(in_channels=in_channels, out_channels=out_channels,
-                              n_modes=n_modes, basis=basis,
-                              activation=activation,
-                              key=_resolve_key(key), **basis_kwargs)
+    return KANSpectralBlock1d(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        n_modes=n_modes,
+        basis=basis,
+        activation=activation,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_spectral_block2d(
-    in_channels: int, out_channels: int, n_modes: int,
-    basis: str = "rbf", activation: Callable = jax.nn.gelu,
-    *, key: jax.Array | None = None, **basis_kwargs,
+    in_channels: int,
+    out_channels: int,
+    n_modes: int,
+    basis: str = "rbf",
+    activation: Callable = jax.nn.gelu,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """FNO-style 2-D block with KAN channel mixing."""
     from .architectures.kan import KANSpectralBlock2d
 
-    return KANSpectralBlock2d(in_channels=in_channels, out_channels=out_channels,
-                              n_modes=n_modes, basis=basis,
-                              activation=activation,
-                              key=_resolve_key(key), **basis_kwargs)
+    return KANSpectralBlock2d(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        n_modes=n_modes,
+        basis=basis,
+        activation=activation,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_spectral_block3d(
-    in_channels: int, out_channels: int, n_modes: int,
-    basis: str = "rbf", activation: Callable = jax.nn.gelu,
-    *, key: jax.Array | None = None, **basis_kwargs,
+    in_channels: int,
+    out_channels: int,
+    n_modes: int,
+    basis: str = "rbf",
+    activation: Callable = jax.nn.gelu,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """FNO-style 3-D block with KAN channel mixing."""
     from .architectures.kan import KANSpectralBlock3d
 
-    return KANSpectralBlock3d(in_channels=in_channels, out_channels=out_channels,
-                              n_modes=n_modes, basis=basis,
-                              activation=activation,
-                              key=_resolve_key(key), **basis_kwargs)
+    return KANSpectralBlock3d(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        n_modes=n_modes,
+        basis=basis,
+        activation=activation,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 def kan_attention_block(
-    features: int, num_heads: int = 4,
+    features: int,
+    num_heads: int = 4,
     basis: str = "rbf",
-    *, key: jax.Array | None = None, **basis_kwargs,
+    *,
+    key: jax.Array | None = None,
+    **basis_kwargs,
 ) -> eqx.Module:
     """Transformer-style block with KAN feed-forward sublayer."""
     from .architectures.kan import KANAttentionBlock
 
-    return KANAttentionBlock(features=features, num_heads=num_heads,
-                             basis=basis, key=_resolve_key(key), **basis_kwargs)
+    return KANAttentionBlock(
+        features=features,
+        num_heads=num_heads,
+        basis=basis,
+        key=_resolve_key(key),
+        **basis_kwargs,
+    )
 
 
 # =====================================================================
@@ -2861,8 +3032,15 @@ def dit2d(
     """
     from .architectures.dit import DiT2d
 
-    return DiT2d(in_channels, patch_size, hidden_size, depth, num_heads, mlp_ratio,
-                 key=_resolve_key(key))
+    return DiT2d(
+        in_channels,
+        patch_size,
+        hidden_size,
+        depth,
+        num_heads,
+        mlp_ratio,
+        key=_resolve_key(key),
+    )
 
 
 def dit3d(
@@ -2894,8 +3072,15 @@ def dit3d(
     """
     from .architectures.dit import DiT3d
 
-    return DiT3d(in_channels, patch_size, hidden_size, depth, num_heads, mlp_ratio,
-                 key=_resolve_key(key))
+    return DiT3d(
+        in_channels,
+        patch_size,
+        hidden_size,
+        depth,
+        num_heads,
+        mlp_ratio,
+        key=_resolve_key(key),
+    )
 
 
 def ffno2d(
@@ -2929,8 +3114,16 @@ def ffno2d(
     """
     from .architectures.ffno import FFNO2d
 
-    return FFNO2d(in_channels, hidden_channels, out_channels or in_channels,
-                  n_modes, n_layers, use_film, emb_dim, key=_resolve_key(key))
+    return FFNO2d(
+        in_channels,
+        hidden_channels,
+        out_channels or in_channels,
+        n_modes,
+        n_layers,
+        use_film,
+        emb_dim,
+        key=_resolve_key(key),
+    )
 
 
 def ffno3d(
@@ -2961,8 +3154,16 @@ def ffno3d(
     """
     from .architectures.ffno import FFNO3d
 
-    return FFNO3d(in_channels, hidden_channels, out_channels or in_channels,
-                  n_modes, n_layers, use_film, emb_dim, key=_resolve_key(key))
+    return FFNO3d(
+        in_channels,
+        hidden_channels,
+        out_channels or in_channels,
+        n_modes,
+        n_layers,
+        use_film,
+        emb_dim,
+        key=_resolve_key(key),
+    )
 
 
 def wno1d(
@@ -2992,8 +3193,14 @@ def wno1d(
     """
     from .architectures.wno import WNO1d
 
-    return WNO1d(in_channels, hidden_channels, out_channels or in_channels,
-                 n_scales, depth, key=_resolve_key(key))
+    return WNO1d(
+        in_channels,
+        hidden_channels,
+        out_channels or in_channels,
+        n_scales,
+        depth,
+        key=_resolve_key(key),
+    )
 
 
 def wno2d(
@@ -3022,8 +3229,14 @@ def wno2d(
     """
     from .architectures.wno import WNO2d
 
-    return WNO2d(in_channels, hidden_channels, out_channels or in_channels,
-                 n_scales, depth, key=_resolve_key(key))
+    return WNO2d(
+        in_channels,
+        hidden_channels,
+        out_channels or in_channels,
+        n_scales,
+        depth,
+        key=_resolve_key(key),
+    )
 
 
 def wno3d(
@@ -3052,5 +3265,11 @@ def wno3d(
     """
     from .architectures.wno import WNO3d
 
-    return WNO3d(in_channels, hidden_channels, out_channels or in_channels,
-                 n_scales, depth, key=_resolve_key(key))
+    return WNO3d(
+        in_channels,
+        hidden_channels,
+        out_channels or in_channels,
+        n_scales,
+        depth,
+        key=_resolve_key(key),
+    )

@@ -57,7 +57,8 @@ include = ["foundax*", "jax_bcat*", "jax_dpot*", "jax_morph*", "jax_mpp*", "jax_
 where = [".", "repos/jax_bcat", "repos/jax_dpot", "repos/jax_morph", "repos/jax_mpp", "repos/jax_pdeformer2", "repos/jax_poseidon", "repos/jax_prose", "repos/jax_walrus"]
 
 [tool.ruff]
-exclude = ["og_repos", "build", "dist"]
+# Exclude vendored upstream code (mirrors pytest `norecursedirs`).
+exclude = ["repos", "og_repos", "build", "dist", "site"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests use `pytest.importorskip` before module imports (E402), compact

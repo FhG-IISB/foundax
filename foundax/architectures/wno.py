@@ -32,24 +32,27 @@ from .linear import Linear
 # Low-pass (scaling) filter — 16 taps.  Values from the standard db8 table
 # (identical to PyWavelets pywt.Wavelet('db8').dec_lo).
 
-_DB8_LO = jnp.array([
-    -1.1747678400228192e-4,
-     6.754494059985568e-4,
-    -3.917403729959771e-4,
-    -4.870352993010670e-3,
-     8.746094047405776e-3,
-     1.398102791701552e-2,
-    -4.408825393106472e-2,
-    -1.736930100202211e-2,
-     1.287474266201860e-1,
-     4.724845739979725e-4,
-    -2.840155429624281e-1,
-    -1.582910525602389e-2,
-     5.853546836548691e-1,
-     6.756307362980128e-1,
-     3.128715909144659e-1,
-     5.441584224308161e-2,
-], dtype=jnp.float32)
+_DB8_LO = jnp.array(
+    [
+        -1.1747678400228192e-4,
+        6.754494059985568e-4,
+        -3.917403729959771e-4,
+        -4.870352993010670e-3,
+        8.746094047405776e-3,
+        1.398102791701552e-2,
+        -4.408825393106472e-2,
+        -1.736930100202211e-2,
+        1.287474266201860e-1,
+        4.724845739979725e-4,
+        -2.840155429624281e-1,
+        -1.582910525602389e-2,
+        5.853546836548691e-1,
+        6.756307362980128e-1,
+        3.128715909144659e-1,
+        5.441584224308161e-2,
+    ],
+    dtype=jnp.float32,
+)
 
 # High-pass (wavelet) filter via quadrature mirror: h_hi[n] = (-1)^n * h_lo[L-1-n]
 _DB8_HI = jnp.array(
@@ -69,9 +72,9 @@ def _dwt_axis(
     Uses zero-boundary convolution (``mode='same'``).
     Input size along *axis* should be ≥ 16 and even.
     """
-    x_moved = jnp.moveaxis(x, axis, 0)           # move target to front
-    shape = x_moved.shape                          # (Waxis, ...)
-    x_2d = x_moved.reshape(shape[0], -1)          # (Waxis, rest)
+    x_moved = jnp.moveaxis(x, axis, 0)  # move target to front
+    shape = x_moved.shape  # (Waxis, ...)
+    x_2d = x_moved.reshape(shape[0], -1)  # (Waxis, rest)
 
     def _conv_down(col: jnp.ndarray, h: jnp.ndarray) -> jnp.ndarray:
         # mode='full' gives length N+M-1; slice center N elements → N//2 after stride 2.
@@ -119,9 +122,9 @@ def _multi_dwt2d(
     all_details = []
     cur = x
     for _ in range(n_scales):
-        lo_w, hi_w = _dwt_axis(cur, h_lo, h_hi, axis=1)   # along W
-        LL, LH = _dwt_axis(lo_w, h_lo, h_hi, axis=0)       # LL, LH
-        HL, HH = _dwt_axis(hi_w, h_lo, h_hi, axis=0)       # HL, HH
+        lo_w, hi_w = _dwt_axis(cur, h_lo, h_hi, axis=1)  # along W
+        LL, LH = _dwt_axis(lo_w, h_lo, h_hi, axis=0)  # LL, LH
+        HL, HH = _dwt_axis(hi_w, h_lo, h_hi, axis=0)  # HL, HH
         all_details.extend([LH, HL, HH])
         cur = LL
     return cur, all_details
@@ -164,9 +167,7 @@ def _pool2d(x: jnp.ndarray, target_H: int, target_W: int) -> jnp.ndarray:
     return x.reshape(target_H, fH, target_W, fW, C).mean(axis=(1, 3))
 
 
-def _pool3d(
-    x: jnp.ndarray, target_D: int, target_H: int, target_W: int
-) -> jnp.ndarray:
+def _pool3d(x: jnp.ndarray, target_D: int, target_H: int, target_W: int) -> jnp.ndarray:
     D, H, W, C = x.shape
     fD, fH, fW = D // target_D, H // target_H, W // target_W
     return x.reshape(target_D, fD, target_H, fH, target_W, fW, C).mean(axis=(1, 3, 5))
@@ -191,8 +192,8 @@ class WaveletBlock1d(eqx.Module):
     n_scales: int = eqx.field(static=True)
     activation: Callable = eqx.field(static=True)
 
-    wavelet_linear: Linear   # in_ch*(n_scales+1) → out_ch
-    skip: Linear             # in_ch → out_ch
+    wavelet_linear: Linear  # in_ch*(n_scales+1) → out_ch
+    skip: Linear  # in_ch → out_ch
 
     def __init__(
         self,
@@ -216,8 +217,8 @@ class WaveletBlock1d(eqx.Module):
         approx, details = _multi_dwt1d(x, _DB8_LO, _DB8_HI, self.n_scales)
         target_W = approx.shape[0]
         pooled = [approx] + [_pool1d(d, target_W) for d in details]
-        x_wave = jnp.concatenate(pooled, axis=-1)      # (target_W, in_ch*(n+1))
-        x_wave = self.wavelet_linear(x_wave)            # (target_W, out_ch)
+        x_wave = jnp.concatenate(pooled, axis=-1)  # (target_W, in_ch*(n+1))
+        x_wave = self.wavelet_linear(x_wave)  # (target_W, out_ch)
         x_wave = jax.image.resize(x_wave, (W, self.out_channels), method="linear")
         return self.activation(x_wave + self.skip(x))
 
@@ -234,7 +235,7 @@ class WaveletBlock2d(eqx.Module):
     n_scales: int = eqx.field(static=True)
     activation: Callable = eqx.field(static=True)
 
-    wavelet_linear: Linear   # in_ch*(3*n_scales+1) → out_ch
+    wavelet_linear: Linear  # in_ch*(3*n_scales+1) → out_ch
     skip: Linear
 
     def __init__(
@@ -251,7 +252,9 @@ class WaveletBlock2d(eqx.Module):
         self.n_scales = n_scales
         self.activation = activation
         k1, k2 = jax.random.split(key)
-        self.wavelet_linear = Linear(in_channels * (3 * n_scales + 1), out_channels, key=k1)
+        self.wavelet_linear = Linear(
+            in_channels * (3 * n_scales + 1), out_channels, key=k1
+        )
         self.skip = Linear(in_channels, out_channels, key=k2)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
@@ -260,7 +263,7 @@ class WaveletBlock2d(eqx.Module):
         tH, tW = approx.shape[0], approx.shape[1]
         pooled = [approx] + [_pool2d(d, tH, tW) for d in details]
         x_wave = jnp.concatenate(pooled, axis=-1)
-        x_wave = self.wavelet_linear(x_wave)            # (tH, tW, out_ch)
+        x_wave = self.wavelet_linear(x_wave)  # (tH, tW, out_ch)
         x_wave = jax.image.resize(x_wave, (H, W, self.out_channels), method="linear")
         return self.activation(x_wave + self.skip(x))
 
@@ -277,7 +280,7 @@ class WaveletBlock3d(eqx.Module):
     n_scales: int = eqx.field(static=True)
     activation: Callable = eqx.field(static=True)
 
-    wavelet_linear: Linear   # in_ch*(7*n_scales+1) → out_ch
+    wavelet_linear: Linear  # in_ch*(7*n_scales+1) → out_ch
     skip: Linear
 
     def __init__(
@@ -294,7 +297,9 @@ class WaveletBlock3d(eqx.Module):
         self.n_scales = n_scales
         self.activation = activation
         k1, k2 = jax.random.split(key)
-        self.wavelet_linear = Linear(in_channels * (7 * n_scales + 1), out_channels, key=k1)
+        self.wavelet_linear = Linear(
+            in_channels * (7 * n_scales + 1), out_channels, key=k1
+        )
         self.skip = Linear(in_channels, out_channels, key=k2)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
