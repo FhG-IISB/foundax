@@ -26,6 +26,34 @@ pip install foundax
 
 Development setup uses pixi — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Integration With [jNO](https://github.com/FhG-IISB/jNO)
+
+```python
+import foundax as fx
+import jno
+import optax
+
+net = jno.nn.wrap(fx.poseidon.T(num_channels=5, num_out_channels=1))
+net.optimizer(
+    optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adamw(
+            learning_rate=optax.schedules.warmup_cosine_decay_schedule(
+                init_value=1e-7,
+                peak_value=1e-3,
+                warmup_steps=500,
+                decay_steps=10000,
+                end_value=1e-6,
+            ),
+            weight_decay=1e-4,
+        ),
+    )
+)
+net.initialize('./poseidonT.eqx')
+net.mask(param_mask).lora(rank=4)
+```
+
+
 ## Supported architectures
 
 Full list with paper references: [`docs/architectures.md`](docs/architectures.md).
@@ -162,33 +190,6 @@ def step(model, state, u, y, target):
     )(model)
     updates, state = opt.update(grads, state, eqx.filter(model, eqx.is_array))
     return eqx.apply_updates(model, updates), state, loss
-```
-
-## Integration With jNO
-
-```python
-import foundax as fx
-import jno
-import optax
-
-net = jno.nn.wrap(fx.poseidon.T(num_channels=5, num_out_channels=1))
-net.optimizer(
-    optax.chain(
-        optax.clip_by_global_norm(1.0),
-        optax.adamw(
-            learning_rate=optax.schedules.warmup_cosine_decay_schedule(
-                init_value=1e-7,
-                peak_value=1e-3,
-                warmup_steps=500,
-                decay_steps=10000,
-                end_value=1e-6,
-            ),
-            weight_decay=1e-4,
-        ),
-    )
-)
-net.initialize('./poseidonT.eqx')
-net.mask(param_mask).lora(rank=4)
 ```
 
 ## Citation
