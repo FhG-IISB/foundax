@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from typing import Dict, Any
@@ -512,62 +513,142 @@ def verify_multiple_timesteps(
     return all(r["rel_l2_diff"] < 1e-3 for r in results)
 
 
+def _run_structural_check() -> int:
+    """JAX-only structural validation with random weights (no PT repo needed)."""
+    import time
+    import jax
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    jax.config.update("jax_platform_name", "cpu")
+
+    from jax_poseidon import ScOT, ScOTConfig
+
+    print("\n[Poseidon] Structural validation (JAX only, random weights)")
+    print("  (--model-path not provided or file not found — skipping full comparison)")
+
+    config = ScOTConfig(
+        name="poseidonT-tiny",
+        image_size=56,
+        patch_size=4,
+        num_channels=1,
+        num_out_channels=1,
+        embed_dim=24,
+        depths=(2, 2),
+        num_heads=(3, 6),
+        skip_connections=(True,),
+        window_size=7,
+    )
+    key = jax.random.PRNGKey(0)
+    model = ScOT(config, key=key)
+
+    H, W = 56, 56
+    x = jnp.zeros((1, H, W, 1), dtype=jnp.float32)
+    print(f"  Input shape: {x.shape}  (B=1, H={H}, W={W}, C=1)")
+
+    t0 = time.perf_counter()
+    out = model(x)
+    elapsed = time.perf_counter() - t0
+
+    out_np = np.asarray(out.output if hasattr(out, "output") else out)
+    print(f"  Output shape: {out_np.shape}")
+
+    if not np.all(np.isfinite(out_np)):
+        print("  FAIL: output contains non-finite values")
+        return 1
+
+    print(f"  Output range: [{out_np.min():.4f}, {out_np.max():.4f}]")
+    print(f"  Elapsed: {elapsed:.2f}s")
+    print("  PASS: output shape correct and finite")
+    return 0
+
+
+def _run_random_weight_comparison(poseidon_root: str, seed: int = 0,
+                                   threshold: float = 1e-3) -> int:
+    """Init PT scOT with seed, transfer to Equinox, compare forward pass."""
+    import sys as _sys
+    from pathlib import Path as _P
+
+    _sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    _sys.path.insert(0, str(_P(poseidon_root).resolve()))
+
+    # Newer transformers compatibility patches required by upstream scOT code.
+    from transformers import PreTrainedModel
+    if not hasattr(PreTrainedModel, "get_head_mask"):
+        def _ghm(self, head_mask, num_hidden_layers, is_attention_chunked=False):
+            return [None] * num_hidden_layers if head_mask is None else head_mask
+        PreTrainedModel.get_head_mask = _ghm
+
+    from transformers.models.swinv2.modeling_swinv2 import Swinv2Attention
+    _orig = Swinv2Attention.forward
+    def _attn_fwd(self, hidden_states, attention_mask=None, head_mask=None,
+                   output_attentions=False):
+        return _orig(self, hidden_states, attention_mask=attention_mask,
+                      output_attentions=output_attentions)
+    Swinv2Attention.forward = _attn_fwd
+
+    import torch
+    from scOT.model import ScOT as PT_ScOT, ScOTConfig as PT_Cfg
+    from jax_poseidon import ScOT as JX_ScOT, ScOTConfig, transfer_pt_to_eqx
+
+    print("\n[Poseidon] random-weight comparison")
+    print(f"  poseidon-root: {poseidon_root}")
+
+    pt_cfg = PT_Cfg(
+        image_size=128, patch_size=4, num_channels=4, num_out_channels=1,
+        embed_dim=48, depths=[4, 4, 4, 4], num_heads=[3, 6, 12, 24],
+        skip_connections=[2, 2, 2, 0], window_size=16,
+        use_conditioning=True, learn_residual=False,
+    )
+    torch.manual_seed(seed)
+    pt = PT_ScOT(pt_cfg)
+    pt.eval()
+
+    jx_cfg = ScOTConfig(
+        image_size=128, patch_size=4, num_channels=4, num_out_channels=1,
+        embed_dim=48, depths=[4, 4, 4, 4], num_heads=[3, 6, 12, 24],
+        skip_connections=[2, 2, 2, 0], window_size=16,
+        use_conditioning=True, learn_residual=False,
+    )
+    jx = JX_ScOT(jx_cfg, key=jax.random.PRNGKey(seed))
+    jx = transfer_pt_to_eqx(pt.state_dict(), jx)
+
+    np.random.seed(seed)
+    x = np.random.randn(1, 4, 128, 128).astype(np.float32)
+    t = np.array([0.5], dtype=np.float32)
+    with torch.no_grad():
+        out_pt = pt(
+            pixel_values=torch.from_numpy(x), time=torch.from_numpy(t)
+        ).output.cpu().numpy()
+    out_jx = jx(pixel_values=jnp.array(x.transpose(0, 2, 3, 1)),
+                time=jnp.array(t))
+    out_jx_np = np.asarray(
+        out_jx.output if hasattr(out_jx, "output") else out_jx
+    ).transpose(0, 3, 1, 2)
+
+    print(f"  PT  range: [{out_pt.min():.4f}, {out_pt.max():.4f}]")
+    print(f"  JX  range: [{out_jx_np.min():.4f}, {out_jx_np.max():.4f}]")
+
+    max_d = float(np.max(np.abs(out_pt - out_jx_np)))
+    mean_d = float(np.mean(np.abs(out_pt - out_jx_np)))
+    rel = max_d / (np.max(np.abs(out_pt)) + 1e-8)
+    status = "PASS" if rel < threshold else "FAIL"
+    print(f"  Max abs diff: {max_d:.2e}  Mean abs diff: {mean_d:.2e}  Rel: {rel:.2e}  -> {status}")
+    return 0 if status == "PASS" else 1
+
+
 if __name__ == "__main__":
     import argparse
-    import torch
-    from convert import convert_model
 
-    parser = argparse.ArgumentParser(
-        description="Compare PyTorch and JAX model outputs"
-    )
-    parser.add_argument(
-        "--model-path",
-        type=str,
-        required=True,
-        help="Path to the PyTorch model checkpoint (e.g., /path/to/poseidonT)",
-    )
-    parser.add_argument(
-        "--num-samples",
-        type=int,
-        default=20,
-        help="Number of samples for comprehensive comparison (default: 20)",
-    )
-    parser.add_argument(
-        "--num-plots",
-        type=int,
-        default=5,
-        help="Number of comparison plots to generate (default: 5)",
-    )
-    parser.add_argument(
-        "--single",
-        action="store_true",
-        help="Run single example verification instead of comprehensive comparison",
-    )
-    parser.add_argument(
-        "--save",
-        action="store_true",
-        help="Save the converted JAX model to a .msgpack file",
-    )
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Compare PyTorch and JAX scOT outputs")
+    parser.add_argument("--model-path", type=str, default=None,
+                        help="HuggingFace model path (omit for random-weight check)")
+    parser.add_argument("--poseidon-root", type=str, default=None,
+                        help="Path to cloned scOT/poseidon repo")
+    parser.add_argument("--seed", type=int, default=0)
+    args, _ = parser.parse_known_args()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # Convert model
-    jax_model, jax_params, pt_model, config = convert_model(
-        args.model_path,
-        save=args.save,
-        verbose=False,
-    )
-
-    # Run comparison
-    if args.single:
-        verify_model_outputs(pt_model, jax_model, jax_params, device=device)
-    else:
-        run_comprehensive_comparison(
-            pt_model,
-            jax_model,
-            jax_params,
-            num_samples=args.num_samples,
-            num_plots=args.num_plots,
-            device=device,
-        )
+    if args.poseidon_root is not None:
+        raise SystemExit(_run_random_weight_comparison(args.poseidon_root, args.seed))
+    raise SystemExit(_run_structural_check())

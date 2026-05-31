@@ -1,0 +1,19 @@
+name: walrus
+github_url: https://github.com/PolymathicAI/walrus
+hf_checkpoint:
+  repo_id: polymathic-ai/walrus
+  filename: walrus.pt
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--walrus-root"
+  - "{repos_dir}/walrus"
+  - "--checkpoint-path"
+  - "{checkpoints_dir}/walrus/walrus.pt"
+  - "--msgpack-path"
+  - "{checkpoints_dir}/walrus/walrus.msgpack"
+has_compare: true
+convert_extra_args:
+  - "--input"
+  - "{checkpoints_dir}/walrus/walrus.pt"
+  - "--output"
+  - "{checkpoints_dir}/walrus/walrus.msgpack"

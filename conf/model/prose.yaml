@@ -1,0 +1,18 @@
+name: prose
+github_url: https://github.com/felix-lyx/prose
+hf_checkpoint:
+  repo_id: felix-lyx/prose
+  filename: prose_fd.pth
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--prose-root"
+  - "{repos_dir}/prose/prose_fd"
+  - "--x-num"
+  - "64"
+  - "--input-len"
+  - "4"
+  - "--output-len"
+  - "4"
+has_compare: true
+convert_extra_args: []
+prose_variant: fd

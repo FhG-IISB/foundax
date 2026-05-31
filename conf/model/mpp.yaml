@@ -1,0 +1,13 @@
+name: mpp
+github_url: https://github.com/PolymathicAI/multiple_physics_pretraining
+# Pretrained HF repo is gated; we verify equivalence with random weights
+# initialised from the cloned PT repo (no checkpoint needed).
+hf_checkpoint: null
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--variant"
+  - "Ti"
+  - "--mpp-root"
+  - "{repos_dir}/mpp"
+has_compare: true
+convert_extra_args: []

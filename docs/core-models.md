@@ -17,6 +17,7 @@ These models are the lighter-weight part of the repository: they are intended fo
 | MgNO | `mgno1d`, `mgno2d` | Multigrid-inspired operator learning |
 | Geometry-aware operators | `geofno`, `pcno`, `pit`, `pointnet` | Irregular meshes, coordinates, point clouds |
 | GNOT family | `cgptno`, `gnot`, `moegptno` | Transformer-based operator learning on irregular domains |
+| Kolmogorov–Arnold Networks | `kan`, `fastkan`, `chebyshev_kan`, `fourier_kan`, … (17 variants) | MLP alternative with learnable univariate edges — see the [KAN page](kan.md) |
 
 ## Linear And MLP
 
@@ -168,6 +169,27 @@ Use them when:
 Reference:
 
 - GNOT paper: https://arxiv.org/abs/2302.14376
+
+## Kolmogorov–Arnold Networks
+
+Constructors (subset):
+
+- `kan`, `efficient_kan`, `fastkan`
+- `fourier_kan`, `chebyshev_kan`, `jacobi_kan`, `legendre_kan`, `gram_kan`
+- `wavelet_kan`, `taylor_kan`, `hermite_kan`, `laguerre_kan`, `bernstein_kan`
+- `relu_kan`, `rational_kan`, `sinc_kan`, `bsrbf_kan`
+- `kan_conv1d`, `kan_conv2d`, `kan_conv3d`
+- `kan_spectral_block1d/2d/3d`, `kan_res_block`, `kan_attention_block`
+
+KANs replace the scalar weights of an MLP with learnable univariate functions on each edge, parameterised by a basis (B-spline, RBF, Fourier, orthogonal polynomial, wavelet, …). foundax ships 17 KAN variants plus matching convolutional / spectral / residual / attention blocks, all integrated with the `|` pipe API.
+
+Use them when:
+
+- you want an expressive MLP alternative with strong inductive bias
+- the target function has known structure (smooth, periodic, multi-scale, polynomial) that a particular basis encodes well
+- you want a drop-in pointwise mixer for FNO/UNet/transformer pipelines (`kan_spectral_block2d`, `kan_attention_block`)
+
+See the [dedicated KAN page](kan.md) for the full variant list, basis details, and usage examples.
 
 ## Factory conventions
 

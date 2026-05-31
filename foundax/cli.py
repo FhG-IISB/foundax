@@ -14,3 +14,8 @@ def convert_entry() -> None:
 def compare_entry() -> None:
     root = Path(__file__).resolve().parents[1]
     _run_script(root / "scripts" / "compare.py")
+
+
+def verify_entry() -> None:
+    root = Path(__file__).resolve().parents[1]
+    _run_script(root / "scripts" / "verify.py")

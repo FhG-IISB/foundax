@@ -7,9 +7,11 @@ except PackageNotFoundError:
 
 from .configs import BCAT_CONFIGS
 from .model_eqx import BCAT
+from .transfer_eqx import transfer_pt_to_eqx
 
 __all__ = [
     "__version__",
     "BCAT",
     "BCAT_CONFIGS",
+    "transfer_pt_to_eqx",
 ]

@@ -15,6 +15,7 @@ from .model_eqx import (
     PROSEODE2to1,
     PROSEPDE2to1,
 )
+from .transfer_eqx import transfer_pt_to_eqx
 
 __all__ = [
     "__version__",
@@ -24,4 +25,5 @@ __all__ = [
     "PROSE2to1",
     "PROSEODE2to1",
     "PROSEPDE2to1",
+    "transfer_pt_to_eqx",
 ]

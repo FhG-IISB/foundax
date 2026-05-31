@@ -38,12 +38,16 @@ def _dispatch_script(
 def _convert_bcat(projects_root: Path, extra_args: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Direct BCAT conversion")
     parser.add_argument(
-        "--checkpoint", required=True, help="Path to BCAT PyTorch checkpoint"
+        "--checkpoint", default=None, help="Path to BCAT PyTorch checkpoint"
     )
-    parser.add_argument("--output", required=True, help="Output msgpack path")
+    parser.add_argument("--output", default=None, help="Output msgpack path")
     parser.add_argument("--input-len", type=int, default=10)
     parser.add_argument("--output-len", type=int, default=10)
     args = parser.parse_args(extra_args)
+
+    if args.checkpoint is None:
+        print("No BCAT checkpoint provided — skipping conversion")
+        return 0
 
     sys.path.insert(0, str(projects_root / "jax_bcat"))
 

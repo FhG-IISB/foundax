@@ -35,6 +35,43 @@ from foundax.architectures.fno import (
 )
 from foundax.architectures.mlp import MLP
 from foundax.architectures.linear import Linear
+from foundax.architectures.ffno import (
+    FactorizedSpectralBlock2d,
+    FactorizedSpectralBlock3d,
+)
+from foundax.architectures.wno import (
+    WaveletBlock1d,
+    WaveletBlock2d,
+    WaveletBlock3d,
+)
+
+from foundax.architectures.kan import (
+    KANLayer,
+    EfficientKANLayer,
+    FastKANLayer,
+    FourierKANLayer,
+    ChebyshevKANLayer,
+    JacobiKANLayer,
+    LegendreKANLayer,
+    WaveletKANLayer,
+    TaylorKANLayer,
+    HermiteKANLayer,
+    LaguerreKANLayer,
+    BernsteinKANLayer,
+    ReLUKANLayer,
+    RationalKANLayer,
+    SincKANLayer,
+    GramKANLayer,
+    BSRBFKANLayer,
+    KANConv1d,
+    KANConv2d,
+    KANConv3d,
+    KANResBlock,
+    KANSpectralBlock1d,
+    KANSpectralBlock2d,
+    KANSpectralBlock3d,
+    KANAttentionBlock,
+)
 
 __all__ = [
     "SpectralBlock1d",
@@ -45,4 +82,37 @@ __all__ = [
     "SpectralConv3d",
     "MLP",
     "Linear",
+    # Flow-matching backbones
+    "FactorizedSpectralBlock2d",
+    "FactorizedSpectralBlock3d",
+    "WaveletBlock1d",
+    "WaveletBlock2d",
+    "WaveletBlock3d",
+    # KAN layer primitives
+    "KANLayer",
+    "EfficientKANLayer",
+    "FastKANLayer",
+    "FourierKANLayer",
+    "ChebyshevKANLayer",
+    "JacobiKANLayer",
+    "LegendreKANLayer",
+    "WaveletKANLayer",
+    "TaylorKANLayer",
+    "HermiteKANLayer",
+    "LaguerreKANLayer",
+    "BernsteinKANLayer",
+    "ReLUKANLayer",
+    "RationalKANLayer",
+    "SincKANLayer",
+    "GramKANLayer",
+    "BSRBFKANLayer",
+    # KAN convolutional + structural blocks
+    "KANConv1d",
+    "KANConv2d",
+    "KANConv3d",
+    "KANResBlock",
+    "KANSpectralBlock1d",
+    "KANSpectralBlock2d",
+    "KANSpectralBlock3d",
+    "KANAttentionBlock",
 ]

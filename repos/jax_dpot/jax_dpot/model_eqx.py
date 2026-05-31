@@ -7,9 +7,14 @@ from __future__ import annotations
 
 from typing import Callable, Optional, Tuple
 
+import functools
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+
+# Match PyTorch nn.GELU() which uses exact GELU (approximate=False)
+_gelu_exact = functools.partial(jax.nn.gelu, approximate=False)
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +42,7 @@ class AFNO2D(eqx.Module):
         channel_first: bool = False,
         modes: int = 32,
         hidden_size_factor: int = 1,
-        act: Callable = jax.nn.gelu,
+        act: Callable = _gelu_exact,
         *,
         key: jax.Array,
     ):
@@ -147,7 +152,7 @@ class Block(eqx.Module):
         mlp_ratio: float = 1.0,
         channel_first: bool = False,
         modes: int = 32,
-        act: Callable = jax.nn.gelu,
+        act: Callable = _gelu_exact,
         *,
         key: jax.Array,
     ):
@@ -226,7 +231,7 @@ class PatchEmbed(eqx.Module):
         in_chans: int,
         embed_dim: int,
         out_dim: int,
-        act: Callable = jax.nn.gelu,
+        act: Callable = _gelu_exact,
         *,
         key: jax.Array,
     ):
@@ -379,7 +384,7 @@ class DPOTNet(eqx.Module):
         mlp_ratio: float = 1.0,
         n_cls: int = 12,
         normalize: bool = False,
-        act: Callable = jax.nn.gelu,
+        act: Callable = _gelu_exact,
         time_agg: str = "exp_mlp",
         *,
         key: jax.Array,

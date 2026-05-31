@@ -45,6 +45,7 @@ If you are new to foundax, follow this path:
 | Guide | Focus |
 |---|---|
 | [Core Models](core-models.md) | Direct Equinox architectures in `foundax/architectures` and exposed via `foundax.nn` |
+| [Kolmogorov–Arnold Networks](kan.md) | 17 KAN variants + convolutional / spectral / residual / attention blocks |
 | [Foundation Models](equinox-architectures.md) | Namespace wrappers for Poseidon, MORPH, MPP, Walrus, BCAT, PDEformer-2, DPOT, and PROSE |
 | [Model Examples](model-examples.md) | Minimal end-to-end examples for both core and foundation-model constructors |
 | [GitHub Pages](github-pages.md) | Local preview, build, and deployment setup |
@@ -57,6 +58,9 @@ import foundax as fx
 # Core architectures
 mlp = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 fno = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
+
+# Kolmogorov–Arnold Networks (one of 17 variants)
+kan = fx.fastkan(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 
 # Foundation wrappers (preferred namespace style)
 poseidon = fx.poseidon.T()

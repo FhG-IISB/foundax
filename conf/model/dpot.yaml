@@ -1,0 +1,21 @@
+name: dpot
+github_url: https://github.com/thu-ml/DPOT
+hf_checkpoint:
+  repo_id: hzk17/DPOT
+  filename: model_Ti.pth
+compare_needs_pt_repo: true
+compare_extra_args:
+  - "--variant"
+  - "Ti"
+  - "--dpot-root"
+  - "{repos_dir}/dpot"
+  - "--checkpoint"
+  - "{checkpoints_dir}/dpot/model_Ti.pth"
+has_compare: true
+convert_extra_args:
+  - "--variant"
+  - "Ti"
+  - "--checkpoint"
+  - "{checkpoints_dir}/dpot/model_Ti.pth"
+  - "--output"
+  - "{checkpoints_dir}/dpot/dpot_Ti.msgpack"

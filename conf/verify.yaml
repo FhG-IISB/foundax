@@ -1,0 +1,40 @@
+defaults:
+  - _self_
+
+# List of model names to verify (must match conf/model/<name>.yaml)
+# Use 'models=[walrus,morph]' on the CLI to run a subset
+models:
+  - walrus
+  - poseidon
+  - morph
+  - mpp
+  - bcat
+  - dpot
+  - pdeformer2
+  - prose
+
+# Root for downloaded/cloned artefacts
+outdir: ${hydra:runtime.cwd}/verify_output
+# Where to clone original PyTorch repos
+repos_dir: ${hydra:runtime.cwd}/og_repos
+
+# Pipeline steps to run (subset of: clone install download convert compare)
+steps:
+  - clone
+  - install
+  - download
+  - convert
+  - compare
+
+# Force re-download / re-convert even if artefacts already exist
+force_download: false
+force_convert: false
+
+# Walrus-specific: number of processor blocks in the full model
+processor_blocks: 40
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${outdir}/hydra/${now:%Y-%m-%d_%H-%M-%S}

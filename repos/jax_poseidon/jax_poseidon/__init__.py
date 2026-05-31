@@ -14,9 +14,11 @@ except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
 from .scot_eqx import ScOT, ScOTConfig
+from .transfer_eqx import transfer_pt_to_eqx
 
 __all__ = [
     "__version__",
     "ScOT",
     "ScOTConfig",
+    "transfer_pt_to_eqx",
 ]

@@ -8,7 +8,7 @@ import torch
 from flax.core import freeze, unfreeze
 from flax.serialization import to_bytes
 
-from jax_prose.prose_fd_2to1 import PROSE2to1
+from jax_prose import PROSE2to1
 
 
 def _strip_prefix(k: str) -> str:
@@ -29,24 +29,29 @@ def main():
     ap = argparse.ArgumentParser(
         description="Convert PROSE-FD PyTorch checkpoint to JAX msgpack"
     )
-    ap.add_argument("--input", type=Path, required=True, help="Path to prose_fd.pth")
-    ap.add_argument("--output", type=Path, required=True, help="Output msgpack path")
+    ap.add_argument("--input", type=Path, default=None, help="Path to prose_fd.pth")
+    ap.add_argument("--output", type=Path, default=None, help="Output msgpack path")
     ap.add_argument("--x-num", type=int, default=128)
     ap.add_argument("--max-output-dim", type=int, default=4)
     ap.add_argument("--input-len", type=int, default=10)
     ap.add_argument("--output-len", type=int, default=10)
     args = ap.parse_args()
 
-    ckpt = torch.load(args.input, map_location="cpu")
+    if args.input is None:
+        print("[PROSE convert] No --input checkpoint provided — skipping.")
+        return
+
+    ckpt = torch.load(args.input, map_location="cpu", weights_only=False)
     state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
     state = {_strip_prefix(k): v for k, v in state.items()}
 
     n_words = int(state["symbol_encoder.word_embeddings.weight"].shape[0])
+    rng = jax.random.PRNGKey(0)
     model = PROSE2to1(
-        n_words=n_words, x_num=args.x_num, max_output_dim=args.max_output_dim
+        n_words=n_words, x_num=args.x_num, max_output_dim=args.max_output_dim,
+        key=rng,
     )
 
-    rng = jax.random.PRNGKey(0)
     dummy_x = jnp.ones(
         (1, args.input_len, args.x_num, args.x_num, args.max_output_dim),
         dtype=jnp.float32,

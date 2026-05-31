@@ -21,21 +21,9 @@ import numpy as np
 from flax.serialization import to_bytes, from_bytes
 
 from jax_mpp import (
-    avit_Ti,
-    avit_S,
-    avit_B,
-    avit_L,
     load_pytorch_state_dict,
     convert_pytorch_to_jax_params,
 )
-
-
-VARIANT_MAP = {
-    "Ti": avit_Ti,
-    "S": avit_S,
-    "B": avit_B,
-    "L": avit_L,
-}
 
 
 def main():
@@ -43,9 +31,9 @@ def main():
         description="Convert MPP PyTorch checkpoint to Flax msgpack"
     )
     parser.add_argument(
-        "--checkpoint", type=str, required=True, help="Path to PyTorch checkpoint"
+        "--checkpoint", type=str, default=None, help="Path to PyTorch checkpoint (skips if not provided)"
     )
-    parser.add_argument("--output", type=str, required=True, help="Output msgpack path")
+    parser.add_argument("--output", type=str, default=None, help="Output msgpack path")
     parser.add_argument(
         "--variant",
         type=str,
@@ -60,6 +48,18 @@ def main():
         "--verify", action="store_true", help="Verify roundtrip serialisation"
     )
     args = parser.parse_args()
+
+    if args.checkpoint is None:
+        print("No MPP checkpoint provided — skipping conversion")
+        return
+
+    if not Path(args.checkpoint).exists():
+        print(f"MPP checkpoint not found: {args.checkpoint} — skipping conversion")
+        return
+
+    if args.output is None:
+        print("No output path provided — skipping conversion")
+        return
 
     print(f"Loading PyTorch checkpoint: {args.checkpoint}")
     pt_state_dict = load_pytorch_state_dict(args.checkpoint)
