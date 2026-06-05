@@ -111,6 +111,7 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | `fx.pdeformer2` | small, base, fast | Graphormer + INR | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) |
 | `fx.dpot` | Ti, S, M, L, H | DPOTNet (AFNO) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) |
 | `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Seq-to-seq transformer | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) |
+| `fx.timesfm` | flax_200m, torch_200m | Decoder-only transformer (time-series, 200M, Flax NNX wrap) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) |
 
 Pretrained weights keep their upstream licenses — see [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
 

@@ -12,6 +12,7 @@ models:
   - dpot
   - pdeformer2
   - prose
+  - timesfm
 
 # Root for downloaded/cloned artefacts
 outdir: ${hydra:runtime.cwd}/verify_output

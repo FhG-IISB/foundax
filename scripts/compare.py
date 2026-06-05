@@ -50,6 +50,7 @@ def main() -> None:
             "walrus",
             "dpot",
             "bcat",
+            "timesfm",
         ],
         help="Model family to compare",
     )
@@ -102,6 +103,14 @@ def main() -> None:
     elif args.model == "bcat":
         code = _dispatch_script(
             args.projects_root, "jax_bcat", "scripts/compare.py", extra
+        )
+    elif args.model == "timesfm":
+        # Wrapped (not vendored) foundation model: dispatch directly to the
+        # top-level compare script.
+        script = Path(__file__).resolve().parent / "compare_timesfm.py"
+        code = _run(
+            [sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
         )
     else:
         print(f"Unsupported model: {args.model}")

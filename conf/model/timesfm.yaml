@@ -1,0 +1,10 @@
+name: timesfm
+github_url: https://github.com/google-research/timesfm
+# HF download is handled lazily by upstream from_pretrained (snapshot_download,
+# not single-file). The orchestrator skips this step; compare_timesfm.py
+# triggers the download itself when run with --download.
+hf_checkpoint: null
+compare_needs_pt_repo: false  # PT impl ships in the same pip package as Flax
+has_compare: true
+convert_extra_args: []
+compare_extra_args: []        # add "--download" here for full PT vs Flax parity

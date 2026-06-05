@@ -79,6 +79,7 @@ Each namespace wraps a vendored JAX implementation in `repos/jax_*`. Pretrained 
 | `fx.pdeformer2` | `small`, `base`, `fast` | Graphormer encoder + INR decoder with hypernetwork | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) | Apache-2.0 |
 | `fx.dpot` | `Ti`, `S`, `M`, `L`, `H` | DPOTNet (AFNO / Fourier-style mixing) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) | Apache-2.0 |
 | `fx.prose` | `fd_1to1`, `fd_2to1`, `ode_2to1`, `pde_2to1` | Transformer sequence-to-sequence (FD / ODE / PDE tasks) | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) | MIT |
+| `fx.timesfm` | `flax_200m`, `torch_200m` | Decoder-only transformer for time-series forecasting (200M, Flax NNX wrap of `google-research/timesfm`) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) | Apache-2.0 |
 
 > Weights keep their upstream licenses — see [THIRD_PARTY_LICENSES](https://github.com/FhG-IISB/foundax/blob/main/THIRD_PARTY_LICENSES); Poseidon weights are non-commercial.
 

@@ -101,6 +101,7 @@ def main() -> None:
             "walrus",
             "dpot",
             "bcat",
+            "timesfm",
         ],
         help="Model family to convert",
     )
@@ -152,6 +153,11 @@ def main() -> None:
         )
     elif args.model == "bcat":
         code = _convert_bcat(args.projects_root, extra)
+    elif args.model == "timesfm":
+        # No conversion: weights live in the upstream timesfm pip package and
+        # are loaded by both backends directly from Hugging Face.
+        print("  [convert] timesfm: native HF checkpoint — no msgpack needed")
+        code = 0
     else:
         print(f"Unsupported model: {args.model}")
         code = 2
