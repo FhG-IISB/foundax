@@ -79,9 +79,29 @@ Each namespace wraps a vendored JAX implementation in `repos/jax_*`. Pretrained 
 | `fx.pdeformer2` | `small`, `base`, `fast` | Graphormer encoder + INR decoder with hypernetwork | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) | Apache-2.0 |
 | `fx.dpot` | `Ti`, `S`, `M`, `L`, `H` | DPOTNet (AFNO / Fourier-style mixing) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) | Apache-2.0 |
 | `fx.prose` | `fd_1to1`, `fd_2to1`, `ode_2to1`, `pde_2to1` | Transformer sequence-to-sequence (FD / ODE / PDE tasks) | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) | MIT |
-| `fx.timesfm` | `flax_200m`, `torch_200m` | Decoder-only transformer for time-series forecasting (200M, Flax NNX wrap of `google-research/timesfm`) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) | Apache-2.0 |
+| `fx.timesfm` | `small` | Decoder-only transformer for time-series forecasting (200M, Flax NNX wrap of `google-research/timesfm`; pure-JAX `__call__`, JIT + fine-tuning — see below) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) | Apache-2.0 |
 
 > Weights keep their upstream licenses — see [THIRD_PARTY_LICENSES](https://github.com/FhG-IISB/foundax/blob/main/THIRD_PARTY_LICENSES); Poseidon weights are non-commercial.
+
+### TimesFM — wrap rather than port
+
+`fx.timesfm` is the first foundation-model entry exposed by *wrapping* upstream code rather than re-porting it: TimesFM 2.5 is a Flax NNX model maintained by Google, and we expose it through a thin `eqx.Module` shell that splits the upstream NNX module via `nnx.split` into a static `GraphDef` and a JAX-array `State` pytree. The wrap pattern is appropriate here because the model is mainly used for inference + fine-tuning of the full surface (rather than architecture surgery), and re-porting 200M NNX params with no functional gain would be high-effort to maintain in lockstep with Google's releases.
+
+Capabilities (verified by `scripts/compare_timesfm.py`):
+
+- **Forward parity vs upstream `forecast()`** — float32 noise (~8e-7 max abs diff on a 3-series, horizon-64 test).
+- **JIT** — `eqx.filter_jit(model)` works (also ~6e-7 vs eager); the inner `model.decode` is already `@nnx.jit`'d upstream.
+- **Fine-tuning** — `eqx.filter_grad` finds the full ~231M-param `state` tree (NNX packs into 25 leaves via internal `nnx.vmap` over the layer stack); standard `optax.adamw` + `eqx.apply_updates` step strictly decreases an MSE loss on a synthetic forecasting task.
+- **Channel-last, unbatched API** — `(context, 1) → (horizon, 1)` for single series; `(B, context, 1) → (B, horizon, 1)` for batched.
+
+For `.eqx` checkpoint serialisation, use [jNO](https://github.com/FhG-IISB/jNO) — `jno.nn.wrap(fx.timesfm.small(horizon=24)).initialize('./timesfm.eqx')` handles the save/load + optimizer state.
+
+Limitations:
+
+- `jax.vmap` over the wrapper is **not** supported — the upstream `decode()` uses `nnx.scan` internally for the per-layer carry, which trips JAX's trace-context check when an outer `vmap` is active. Use the explicit `(B, context, 1)` batched form instead — JIT specialises per batch shape and is equally efficient.
+- TimesFM 2.5 is strictly univariate; the channel axis is always size 1.
+- Each distinct `horizon` triggers a separate JIT trace; build one model per horizon you need.
+- Pretrained-only — there is no “fresh init from scratch” path through this wrapper. For from-scratch training you would interact with the upstream NNX module directly.
 
 See [Foundation Models](equinox-architectures.md) for per-namespace usage.
 

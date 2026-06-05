@@ -138,7 +138,7 @@ transformers = ">=4.30"
 rotary-embedding-torch = ">=0.8.9, <0.9"
 torchtune = ">=0.6.1, <0.7"
 torchao = ">=0.17.0, <0.18"
-timesfm = { path = "/home/fleef/Work/projects/foundax/og_repos/timesfm", extras = ["flax", "torch"] }
+timesfm = { path = "/home/fleef/Work/projects/foundax/og_repos/timesfm", extras = ["flax"] }
 
 [tool.pixi.feature.dev.tasks]
 test-train = "pytest --tb=short -m train -v"

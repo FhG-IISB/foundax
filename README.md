@@ -111,7 +111,7 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | `fx.pdeformer2` | small, base, fast | Graphormer + INR | Ye et al. 2025 — [arXiv:2507.15409](https://arxiv.org/abs/2507.15409) |
 | `fx.dpot` | Ti, S, M, L, H | DPOTNet (AFNO) | Hao et al., ICML 2024 — [arXiv:2403.03542](https://arxiv.org/abs/2403.03542) |
 | `fx.prose` | fd_1to1, fd_2to1, ode_2to1, pde_2to1 | Seq-to-seq transformer | Liu et al. 2023 — [arXiv:2309.16816](https://arxiv.org/abs/2309.16816); follow-up Sun et al. 2024 — [arXiv:2404.12355](https://arxiv.org/abs/2404.12355) |
-| `fx.timesfm` | flax_200m, torch_200m | Decoder-only transformer (time-series, 200M, Flax NNX wrap) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) |
+| `fx.timesfm` | small | Decoder-only transformer (time-series, 200M, Flax NNX wrap; jit + fine-tuning) | Das et al. 2024 — [arXiv:2310.10688](https://arxiv.org/abs/2310.10688) |
 
 Pretrained weights keep their upstream licenses — see [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
 
@@ -138,7 +138,47 @@ model = fx.bcat.base()
 model = fx.pdeformer2.small()     # small/base/fast
 model = fx.dpot.Ti()              # Ti/S/M/L/H
 model, variables = fx.prose.fd_1to1()
+
+# TimesFM 2.5 — time-series foundation model (Flax NNX wrap, 200M params)
+# - input/output: channel-last unbatched (context, 1) → (horizon, 1);
+#   also accepts (B, context, 1) → (B, horizon, 1)
+# - horizon fixed at construction so JIT can specialise on it
+# - context must be a multiple of 32 (input patch size)
+import jax.numpy as jnp
+model = fx.timesfm.small(horizon=24)    # downloads checkpoint from HF on first call
+y = model(jnp.zeros((512, 1)))          # (24, 1)
 ```
+
+### TimesFM extras (JIT, fine-tuning)
+
+```python
+import equinox as eqx, optax, jax.numpy as jnp
+import foundax as fx
+
+model = fx.timesfm.small(horizon=24)
+
+# JIT — compiles once per input shape
+fast = eqx.filter_jit(model)
+y = fast(jnp.zeros((512, 1)))
+
+# Fine-tuning — gradients flow through the full ~231M-param state
+optimizer = optax.adamw(1e-5)
+opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
+
+@eqx.filter_jit
+def step(model, opt_state, x, y):
+    def loss_fn(m): return jnp.mean((m(x) - y) ** 2)
+    loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
+    updates, opt_state = optimizer.update(grads, opt_state, eqx.filter(model, eqx.is_array))
+    return eqx.apply_updates(model, updates), opt_state, loss
+```
+
+For `.eqx` checkpoint serialisation (and the training/inference helpers built on top of it) see [jNO](https://github.com/FhG-IISB/jNO) — `jno.nn.wrap(fx.timesfm.small(horizon=24)).initialize('./timesfm.eqx')`.
+
+**Caveats:**
+- `jax.vmap` over the wrapper is **not** supported — the upstream `decode()` uses `nnx.scan` for the per-layer carry, which conflicts with `vmap`'s trace level. Use the explicit `(B, context, 1)` batched form instead (JIT specialises per batch shape; equally efficient).
+- TimesFM is strictly univariate — the channel axis is always size 1.
+- Each distinct `horizon` triggers a separate JIT trace; build one model per horizon you care about.
 
 ## Composable Pipe API
 

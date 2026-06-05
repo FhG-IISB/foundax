@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
 """
-TimesFM: forward-pass parity between foundax's Flax wrapper and the
-upstream PyTorch implementation.
+TimesFM: forward-pass parity + training-readiness checks for the
+foundax Flax wrapper.
 
-Both backends load the same pretrained 200M-param checkpoint from
-Hugging Face (``google/timesfm-2.5-200m-flax`` and ``-torch``), forecast
-the same synthetic series, and we compare the point forecasts.
+Four checks (all pure JAX, no PyTorch dep):
 
-Two modes:
+  1. **Upstream-vs-foundax-wrapper parity** — call the upstream high-level
+     ``TimesFM_2p5_200M_flax.forecast()`` and compare against our
+     wrapper's ``model(inputs)`` on the same input.
+  2. **Unbatched vs batched shape equivalence** — single-series
+     ``(context, 1)`` call vs stacking + batched ``(B, context, 1)`` call.
+  3. **JIT compatibility** — eager call equals ``eqx.filter_jit(model)``.
+  4. **Training readiness** — gradients flow through ``eqx.filter_grad``,
+     and one optimizer step decreases a synthetic loss.
 
-  1. **Full parity** (default when checkpoints are available locally OR
-     ``--download`` is passed): runs both backends end-to-end and
-     compares ``point_forecast`` element-wise.
-  2. **Structural check** (fallback): instantiates the wrapper without
-     loading any checkpoint, just verifies the public surface is sane.
-     Used when checkpoints aren't downloaded and ``--download`` is not
-     given (saves ~800MB on every CI run).
+Checks 1-4 need the HF checkpoint (~800MB). On first run, pass
+``--download`` to allow the fetch. After that the cache makes subsequent
+runs fast.
 
 Usage::
 
-    # Structural check (no download)
-    python scripts/compare_timesfm.py
-
-    # Full parity (downloads ~800MB on first run, cached afterwards)
-    python scripts/compare_timesfm.py --download
+    python scripts/compare_timesfm.py            # structural-only
+    python scripts/compare_timesfm.py --download # full parity + jit + train
 """
 
 from __future__ import annotations
@@ -37,12 +35,10 @@ import numpy as np
 
 
 def _checkpoint_exists_locally(model_id: str) -> bool:
-    """True if the HF snapshot is already cached on disk."""
     try:
         hf_home = Path(
             os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface" / "hub")
         )
-        # snapshot_download stores under models--<org>--<name>/snapshots/<sha>/
         org, name = model_id.split("/")
         candidates = list(
             (hf_home / "hub").glob(f"models--{org}--{name}/snapshots/*")
@@ -52,73 +48,175 @@ def _checkpoint_exists_locally(model_id: str) -> bool:
         return False
 
 
-def _generate_synthetic_series(seed: int) -> list[np.ndarray]:
-    """Three deterministic time series of varying length and character."""
+def _generate_inputs(seed: int, batch: int = 3, context: int = 512):
+    """Return ``(B, context, 1)`` jnp array — context % patch_size=32 == 0.
+
+    Foundax channel-last convention: 1-D univariate series have channels=1.
+    """
+    import jax.numpy as jnp
+
     rng = np.random.default_rng(seed)
-    t1 = np.linspace(0, 50, 600)
-    series1 = np.sin(t1) + 0.3 * np.cos(2.3 * t1) + 0.05 * rng.standard_normal(t1.shape)
-    t2 = np.linspace(0, 30, 400)
-    series2 = (
-        0.5 * t2 / 30.0 + 0.4 * np.sin(0.7 * t2) + 0.1 * rng.standard_normal(t2.shape)
-    )
-    t3 = np.linspace(0, 100, 1024)
-    series3 = np.cumsum(rng.standard_normal(t3.shape)) * 0.05 + 0.3 * np.sin(0.5 * t3)
-    return [
-        series1.astype(np.float32),
-        series2.astype(np.float32),
-        series3.astype(np.float32),
-    ]
+    t = np.linspace(0.0, 50.0, context)
+    series = np.stack(
+        [
+            np.sin(t) + 0.3 * np.cos(2.3 * t) + 0.05 * rng.standard_normal(t.shape),
+            0.5 * t / 50.0 + 0.4 * np.sin(0.7 * t) + 0.1 * rng.standard_normal(t.shape),
+            np.cumsum(rng.standard_normal(t.shape)) * 0.05 + 0.3 * np.sin(0.5 * t),
+        ],
+        axis=0,
+    )[:batch]
+    return jnp.asarray(series, dtype=jnp.float32)[..., None]  # (B, context, 1)
 
 
-def compare_forward(seed: int) -> bool:
-    """Load both backends with HF checkpoints, forecast, compare."""
-    import foundax as fx
-
-    print("Loading Flax backend (compiling — may take ~30s)...")
-    flax_model = fx.timesfm.flax_200m(max_context=1024, max_horizon=128)
-    print("Loading PyTorch backend...")
-    torch_model = fx.timesfm.torch_200m(max_context=1024, max_horizon=128)
-
-    series = _generate_synthetic_series(seed)
-    print(f"Forecasting {len(series)} series, horizon=64")
-
-    flax_point, flax_q = flax_model(horizon=64, inputs=series)
-    torch_point, torch_q = torch_model(horizon=64, inputs=series)
-
-    # Empirically the PT and Flax backends agree to ~1e-6 max abs on the
-    # 200M model — well within float32 noise. We set the tolerance at 1e-4
-    # to leave some headroom for hardware / BLAS-impl variations.
-    diff_point = np.abs(np.asarray(flax_point) - np.asarray(torch_point))
-    rel_l2 = np.linalg.norm(diff_point) / (
-        np.linalg.norm(np.asarray(torch_point)) + 1e-12
-    )
-    max_abs = float(np.max(diff_point))
-    mean_abs = float(np.mean(diff_point))
-
-    tol = 1e-4
-    status = "PASS" if max_abs < tol else "FAIL"
+def _compare(name, ref, ours, atol=1e-4, rtol=1e-4):
+    ref = np.asarray(ref)
+    ours = np.asarray(ours)
+    assert ref.shape == ours.shape, f"{name}: shape {ref.shape} vs {ours.shape}"
+    diff = np.abs(ref - ours)
+    max_abs = float(diff.max())
+    mean_abs = float(diff.mean())
+    rel = float(np.linalg.norm(diff) / (np.linalg.norm(ref) + 1e-12))
+    threshold = atol + rtol * float(np.max(np.abs(ref)))
+    status = "PASS" if max_abs < threshold else "FAIL"
     print(
-        f"  [{status}] TimesFM 2.5 200M point forecast "
-        f"shape={tuple(flax_point.shape)} "
-        f"max_abs={max_abs:.3e} mean_abs={mean_abs:.3e} rel_l2={float(rel_l2):.3e}"
+        f"  [{status}] {name:<40} shape={tuple(ours.shape)} "
+        f"max_abs={max_abs:.3e} mean_abs={mean_abs:.3e} rel_l2={rel:.3e}"
     )
     return status == "PASS"
 
 
+def upstream_vs_wrapper(seed: int) -> bool:
+    """Foundax wrapper (batched form) == upstream forecast() output."""
+    import foundax as fx
+    from timesfm import ForecastConfig, TimesFM_2p5_200M_flax
+
+    horizon, context = 64, 512
+
+    print("Loading upstream Flax model + compiling (~30s)...")
+    upstream = TimesFM_2p5_200M_flax.from_pretrained("google/timesfm-2.5-200m-flax")
+    upstream.compile(
+        forecast_config=ForecastConfig(
+            max_context=context,
+            max_horizon=horizon,
+            normalize_inputs=False,
+            force_flip_invariance=False,
+            infer_is_positive=False,
+        ),
+        dryrun=False,
+    )
+
+    print("Loading foundax wrapper...")
+    ours = fx.timesfm.small(horizon=horizon, normalize_inputs=False)
+
+    batch = _generate_inputs(seed, batch=3, context=context)  # (3, context, 1)
+    inputs_list = [np.asarray(batch[i, :, 0]) for i in range(batch.shape[0])]
+
+    upstream_point, _ = upstream.forecast(horizon=horizon, inputs=inputs_list)
+    ours_point = ours(batch)[..., 0]  # strip channel for comparison
+
+    return _compare(
+        "upstream forecast vs wrapper (batched)", upstream_point, ours_point
+    )
+
+
+def single_vs_batched(seed: int) -> bool:
+    """Single-series (context, 1) call == stacking + batched call."""
+    import jax.numpy as jnp
+    import foundax as fx
+
+    horizon, context = 64, 512
+    model = fx.timesfm.small(horizon=horizon, normalize_inputs=True)
+    batch = _generate_inputs(seed, batch=3, context=context)
+
+    print("Per-series (channel-last unbatched) loop...")
+    single_outs = jnp.stack([model(batch[i]) for i in range(batch.shape[0])])
+    print("Batched (B, context, 1) call...")
+    batched_out = model(batch)
+
+    return _compare("single (context,1) vs batched", batched_out, single_outs)
+
+
+def jit_equivalence(seed: int) -> bool:
+    """Eager == eqx.filter_jit on the unbatched (context, 1) form."""
+    import equinox as eqx
+    import foundax as fx
+
+    horizon, context = 64, 512
+    model = fx.timesfm.small(horizon=horizon, normalize_inputs=True)
+    series = _generate_inputs(seed, batch=1, context=context)[0]
+
+    print("Running eager forward...")
+    eager = model(series)
+    print("Running jit'd forward...")
+    jitted = eqx.filter_jit(model)(series)
+
+    return _compare("eager vs eqx.filter_jit", eager, jitted, atol=1e-5, rtol=1e-5)
+
+
+def train_step_decreases_loss(seed: int) -> bool:
+    """Fine-tuning loop: ``eqx.filter_grad`` finds trainable arrays + one
+    optax step strictly decreases an MSE loss on synthetic data."""
+    import equinox as eqx
+    import jax
+    import jax.numpy as jnp
+    import optax
+    import foundax as fx
+
+    horizon, context = 32, 128  # small for CPU speed
+    model = fx.timesfm.small(horizon=horizon, normalize_inputs=True)
+
+    # Synthetic supervised data: model trained to predict a step-shifted sine.
+    rng = jax.random.PRNGKey(seed)
+    x_rng, y_rng = jax.random.split(rng)
+    x = (
+        jnp.sin(jnp.linspace(0, 20, context))[None, :, None]
+        + 0.05 * jax.random.normal(x_rng, (2, context, 1))
+    ).astype(jnp.float32)
+    y = (
+        jnp.sin(jnp.linspace(20, 20 + 10 * horizon / context, horizon))[None, :, None]
+        + 0.05 * jax.random.normal(y_rng, (2, horizon, 1))
+    ).astype(jnp.float32)
+
+    def loss_fn(m):
+        return jnp.mean((m(x) - y) ** 2)
+
+    optimizer = optax.adamw(learning_rate=1e-5)
+    opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
+
+    @eqx.filter_jit
+    def step(model, opt_state):
+        loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
+        updates, opt_state = optimizer.update(
+            grads, opt_state, eqx.filter(model, eqx.is_array)
+        )
+        return eqx.apply_updates(model, updates), opt_state, loss
+
+    print("Running 3 fine-tuning steps...")
+    losses = []
+    for _ in range(3):
+        model, opt_state, loss = step(model, opt_state)
+        losses.append(float(loss))
+    print(f"  losses: {losses[0]:.6f} → {losses[-1]:.6f}")
+    ok = losses[-1] < losses[0]
+    status = "PASS" if ok else "FAIL"
+    print(
+        f"  [{status}] training step decreases loss     "
+        f"loss[0]={losses[0]:.3e}  loss[-1]={losses[-1]:.3e}  "
+        f"Δ={losses[0] - losses[-1]:+.3e}"
+    )
+    return ok
+
+
 def run_structural_check() -> int:
-    """Check the wrapper imports + surface is callable, without downloading."""
     import foundax as fx
 
     print("[TimesFM] Structural check (no checkpoint download)")
-    print(f"  fx.timesfm is callable:        {callable(fx.timesfm)}")
-    print(f"  fx.timesfm.flax_200m exists:   {fx.timesfm.flax_200m is not None}")
-    print(f"  fx.timesfm.torch_200m exists:  {fx.timesfm.torch_200m is not None}")
-    # Check we can at least import the upstream classes referenced by the
-    # wrapper without triggering a download.
+    print(f"  fx.timesfm is callable:      {callable(fx.timesfm)}")
+    print(f"  fx.timesfm.small exists:     {hasattr(fx.timesfm, 'small')}")
     try:
-        from timesfm import TimesFM_2p5_200M_flax, TimesFM_2p5_200M_torch  # noqa: F401
+        from timesfm import TimesFM_2p5_200M_flax  # noqa: F401
 
-        print("  upstream timesfm classes import: ok")
+        print("  upstream timesfm class imports: ok")
     except Exception as e:
         print(f"  upstream import failed: {e}")
         return 1
@@ -131,7 +229,7 @@ def parse_args(argv=None):
     p.add_argument(
         "--download",
         action="store_true",
-        help="Allow downloading the HF checkpoint (~800MB) for full parity test.",
+        help="Allow downloading the HF checkpoint (~800MB) for full forward parity.",
     )
     p.add_argument("--seed", type=int, default=0)
     return p.parse_args(argv)
@@ -140,25 +238,27 @@ def parse_args(argv=None):
 def main(argv=None) -> int:
     args = parse_args(argv)
     if find_spec("timesfm") is None:
-        print(
-            "timesfm package not installed — install with `pixi add --pypi --feature dev timesfm[flax,torch]`"
-        )
+        print("timesfm package not installed.")
         return 1
 
     flax_cached = _checkpoint_exists_locally("google/timesfm-2.5-200m-flax")
-    torch_cached = _checkpoint_exists_locally("google/timesfm-2.5-200m-pytorch")
-
-    if not (args.download or (flax_cached and torch_cached)):
+    if not (args.download or flax_cached):
         print("=" * 70)
         print("TimesFM: structural check only (run with --download for full parity)")
         print("=" * 70)
         return run_structural_check()
 
     print("=" * 70)
-    print("TimesFM: foundax Flax wrapper vs upstream PyTorch implementation")
+    print("TimesFM: foundax wrapper forward + JIT parity")
     print(f"  seed: {args.seed}")
     print("=" * 70)
-    return 0 if compare_forward(args.seed) else 1
+    ok = [
+        upstream_vs_wrapper(args.seed),
+        single_vs_batched(args.seed),
+        jit_equivalence(args.seed),
+        train_step_decreases_loss(args.seed),
+    ]
+    return 0 if all(ok) else 1
 
 
 if __name__ == "__main__":
