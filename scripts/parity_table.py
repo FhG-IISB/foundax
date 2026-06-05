@@ -28,6 +28,7 @@ ARCHITECTURES = [
     ("WNO", "compare_wno.py", "TapasTripura/WNO (structural only)"),
     ("DiT", "compare_dit.py", "facebookresearch/DiT"),
     ("GNOT", "compare_gnot.py", "HaoZhongkai/GNOT"),
+    ("GAOT", "compare_gaot.py", "camlab-ethz/GAOT"),
 ]
 
 # Map test-name (or substring) to (input shape string, kind-of-input).
@@ -52,6 +53,21 @@ INPUT_SHAPES = {
     "LinearAttention": "(1, 12, 32)",
     "LinearCrossAttention": "(1, 10, 32) query + 2×(1, 16, 32) branches",
     "CrossAttentionBlock": "(1, 10, 32) query + 2×(1, 16, 32) branches",
+    # GAOT — all 7 variants share the same toy I/O shape
+    "(a) linear / no attn / no geoembed":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(b) linear / cosine attn / no geoembed":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(c1) linear / dot_product attn / no geoembed":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(c2) linear / cosine attn / geoembed=statistical":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(c) linear / dot_product attn / geoembed=statistical":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(d) linear / cosine attn / geoembed=pointnet/mean":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
+    "(e) linear / cosine attn / geoembed=statistical / 5 layers":
+        "(3, 40, 2) phys / 8×8 latent / 20 query",
 }
 
 LINE_RE = re.compile(
