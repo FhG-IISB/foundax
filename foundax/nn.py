@@ -974,6 +974,165 @@ def gnot(
     )
 
 
+def gaot(
+    input_size: int = 2,
+    output_size: int = 1,
+    coord_dim: int = 2,
+    radius: float = 0.033,
+    hidden_size_mlp: int = 64,
+    mlp_layers: int = 3,
+    lifting_channels: int = 32,
+    use_attention: bool = True,
+    attention_type: str = "cosine",
+    use_geoembed: bool = True,
+    embedding_method: str = "statistical",
+    pooling: str = "max",
+    transform_type: str = "linear",
+    transformer_hidden_size: int = 256,
+    num_heads: int = 8,
+    num_kv_heads: Optional[int] = None,
+    num_layers: int = 3,
+    patch_size: int = 2,
+    ffn_multiplier: int = 4,
+    positional_embedding: str = "absolute",
+    use_long_range_skip: bool = True,
+    latent_tokens_size: Tuple[int, int] = (32, 32),
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a Geometry-Aware Operator Transformer (GAOT).
+
+    Faithful JAX/Equinox port of ``camlab-ethz/GAOT``. Precompute neighbour
+    graphs with :func:`foundax.architectures.gaot.compute_neighbors_csr`.
+
+    Args:
+        input_size: Number of input physical channels.
+        output_size: Number of output channels.
+        coord_dim: Spatial coordinate dimension (2 or 3).
+        radius: MAGNO neighbour search radius.
+        hidden_size_mlp: Hidden width of kernel + lifting MLPs.
+        mlp_layers: Kernel MLP depth.
+        lifting_channels: Latent token feature dimension.
+        use_attention: Enable AGNO attention reweighting.
+        attention_type: ``"cosine"`` or ``"dot_product"``.
+        use_geoembed: Enable per-query geometric embedding.
+        embedding_method: ``"statistical"`` or ``"pointnet"``.
+        pooling: PointNet pooling (``"max"`` or ``"mean"``).
+        transform_type: AGNO transform (``"linear"`` / ``"nonlinear"``).
+        transformer_hidden_size: UViT hidden width.
+        num_heads: UViT attention heads.
+        num_kv_heads: UViT key/value heads (None → ``num_heads``).
+        num_layers: UViT depth.
+        patch_size: Latent-grid patchification stride.
+        ffn_multiplier: SwiGLU FFN width multiplier.
+        positional_embedding: ``"absolute"`` or ``"rope"``.
+        use_long_range_skip: Enable UViT encoder↔decoder skips.
+        latent_tokens_size: ``(H, W)`` of the latent grid.
+        key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
+
+    Returns:
+        An ``equinox.Module`` (GAOT).
+    """
+    from .architectures.gaot import (
+        gaot as _gaot, MAGNOConfig, TransformerConfig, AttentionConfig,
+    )
+
+    if num_kv_heads is None:
+        num_kv_heads = num_heads
+
+    mc = MAGNOConfig(
+        coord_dim=coord_dim, radius=radius,
+        hidden_size=hidden_size_mlp, mlp_layers=mlp_layers,
+        lifting_channels=lifting_channels,
+        use_attention=use_attention, attention_type=attention_type,
+        use_geoembed=use_geoembed, embedding_method=embedding_method,
+        pooling=pooling, transform_type=transform_type,
+    )
+    tc = TransformerConfig(
+        patch_size=patch_size,
+        hidden_size=transformer_hidden_size,
+        num_layers=num_layers,
+        ffn_multiplier=ffn_multiplier,
+        positional_embedding=positional_embedding,
+        use_long_range_skip=use_long_range_skip,
+        attn_config=AttentionConfig(num_heads=num_heads, num_kv_heads=num_kv_heads),
+    )
+    return _gaot(
+        input_size=input_size, output_size=output_size,
+        magno_config=mc, transformer_config=tc,
+        latent_tokens_size=latent_tokens_size, key=_resolve_key(key),
+    )
+
+
+def gaot_S(
+    input_size: int = 2,
+    output_size: int = 1,
+    *,
+    key: jax.Array | None = None,
+    **kwargs,
+) -> eqx.Module:
+    """GAOT-S (Small) ~12 M params.
+
+    Args:
+        input_size: Number of input physical channels.
+        output_size: Number of output channels.
+        key: JAX PRNG key.
+        **kwargs: Override any :func:`gaot` hyperparameter.
+
+    Returns:
+        An ``equinox.Module`` (GAOT).
+    """
+    from .architectures.gaot import S
+
+    return S(input_size, output_size, key=_resolve_key(key), **kwargs)
+
+
+def gaot_M(
+    input_size: int = 2,
+    output_size: int = 1,
+    *,
+    key: jax.Array | None = None,
+    **kwargs,
+) -> eqx.Module:
+    """GAOT-M (Medium) ~55 M params.
+
+    Args:
+        input_size: Number of input physical channels.
+        output_size: Number of output channels.
+        key: JAX PRNG key.
+        **kwargs: Override any :func:`gaot` hyperparameter.
+
+    Returns:
+        An ``equinox.Module`` (GAOT).
+    """
+    from .architectures.gaot import M
+
+    return M(input_size, output_size, key=_resolve_key(key), **kwargs)
+
+
+def gaot_L(
+    input_size: int = 2,
+    output_size: int = 1,
+    *,
+    key: jax.Array | None = None,
+    **kwargs,
+) -> eqx.Module:
+    """GAOT-L (Large) ~200 M params.
+
+    Args:
+        input_size: Number of input physical channels.
+        output_size: Number of output channels.
+        key: JAX PRNG key.
+        **kwargs: Override any :func:`gaot` hyperparameter.
+
+    Returns:
+        An ``equinox.Module`` (GAOT).
+    """
+    from .architectures.gaot import L
+
+    return L(input_size, output_size, key=_resolve_key(key), **kwargs)
+
+
 def moegptno(
     trunk_size: int,
     branch_size: int,

@@ -6,6 +6,15 @@ https://arxiv.org/abs/2405.19101
 Architecture: Scalable Operator Transformer (ScOT) -- Swin-Transformer
 backbone with U-Net-style skip connections for multi-scale operator learning.
 
+.. warning::
+
+    The upstream Poseidon repository (https://github.com/camlab-ethz/poseidon)
+    carries **no code license** (all rights reserved by default).  The pretrained
+    weights hosted on Hugging Face are released under
+    **CC BY-NC 4.0** (non-commercial use only).
+    See https://creativecommons.org/licenses/by-nc/4.0/ and
+    ``THIRD_PARTY_LICENSES`` for details.
+
 Usage::
 
     model = foundax.poseidon.T(num_channels=1, num_out_channels=1)

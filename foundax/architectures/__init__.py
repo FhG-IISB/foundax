@@ -58,6 +58,18 @@ from .wno import (
     WNO2d as WNO2d,
     WNO3d as WNO3d,
 )
+from .gaot import (
+    GAOT as GAOT,
+    MAGNOConfig as MAGNOConfig,
+    TransformerConfig as TransformerConfig,
+    AttentionConfig as AttentionConfig,
+    AGNO as AGNO,
+    GeometricEmbedding as GeometricEmbedding,
+    MAGNOEncoder as MAGNOEncoder,
+    MAGNODecoder as MAGNODecoder,
+    compute_neighbors as compute_neighbors,
+    compute_neighbors_csr as compute_neighbors_csr,
+)
 from .kan import (
     # bases
     BSplineBasis as BSplineBasis,

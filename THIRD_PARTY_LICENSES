@@ -21,6 +21,22 @@ See https://creativecommons.org/licenses/by-nc/4.0/ for details.
 
 
 ────────────────────────────────────────────────────────────────────────
+GAOT (Geometry-Aware Operator Transformer)
+────────────────────────────────────────────────────────────────────────
+Project:  https://github.com/camlab-ethz/GAOT
+Weights:  No pretrained weights released as of 2026-06.
+
+Code License:    No license specified in the GitHub repository.
+Weights License: N/A
+
+The GAOT architecture is re-implemented here from the published paper
+(arXiv:2505.18781) without copying upstream source code.  As with the
+Poseidon repository, the upstream repo carries no explicit open-source
+license, which means all rights are reserved by default.  Consult the
+upstream authors before using this implementation in commercial products.
+
+
+────────────────────────────────────────────────────────────────────────
 Walrus
 ────────────────────────────────────────────────────────────────────────
 Project:  https://github.com/PolymathicAI/walrus
