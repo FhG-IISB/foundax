@@ -52,7 +52,9 @@ def _build_pt_spherical_conv(torch, th_nn, th, in_ch, out_ch, L, nlat, nlon, gri
         def __init__(self):
             super().__init__()
             self.sht = th.RealSHT(nlat=nlat, nlon=nlon, lmax=L, mmax=L, grid=grid)
-            self.isht = th.InverseRealSHT(nlat=nlat, nlon=nlon, lmax=L, mmax=L, grid=grid)
+            self.isht = th.InverseRealSHT(
+                nlat=nlat, nlon=nlon, lmax=L, mmax=L, grid=grid
+            )
             # Match foundax shape (L, L, in_ch, out_ch) so weight transfer
             # is identity (no transpose).
             self.weight_real = th_nn.Parameter(torch.zeros(L, L, in_ch, out_ch))
@@ -60,17 +62,19 @@ def _build_pt_spherical_conv(torch, th_nn, th, in_ch, out_ch, L, nlat, nlon, gri
 
         def forward(self, x):
             # x: (B, nlat, nlon, in_ch) channel-last
-            x_cf = x.permute(0, 3, 1, 2)            # (B, in_ch, nlat, nlon)
-            f_lm = self.sht(x_cf)                    # (B, in_ch, L, L) complex
+            x_cf = x.permute(0, 3, 1, 2)  # (B, in_ch, nlat, nlon)
+            f_lm = self.sht(x_cf)  # (B, in_ch, L, L) complex
             w = self.weight_real + 1j * self.weight_imag  # (L, L, in_ch, out_ch)
             out_lm = torch.einsum("bilm,lmio->bolm", f_lm, w)
-            out = self.isht(out_lm)                  # (B, out_ch, nlat, nlon)
-            return out.permute(0, 2, 3, 1)            # (B, nlat, nlon, out_ch)
+            out = self.isht(out_lm)  # (B, out_ch, nlat, nlon)
+            return out.permute(0, 2, 3, 1)  # (B, nlat, nlon, out_ch)
 
     return PtSphericalConv2d()
 
 
-def _build_pt_sfno(torch, th_nn, th, in_ch, hidden, out_ch, L, nlat, nlon, n_layers, grid, act):
+def _build_pt_sfno(
+    torch, th_nn, th, in_ch, hidden, out_ch, L, nlat, nlon, n_layers, grid, act
+):
     """Mirror of foundax.architectures.sfno.SFNO2d in PyTorch."""
 
     act_fn = {"gelu": torch.nn.functional.gelu, "silu": torch.nn.functional.silu}[act]
@@ -90,7 +94,9 @@ def _build_pt_sfno(torch, th_nn, th, in_ch, hidden, out_ch, L, nlat, nlon, n_lay
         def __init__(self):
             super().__init__()
             self.lift = th_nn.Linear(in_ch, hidden)
-            self.blocks = th_nn.ModuleList([PtSphericalBlock2d() for _ in range(n_layers)])
+            self.blocks = th_nn.ModuleList(
+                [PtSphericalBlock2d() for _ in range(n_layers)]
+            )
             self.project = th_nn.Linear(hidden, out_ch)
 
         def forward(self, x):
@@ -145,12 +151,14 @@ def compare_sht(seed: int) -> bool:
     ours = RealSHT2d(L=L, nlat=nlat, nlon=nlon, grid="legendre-gauss")
     x_t = torch.randn(1, nlat, nlon, dtype=torch.float32)
     x_j = jnp.asarray(x_t.squeeze(0).unsqueeze(-1).numpy())  # (nlat, nlon, 1)
-    th_coef = th_sht(x_t).detach().cpu().numpy()[0]          # (L, L)
+    th_coef = th_sht(x_t).detach().cpu().numpy()[0]  # (L, L)
     ours_coef = np.asarray(ours.forward(x_j))[..., 0]
     ok_fwd = _compare("SHT forward", th_coef, ours_coef)
 
     # Inverse: bandlimited coefficients → matching grids
-    th_isht = th.InverseRealSHT(nlat=nlat, nlon=nlon, lmax=L, mmax=L, grid="legendre-gauss")
+    th_isht = th.InverseRealSHT(
+        nlat=nlat, nlon=nlon, lmax=L, mmax=L, grid="legendre-gauss"
+    )
     coef_t = torch.randn(L, L, dtype=torch.complex64) / 10
     mask = (torch.arange(L)[None, :] <= torch.arange(L)[:, None]).to(torch.complex64)
     coef_t = coef_t * mask
@@ -216,15 +224,31 @@ def compare_sfno_full(seed: int) -> bool:
 
     torch.manual_seed(seed)
     pt = _build_pt_sfno(
-        torch, nn, th, in_ch, hidden, out_ch, L, nlat, nlon, n_layers,
-        grid="legendre-gauss", act="gelu",
+        torch,
+        nn,
+        th,
+        in_ch,
+        hidden,
+        out_ch,
+        L,
+        nlat,
+        nlon,
+        n_layers,
+        grid="legendre-gauss",
+        act="gelu",
     )
     pt.eval()
 
     eqx_model = SFNO2d(
-        in_channels=in_ch, hidden_channels=hidden, out_channels=out_ch,
-        L=L, nlat=nlat, nlon=nlon, n_layers=n_layers,
-        grid="legendre-gauss", activation="gelu",
+        in_channels=in_ch,
+        hidden_channels=hidden,
+        out_channels=out_ch,
+        L=L,
+        nlat=nlat,
+        nlon=nlon,
+        n_layers=n_layers,
+        grid="legendre-gauss",
+        activation="gelu",
         key=jax.random.PRNGKey(seed),
     )
     eqx_model = transfer_sfno_weights(pt, eqx_model)
@@ -243,8 +267,14 @@ def run_structural_check(seed: int) -> int:
 
     print("[SFNO] Structural check (JAX only, random weights)")
     m = SFNO2d(
-        in_channels=2, hidden_channels=16, out_channels=1,
-        L=8, nlat=16, nlon=32, n_layers=2, key=jax.random.PRNGKey(seed),
+        in_channels=2,
+        hidden_channels=16,
+        out_channels=1,
+        L=8,
+        nlat=16,
+        nlon=32,
+        n_layers=2,
+        key=jax.random.PRNGKey(seed),
     )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (16, 32, 2))
     y = m(x)

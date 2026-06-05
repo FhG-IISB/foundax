@@ -21,7 +21,7 @@ Convention notes worth knowing before writing a new copier:
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 
@@ -128,9 +128,7 @@ def compare_arrays(name, pt_out, jax_out, atol=1e-4, rtol=1e-4):
         else np.asarray(pt_out)
     )
     jax_np = np.asarray(jax_out)
-    assert pt_np.shape == jax_np.shape, (
-        f"{name}: shape {pt_np.shape} vs {jax_np.shape}"
-    )
+    assert pt_np.shape == jax_np.shape, f"{name}: shape {pt_np.shape} vs {jax_np.shape}"
     max_diff = float(np.max(np.abs(pt_np - jax_np)))
     mean_diff = float(np.mean(np.abs(pt_np - jax_np)))
     denom = float(np.linalg.norm(pt_np)) + 1e-12

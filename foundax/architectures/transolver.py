@@ -36,7 +36,7 @@ Batch with ``jax.vmap`` externally.
 
 from __future__ import annotations
 
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -331,8 +331,12 @@ class PhysicsAttentionStructured3D(eqx.Module):
         self.dropout_rate = dropout
         self.temperature = jnp.full((num_heads, 1, 1), 0.5)
 
-        self.in_project_x = Conv3dNHWC(dim, inner_dim, kernel, padding="SAME", key=keys[0])
-        self.in_project_fx = Conv3dNHWC(dim, inner_dim, kernel, padding="SAME", key=keys[1])
+        self.in_project_x = Conv3dNHWC(
+            dim, inner_dim, kernel, padding="SAME", key=keys[0]
+        )
+        self.in_project_fx = Conv3dNHWC(
+            dim, inner_dim, kernel, padding="SAME", key=keys[1]
+        )
 
         slice_proj = Linear(dim_head, slice_num, key=keys[2])
         slice_proj = eqx.tree_at(
@@ -513,9 +517,7 @@ class TransolverIrregular(eqx.Module):
             keys[-1], (hidden_dim,), minval=0.0, maxval=1.0 / hidden_dim
         )
         self.time_embed = (
-            SinusoidalTimeEmbedding(hidden_dim, key=keys[0])
-            if time_input
-            else None
+            SinusoidalTimeEmbedding(hidden_dim, key=keys[0]) if time_input else None
         )
 
     def __call__(

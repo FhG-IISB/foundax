@@ -76,13 +76,15 @@ def _stuff_complex_weight(pt_param, real, imag):
     """Pack our (in, out, modes) complex weight into upstream's
     (in, out, modes, 2) real/imag layout."""
     import torch
+
     stacked = np.stack([real, imag], axis=-1)
     pt_param.data = torch.from_numpy(stacked.astype(np.float32))
 
 
 def compare_spectral_conv_2d(fourierflow_root: Path, seed: int) -> bool:
     import torch
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     from foundax.architectures.ffno import FactorizedSpectralConv2d
 
     Pt2D, _ = _import_pt_spectral(fourierflow_root)
@@ -120,19 +122,23 @@ def compare_spectral_conv_2d(fourierflow_root: Path, seed: int) -> bool:
     #   upstream fourier_weight[0]  ← our weight_x  (W-axis FFT)
     #   upstream fourier_weight[1]  ← our weight_y  (H-axis FFT)
     eqx_conv = set_eqx_array(
-        eqx_conv, [("weight_x_real", None)],
+        eqx_conv,
+        [("weight_x_real", None)],
         pt.fourier_weight[0].detach().cpu().numpy()[..., 0],
     )
     eqx_conv = set_eqx_array(
-        eqx_conv, [("weight_x_imag", None)],
+        eqx_conv,
+        [("weight_x_imag", None)],
         pt.fourier_weight[0].detach().cpu().numpy()[..., 1],
     )
     eqx_conv = set_eqx_array(
-        eqx_conv, [("weight_y_real", None)],
+        eqx_conv,
+        [("weight_y_real", None)],
         pt.fourier_weight[1].detach().cpu().numpy()[..., 0],
     )
     eqx_conv = set_eqx_array(
-        eqx_conv, [("weight_y_imag", None)],
+        eqx_conv,
+        [("weight_y_imag", None)],
         pt.fourier_weight[1].detach().cpu().numpy()[..., 1],
     )
 
@@ -148,7 +154,8 @@ def compare_spectral_conv_2d(fourierflow_root: Path, seed: int) -> bool:
 
 def compare_spectral_conv_3d(fourierflow_root: Path, seed: int) -> bool:
     import torch
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     from foundax.architectures.ffno import FactorizedSpectralConv3d
 
     _, Pt3D = _import_pt_spectral(fourierflow_root)
@@ -176,15 +183,18 @@ def compare_spectral_conv_3d(fourierflow_root: Path, seed: int) -> bool:
     ).eval()
 
     eqx_conv = FactorizedSpectralConv3d(
-        in_dim, out_dim,
-        n_modes_d=modes_x,   # upstream X (S1, axis=-3) ↔ our D (axis=0)
-        n_modes_h=modes_y,   # upstream Y (S2, axis=-2) ↔ our H (axis=1)
-        n_modes_w=modes_z,   # upstream Z (S3, axis=-1) ↔ our W (axis=2)
+        in_dim,
+        out_dim,
+        n_modes_d=modes_x,  # upstream X (S1, axis=-3) ↔ our D (axis=0)
+        n_modes_h=modes_y,  # upstream Y (S2, axis=-2) ↔ our H (axis=1)
+        n_modes_w=modes_z,  # upstream Z (S3, axis=-1) ↔ our W (axis=2)
         key=jax.random.PRNGKey(seed),
     )
     # Weight transfer: upstream [0]→D, [1]→H, [2]→W
     for upstream_idx, prefix in [
-        (0, "d"), (1, "h"), (2, "w"),
+        (0, "d"),
+        (1, "h"),
+        (2, "w"),
     ]:
         w = pt.fourier_weight[upstream_idx].detach().cpu().numpy()
         eqx_conv = set_eqx_array(eqx_conv, [(f"weight_{prefix}_real", None)], w[..., 0])
@@ -200,11 +210,19 @@ def compare_spectral_conv_3d(fourierflow_root: Path, seed: int) -> bool:
 
 
 def run_structural_check(seed: int) -> int:
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import foundax as fx
 
     print("[FFNO] Structural check (JAX only)")
-    m = fx.ffno2d(in_channels=2, hidden_channels=16, out_channels=1, n_modes=4, n_layers=2, key=jax.random.PRNGKey(seed))
+    m = fx.ffno2d(
+        in_channels=2,
+        hidden_channels=16,
+        out_channels=1,
+        n_modes=4,
+        n_layers=2,
+        key=jax.random.PRNGKey(seed),
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (16, 16, 2))
     y = m(x)
     print(f"  output shape: {y.shape}, finite: {bool(jnp.all(jnp.isfinite(y)))}")
@@ -224,7 +242,10 @@ def parse_args(argv=None):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    if find_spec("torch") is None or not (args.fourierflow_root / "fourierflow").exists():
+    if (
+        find_spec("torch") is None
+        or not (args.fourierflow_root / "fourierflow").exists()
+    ):
         print("torch or upstream missing — JAX-only structural check.")
         return run_structural_check(args.seed)
 

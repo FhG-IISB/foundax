@@ -112,8 +112,8 @@ class RealSHT2d(eqx.Module):
     zero so those weights do not contribute.
     """
 
-    legendre: jnp.ndarray   # (L, L, nlat) static (treated as buffer)
-    weights: jnp.ndarray    # (nlat,)      static (treated as buffer)
+    legendre: jnp.ndarray  # (L, L, nlat) static (treated as buffer)
+    weights: jnp.ndarray  # (nlat,)      static (treated as buffer)
     L: int = eqx.field(static=True)
     nlat: int = eqx.field(static=True)
     nlon: int = eqx.field(static=True)
@@ -200,8 +200,12 @@ class SphericalConv2d(eqx.Module):
         scale = 1.0 / (in_channels * out_channels)
         k1, k2 = jax.random.split(key)
         shape = (L, L, in_channels, out_channels)
-        self.weight_real = scale * jax.random.uniform(k1, shape, minval=-1.0, maxval=1.0)
-        self.weight_imag = scale * jax.random.uniform(k2, shape, minval=-1.0, maxval=1.0)
+        self.weight_real = scale * jax.random.uniform(
+            k1, shape, minval=-1.0, maxval=1.0
+        )
+        self.weight_imag = scale * jax.random.uniform(
+            k2, shape, minval=-1.0, maxval=1.0
+        )
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         f_lm = self.sht.forward(x)

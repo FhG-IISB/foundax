@@ -7,9 +7,7 @@ import pytest
 import foundax as fx
 from foundax.architectures.sfno import (
     RealSHT2d,
-    SphericalConv2d,
     SphericalBlock2d,
-    SFNO2d,
 )
 
 
@@ -19,7 +17,10 @@ KEY = jax.random.PRNGKey(0)
 def _bandlimited_coeffs(L, channels, rng):
     """Random spectral coefficients respecting the m ≤ l mask and real
     constraint on m=0."""
-    c = (rng.standard_normal((L, L, channels)) + 1j * rng.standard_normal((L, L, channels))) / 10
+    c = (
+        rng.standard_normal((L, L, channels))
+        + 1j * rng.standard_normal((L, L, channels))
+    ) / 10
     for l in range(L):
         for m in range(L):
             if m > l:
@@ -81,7 +82,9 @@ def test_factory_shape():
 
 
 def test_default_out_channels_matches_in_channels():
-    model = fx.sfno2d(in_channels=4, hidden_channels=8, L=4, nlat=8, nlon=16, n_layers=1)
+    model = fx.sfno2d(
+        in_channels=4, hidden_channels=8, L=4, nlat=8, nlon=16, n_layers=1
+    )
     x = jax.random.normal(KEY, (8, 16, 4))
     out = model(x)
     assert out.shape == (8, 16, 4)
@@ -198,8 +201,13 @@ def test_jit_compatibility():
     assert inv(sht, f).shape == (16, 32, 2)
 
     model = fx.sfno2d(
-        in_channels=2, hidden_channels=8, out_channels=1,
-        L=4, nlat=8, nlon=16, n_layers=2,
+        in_channels=2,
+        hidden_channels=8,
+        out_channels=1,
+        L=4,
+        nlat=8,
+        nlon=16,
+        n_layers=2,
     )
     y_t = jax.random.normal(KEY, (8, 16, 1))
 

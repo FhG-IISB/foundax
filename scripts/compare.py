@@ -114,32 +114,60 @@ def main() -> None:
         # Core architecture (not a vendored foundation model): dispatch
         # directly to the top-level compare script in foundax/scripts.
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_transolver.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "sfno":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_sfno.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "ffno":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_ffno.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "fno":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_fno.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "wno":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_wno.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "dit":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_dit.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     elif args.model == "gnot":
         import sys as _sys
+
         script = Path(__file__).resolve().parent / "compare_gnot.py"
-        code = _run([_sys.executable, str(script), *extra], cwd=Path(__file__).resolve().parents[1])
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
     else:
         print(f"Unsupported model: {args.model}")
         code = 2

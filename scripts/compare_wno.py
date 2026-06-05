@@ -38,30 +38,45 @@ import argparse
 import jax
 import jax.numpy as jnp
 import equinox as eqx
-import numpy as np
 
 
 def structural_1d(seed: int) -> bool:
     import foundax as fx
 
-    m = fx.wno1d(in_channels=2, hidden_channels=16, n_scales=2, depth=2, key=jax.random.PRNGKey(seed))
+    m = fx.wno1d(
+        in_channels=2,
+        hidden_channels=16,
+        n_scales=2,
+        depth=2,
+        key=jax.random.PRNGKey(seed),
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (32, 2))
     y = m(x)
     ok = bool(jnp.all(jnp.isfinite(y))) and y.shape == (32, 2)
     status = "PASS" if ok else "FAIL"
-    print(f"  [{status}] WNO1d structural               shape={y.shape}  finite={bool(jnp.all(jnp.isfinite(y)))}")
+    print(
+        f"  [{status}] WNO1d structural               shape={y.shape}  finite={bool(jnp.all(jnp.isfinite(y)))}"
+    )
     return ok
 
 
 def structural_2d(seed: int) -> bool:
     import foundax as fx
 
-    m = fx.wno2d(in_channels=2, hidden_channels=8, n_scales=2, depth=2, key=jax.random.PRNGKey(seed))
+    m = fx.wno2d(
+        in_channels=2,
+        hidden_channels=8,
+        n_scales=2,
+        depth=2,
+        key=jax.random.PRNGKey(seed),
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (32, 32, 2))
     y = m(x)
     ok = bool(jnp.all(jnp.isfinite(y))) and y.shape == (32, 32, 2)
     status = "PASS" if ok else "FAIL"
-    print(f"  [{status}] WNO2d structural               shape={y.shape}  finite={bool(jnp.all(jnp.isfinite(y)))}")
+    print(
+        f"  [{status}] WNO2d structural               shape={y.shape}  finite={bool(jnp.all(jnp.isfinite(y)))}"
+    )
     return ok
 
 
@@ -69,7 +84,13 @@ def gradient_flow_3d(seed: int) -> bool:
     """Confirm autodiff actually flows through the WNO3d wavelet path."""
     import foundax as fx
 
-    m = fx.wno3d(in_channels=1, hidden_channels=8, n_scales=2, depth=1, key=jax.random.PRNGKey(seed))
+    m = fx.wno3d(
+        in_channels=1,
+        hidden_channels=8,
+        n_scales=2,
+        depth=1,
+        key=jax.random.PRNGKey(seed),
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (16, 16, 16, 1))
     y_t = jax.random.normal(jax.random.PRNGKey(seed + 2), (16, 16, 16, 1))
 
@@ -82,7 +103,9 @@ def gradient_flow_3d(seed: int) -> bool:
     nonzero = any(bool(jnp.linalg.norm(g) > 0) for g in flat if g.size > 0)
     ok = finite and nonzero
     status = "PASS" if ok else "FAIL"
-    print(f"  [{status}] WNO3d gradient-flow            finite={finite}  nonzero={nonzero}")
+    print(
+        f"  [{status}] WNO3d gradient-flow            finite={finite}  nonzero={nonzero}"
+    )
     return ok
 
 

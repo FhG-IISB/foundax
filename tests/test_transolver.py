@@ -9,9 +9,6 @@ from foundax.architectures.transolver import (
     PhysicsAttentionStructured2D,
     PhysicsAttentionStructured3D,
     TransolverBlock,
-    TransolverIrregular,
-    TransolverStructured2D,
-    TransolverStructured3D,
 )
 
 
@@ -72,9 +69,7 @@ def test_factory_structured_3d_shape():
 def test_physics_attention_preserves_shape():
     """All three attention variants are residual-shaped: out matches input."""
     dim = 32
-    attn = PhysicsAttentionIrregular(
-        dim, num_heads=4, dim_head=8, slice_num=8, key=KEY
-    )
+    attn = PhysicsAttentionIrregular(dim, num_heads=4, dim_head=8, slice_num=8, key=KEY)
     x = jax.random.normal(KEY, (100, dim))
     assert attn(x).shape == x.shape
 
@@ -178,9 +173,7 @@ def test_x_func_none_with_positive_fun_dim_raises():
 def test_pipe_integration_with_transolver_block():
     """TransolverBlock alone is shape-preserving and pipeable as a block."""
     dim = 32
-    attn = PhysicsAttentionIrregular(
-        dim, num_heads=4, dim_head=8, slice_num=8, key=KEY
-    )
+    attn = PhysicsAttentionIrregular(dim, num_heads=4, dim_head=8, slice_num=8, key=KEY)
     block = TransolverBlock(dim, attn, mlp_ratio=2, key=KEY)
     x = jax.random.normal(KEY, (50, dim))
     assert block(x).shape == x.shape

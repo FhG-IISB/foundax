@@ -36,15 +36,15 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _pt2eqx import compare_arrays, copy_layernorm, copy_linear, set_eqx_array
+from _pt2eqx import compare_arrays, copy_linear
 
 
 def _import_upstream(dit_root: Path):
     sys.path.insert(0, str(dit_root))
     from models import DiTBlock as PtDiTBlock
+
     return PtDiTBlock
 
 
@@ -81,7 +81,7 @@ def _make_equinox_upstream_block(hidden, num_heads, mlp_ratio, *, key):
         mlp_hidden: int = eqx.field(static=True)
         norm1: _NoAffineLayerNorm
         norm2: _NoAffineLayerNorm
-        qkv: Linear      # fused, hidden → 3*hidden
+        qkv: Linear  # fused, hidden → 3*hidden
         proj: Linear
         mlp1: Linear
         mlp2: Linear
@@ -116,9 +116,19 @@ def _make_equinox_upstream_block(hidden, num_heads, mlp_ratio, *, key):
         def __call__(self, x, c):
             # x: (N, hidden), c: (hidden,) conditioning vector
             d = self.hidden
-            cond = self.adaLN_linear(jax.nn.silu(c))   # upstream Sequential(SiLU, Linear)
-            shift_msa, scale_msa, gate_msa = cond[:d], cond[d:2*d], cond[2*d:3*d]
-            shift_mlp, scale_mlp, gate_mlp = cond[3*d:4*d], cond[4*d:5*d], cond[5*d:]
+            cond = self.adaLN_linear(
+                jax.nn.silu(c)
+            )  # upstream Sequential(SiLU, Linear)
+            shift_msa, scale_msa, gate_msa = (
+                cond[:d],
+                cond[d : 2 * d],
+                cond[2 * d : 3 * d],
+            )
+            shift_mlp, scale_mlp, gate_mlp = (
+                cond[3 * d : 4 * d],
+                cond[4 * d : 5 * d],
+                cond[5 * d :],
+            )
             x_a = self.norm1(x) * (1.0 + scale_msa) + shift_msa
             x = x + gate_msa * self._attn(x_a)
             x_m = self.norm2(x) * (1.0 + scale_mlp) + shift_mlp
@@ -149,7 +159,9 @@ def transfer_upstream_block_weights(pt_block, eqx_block):
     eqx_block = copy_linear(eqx_block, [("mlp1", None)], pt_block.mlp.fc1)
     eqx_block = copy_linear(eqx_block, [("mlp2", None)], pt_block.mlp.fc2)
     # adaLN_modulation is Sequential(SiLU(), Linear) — index 1 is the Linear.
-    eqx_block = copy_linear(eqx_block, [("adaLN_linear", None)], pt_block.adaLN_modulation[1])
+    eqx_block = copy_linear(
+        eqx_block, [("adaLN_linear", None)], pt_block.adaLN_modulation[1]
+    )
     return eqx_block
 
 
@@ -173,12 +185,15 @@ def compare_block(dit_root: Path, seed: int) -> bool:
     pt.eval()
 
     eqx_block = _make_equinox_upstream_block(
-        hidden, num_heads, mlp_ratio, key=jax.random.PRNGKey(seed),
+        hidden,
+        num_heads,
+        mlp_ratio,
+        key=jax.random.PRNGKey(seed),
     )
     eqx_block = transfer_upstream_block_weights(pt, eqx_block)
 
     x = torch.randn(1, N, hidden, dtype=torch.float32)  # (B, N, D)
-    c = torch.randn(1, hidden, dtype=torch.float32)      # (B, D)
+    c = torch.randn(1, hidden, dtype=torch.float32)  # (B, D)
     with torch.no_grad():
         pt_out = pt(x, c)[0]  # (N, D)
     eqx_out = eqx_block(x[0].numpy(), c[0].numpy())
@@ -186,11 +201,19 @@ def compare_block(dit_root: Path, seed: int) -> bool:
 
 
 def run_structural_check(seed: int) -> int:
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import foundax as fx
 
     print("[DiT] Structural check (JAX only)")
-    m = fx.dit2d(in_channels=4, patch_size=2, hidden_size=64, depth=2, num_heads=4, key=jax.random.PRNGKey(seed))
+    m = fx.dit2d(
+        in_channels=4,
+        patch_size=2,
+        hidden_size=64,
+        depth=2,
+        num_heads=4,
+        key=jax.random.PRNGKey(seed),
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (16, 16, 4))
     y = m(x, jnp.array(0.5))
     print(f"  output shape: {y.shape}, finite: {bool(jnp.all(jnp.isfinite(y)))}")
@@ -210,10 +233,7 @@ def parse_args(argv=None):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    if (
-        find_spec("torch") is None
-        or not (args.dit_root / "models.py").exists()
-    ):
+    if find_spec("torch") is None or not (args.dit_root / "models.py").exists():
         print("torch or upstream missing — JAX-only structural check.")
         return run_structural_check(args.seed)
 

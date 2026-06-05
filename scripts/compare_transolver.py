@@ -104,12 +104,8 @@ def transfer_transolver_weights(pt_model, eqx_model, is_structured):
     n_blocks = len(pt_model.blocks)
     for i, pt_block in enumerate(pt_model.blocks):
         prefix = [("blocks", i)]
-        eqx_model = _copy_layernorm(
-            eqx_model, prefix + [("ln_1", None)], pt_block.ln_1
-        )
-        eqx_model = _copy_layernorm(
-            eqx_model, prefix + [("ln_2", None)], pt_block.ln_2
-        )
+        eqx_model = _copy_layernorm(eqx_model, prefix + [("ln_1", None)], pt_block.ln_1)
+        eqx_model = _copy_layernorm(eqx_model, prefix + [("ln_2", None)], pt_block.ln_2)
         eqx_model = _copy_physics_attention(
             eqx_model, prefix + [("physics_attn", None)], pt_block.Attn, is_structured
         )
@@ -118,12 +114,8 @@ def transfer_transolver_weights(pt_model, eqx_model, is_structured):
         )
         # Last block's ln_3 / mlp2 → our hoisted head_ln / head.
         if i == n_blocks - 1 and getattr(pt_block, "last_layer", False):
-            eqx_model = _copy_layernorm(
-                eqx_model, [("head_ln", None)], pt_block.ln_3
-            )
-            eqx_model = _copy_linear(
-                eqx_model, [("head", None)], pt_block.mlp2
-            )
+            eqx_model = _copy_layernorm(eqx_model, [("head_ln", None)], pt_block.ln_3)
+            eqx_model = _copy_linear(eqx_model, [("head", None)], pt_block.mlp2)
 
     return eqx_model
 
@@ -250,8 +242,13 @@ def run_structural_check(seed: int) -> int:
 
     print("[Transolver] Structural check (JAX only, random weights)")
     model = TransolverIrregular(
-        space_dim=2, fun_dim=1, out_features=1,
-        hidden_dim=32, n_layers=2, n_heads=4, n_slices=8,
+        space_dim=2,
+        fun_dim=1,
+        out_features=1,
+        hidden_dim=32,
+        n_layers=2,
+        n_heads=4,
+        n_slices=8,
         key=jax.random.PRNGKey(seed),
     )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (64, 2))

@@ -4,7 +4,6 @@ import pytest
 
 import foundax as fx
 from foundax.architectures.transformer import (
-    Transformer,
     TransformerEncoder,
     TransformerDecoder,
     MultiHeadAttention,

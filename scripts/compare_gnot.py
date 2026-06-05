@@ -25,7 +25,6 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _pt2eqx import compare_arrays, copy_linear, copy_layernorm
@@ -108,36 +107,44 @@ def transfer_block(pt_block, eqx_block):
     eqx_block = copy_layernorm(eqx_block, [("ln5", None)], pt_block.ln5)
     # cross_attn: rewrite each sub-array
     eqx_block = set_eqx_array(
-        eqx_block, [("cross_attn", None), ("query_proj", None), ("weight", None)],
+        eqx_block,
+        [("cross_attn", None), ("query_proj", None), ("weight", None)],
         pt_block.crossattn.query.weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("cross_attn", None), ("query_proj", None), ("bias", None)],
+        eqx_block,
+        [("cross_attn", None), ("query_proj", None), ("bias", None)],
         pt_block.crossattn.query.bias.detach().cpu().numpy(),
     )
     for i in range(len(pt_block.crossattn.keys)):
         eqx_block = set_eqx_array(
-            eqx_block, [("cross_attn", None), ("key_projs", i), ("weight", None)],
+            eqx_block,
+            [("cross_attn", None), ("key_projs", i), ("weight", None)],
             pt_block.crossattn.keys[i].weight.detach().cpu().numpy(),
         )
         eqx_block = set_eqx_array(
-            eqx_block, [("cross_attn", None), ("key_projs", i), ("bias", None)],
+            eqx_block,
+            [("cross_attn", None), ("key_projs", i), ("bias", None)],
             pt_block.crossattn.keys[i].bias.detach().cpu().numpy(),
         )
         eqx_block = set_eqx_array(
-            eqx_block, [("cross_attn", None), ("value_projs", i), ("weight", None)],
+            eqx_block,
+            [("cross_attn", None), ("value_projs", i), ("weight", None)],
             pt_block.crossattn.values[i].weight.detach().cpu().numpy(),
         )
         eqx_block = set_eqx_array(
-            eqx_block, [("cross_attn", None), ("value_projs", i), ("bias", None)],
+            eqx_block,
+            [("cross_attn", None), ("value_projs", i), ("bias", None)],
             pt_block.crossattn.values[i].bias.detach().cpu().numpy(),
         )
     eqx_block = set_eqx_array(
-        eqx_block, [("cross_attn", None), ("proj", None), ("weight", None)],
+        eqx_block,
+        [("cross_attn", None), ("proj", None), ("weight", None)],
         pt_block.crossattn.proj.weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("cross_attn", None), ("proj", None), ("bias", None)],
+        eqx_block,
+        [("cross_attn", None), ("proj", None), ("bias", None)],
         pt_block.crossattn.proj.bias.detach().cpu().numpy(),
     )
     # self_attn
@@ -145,44 +152,54 @@ def transfer_block(pt_block, eqx_block):
         pt_layer = getattr(pt_block.selfattn, name)
         # foundax field names: query/key/value/proj
         eqx_block = set_eqx_array(
-            eqx_block, [("self_attn", None), (name, None), ("weight", None)],
+            eqx_block,
+            [("self_attn", None), (name, None), ("weight", None)],
             pt_layer.weight.detach().cpu().numpy(),
         )
         eqx_block = set_eqx_array(
-            eqx_block, [("self_attn", None), (name, None), ("bias", None)],
+            eqx_block,
+            [("self_attn", None), (name, None), ("bias", None)],
             pt_layer.bias.detach().cpu().numpy(),
         )
     # FFNs — upstream mlp1[0], mlp1[2] are the Linear layers
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn1", None), ("fc1", None), ("weight", None)],
+        eqx_block,
+        [("ffn1", None), ("fc1", None), ("weight", None)],
         pt_block.mlp1[0].weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn1", None), ("fc1", None), ("bias", None)],
+        eqx_block,
+        [("ffn1", None), ("fc1", None), ("bias", None)],
         pt_block.mlp1[0].bias.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn1", None), ("fc2", None), ("weight", None)],
+        eqx_block,
+        [("ffn1", None), ("fc2", None), ("weight", None)],
         pt_block.mlp1[2].weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn1", None), ("fc2", None), ("bias", None)],
+        eqx_block,
+        [("ffn1", None), ("fc2", None), ("bias", None)],
         pt_block.mlp1[2].bias.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn2", None), ("fc1", None), ("weight", None)],
+        eqx_block,
+        [("ffn2", None), ("fc1", None), ("weight", None)],
         pt_block.mlp2[0].weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn2", None), ("fc1", None), ("bias", None)],
+        eqx_block,
+        [("ffn2", None), ("fc1", None), ("bias", None)],
         pt_block.mlp2[0].bias.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn2", None), ("fc2", None), ("weight", None)],
+        eqx_block,
+        [("ffn2", None), ("fc2", None), ("weight", None)],
         pt_block.mlp2[2].weight.detach().cpu().numpy(),
     )
     eqx_block = set_eqx_array(
-        eqx_block, [("ffn2", None), ("fc2", None), ("bias", None)],
+        eqx_block,
+        [("ffn2", None), ("fc2", None), ("bias", None)],
         pt_block.mlp2[2].bias.detach().cpu().numpy(),
     )
     return eqx_block
@@ -194,7 +211,7 @@ def transfer_block(pt_block, eqx_block):
 def compare_linear_attention(gnot_root: Path, seed: int) -> bool:
     import torch
     import jax
-    from foundax.architectures.gnot import LinearAttention, GPTConfig
+    from foundax.architectures.gnot import LinearAttention
 
     cgpt = _import_upstream(gnot_root)
     n_embd, n_head, T = 32, 4, 12
@@ -202,14 +219,15 @@ def compare_linear_attention(gnot_root: Path, seed: int) -> bool:
     config = cgpt.GPTConfig(n_embd=n_embd, n_head=n_head, attn_type="linear")
     pt = cgpt.LinearAttention(config).eval()
 
-    eqx_attn = LinearAttention(n_embd=n_embd, n_head=n_head, attn_type="l1",
-                                key=jax.random.PRNGKey(seed))
+    eqx_attn = LinearAttention(
+        n_embd=n_embd, n_head=n_head, attn_type="l1", key=jax.random.PRNGKey(seed)
+    )
     eqx_attn = transfer_linear_attention(pt, eqx_attn)
 
     x = torch.randn(1, T, n_embd, dtype=torch.float32)
     with torch.no_grad():
         pt_out = pt(x)
-    eqx_out = eqx_attn(jax_input := x.numpy())
+    eqx_out = eqx_attn(x.numpy())
     return compare_arrays("LinearAttention", pt_out, eqx_out)
 
 
@@ -222,12 +240,15 @@ def compare_linear_cross_attention(gnot_root: Path, seed: int) -> bool:
     n_embd, n_head, n_inputs = 32, 4, 2
     T1, T2 = 10, 16
     torch.manual_seed(seed)
-    config = cgpt.GPTConfig(n_embd=n_embd, n_head=n_head, n_inputs=n_inputs,
-                             attn_type="linear")
+    config = cgpt.GPTConfig(
+        n_embd=n_embd, n_head=n_head, n_inputs=n_inputs, attn_type="linear"
+    )
     pt = cgpt.LinearCrossAttention(config).eval()
 
     eqx_attn = LinearCrossAttention(
-        n_embd=n_embd, n_head=n_head, n_inputs=n_inputs,
+        n_embd=n_embd,
+        n_head=n_head,
+        n_inputs=n_inputs,
         key=jax.random.PRNGKey(seed),
     )
     eqx_attn = transfer_linear_cross_attention(pt, eqx_attn)
@@ -252,14 +273,22 @@ def compare_cross_attention_block(gnot_root: Path, seed: int) -> bool:
 
     torch.manual_seed(seed)
     pt_config = cgpt.GPTConfig(
-        n_embd=n_embd, n_head=n_head, n_inputs=n_inputs, n_inner=n_inner,
-        attn_type="linear", act="gelu",
+        n_embd=n_embd,
+        n_head=n_head,
+        n_inputs=n_inputs,
+        n_inner=n_inner,
+        attn_type="linear",
+        act="gelu",
     )
     pt = cgpt.CrossAttentionBlock(pt_config).eval()
 
     eqx_config = GPTConfig(
-        n_embd=n_embd, n_head=n_head, n_inputs=n_inputs, n_inner=n_inner,
-        attn_type="linear", act="gelu",
+        n_embd=n_embd,
+        n_head=n_head,
+        n_inputs=n_inputs,
+        n_inner=n_inner,
+        attn_type="linear",
+        act="gelu",
     )
     eqx_block = CrossAttentionBlock(eqx_config, key=jax.random.PRNGKey(seed))
     eqx_block = transfer_block(pt, eqx_block)
@@ -269,6 +298,7 @@ def compare_cross_attention_block(gnot_root: Path, seed: int) -> bool:
 
     # Upstream forward signature: forward(x, y) where y is MultipleTensors([y0, y1])
     from utils import MultipleTensors
+
     with torch.no_grad():
         pt_out = pt(x, MultipleTensors(ys_pt))
     eqx_out = eqx_block(x.numpy(), [y.numpy() for y in ys_pt])
@@ -276,13 +306,19 @@ def compare_cross_attention_block(gnot_root: Path, seed: int) -> bool:
 
 
 def run_structural_check(seed: int) -> int:
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import foundax as fx
 
     print("[GNOT] Structural check (JAX only)")
     m = fx.cgptno(
-        trunk_size=2, branch_sizes=[2], output_size=1,
-        n_layers=2, n_hidden=32, n_head=4, key=jax.random.PRNGKey(seed),
+        trunk_size=2,
+        branch_sizes=[2],
+        output_size=1,
+        n_layers=2,
+        n_hidden=32,
+        n_head=4,
+        key=jax.random.PRNGKey(seed),
     )
     x_trunk = jax.random.normal(jax.random.PRNGKey(seed + 1), (1, 16, 2))
     x_branch = jax.random.normal(jax.random.PRNGKey(seed + 2), (1, 8, 2))
@@ -304,7 +340,10 @@ def parse_args(argv=None):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    if find_spec("torch") is None or not (args.gnot_root / "models" / "cgpt.py").exists():
+    if (
+        find_spec("torch") is None
+        or not (args.gnot_root / "models" / "cgpt.py").exists()
+    ):
         print("torch or upstream missing — JAX-only structural check.")
         return run_structural_check(args.seed)
 

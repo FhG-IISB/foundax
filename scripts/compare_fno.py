@@ -35,7 +35,6 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _pt2eqx import compare_arrays, set_eqx_array
@@ -44,6 +43,7 @@ from _pt2eqx import compare_arrays, set_eqx_array
 def _import_upstream(neuralop_root: Path):
     sys.path.insert(0, str(neuralop_root))
     from neuralop.layers.legacy_spectral_convolution import SpectralConv
+
     return SpectralConv
 
 
@@ -70,20 +70,27 @@ def compare_1d(neuralop_root: Path, seed: int) -> bool:
 
     torch.manual_seed(seed)
     sc = SpectralConv(
-        in_channels=in_ch, out_channels=out_ch,
+        in_channels=in_ch,
+        out_channels=out_ch,
         n_modes=(2 * n_modes_foundax,),
-        factorization=None, bias=False, fft_norm="ortho",
+        factorization=None,
+        bias=False,
+        fft_norm="ortho",
     ).eval()
     w0 = sc.weight[0].to_tensor().detach().cpu().numpy()  # (in, out, m)
 
-    eqx_conv = SpectralConv1d(in_ch, out_ch, n_modes_foundax,
-                              linear_conv=False, key=jax.random.PRNGKey(seed))
+    eqx_conv = SpectralConv1d(
+        in_ch, out_ch, n_modes_foundax, linear_conv=False, key=jax.random.PRNGKey(seed)
+    )
     eqx_conv = _copy_complex_weight(
-        eqx_conv, [("weight_real", None)], [("weight_imag", None)], w0,
+        eqx_conv,
+        [("weight_real", None)],
+        [("weight_imag", None)],
+        w0,
     )
 
-    x_t = torch.randn(1, in_ch, W, dtype=torch.float32)        # (B, C, W)
-    x_j = x_t[0].permute(1, 0).numpy()                          # (W, C)
+    x_t = torch.randn(1, in_ch, W, dtype=torch.float32)  # (B, C, W)
+    x_j = x_t[0].permute(1, 0).numpy()  # (W, C)
     with torch.no_grad():
         pt_out = sc(x_t)[0].permute(1, 0).detach().cpu().numpy()  # (W, out)
     eqx_out = eqx_conv(x_j)
@@ -102,22 +109,32 @@ def compare_2d(neuralop_root: Path, seed: int) -> bool:
 
     torch.manual_seed(seed)
     sc = SpectralConv(
-        in_channels=in_ch, out_channels=out_ch,
+        in_channels=in_ch,
+        out_channels=out_ch,
         n_modes=(2 * m1, 2 * m2),
-        factorization=None, bias=False, fft_norm="ortho",
+        factorization=None,
+        bias=False,
+        fft_norm="ortho",
     ).eval()
     w0 = sc.weight[0].to_tensor().detach().cpu().numpy()  # ++ quadrant
     w1 = sc.weight[1].to_tensor().detach().cpu().numpy()  # -+ quadrant
 
-    eqx_conv = SpectralConv2d(in_ch, out_ch, m1, m2,
-                              linear_conv=False, key=jax.random.PRNGKey(seed))
+    eqx_conv = SpectralConv2d(
+        in_ch, out_ch, m1, m2, linear_conv=False, key=jax.random.PRNGKey(seed)
+    )
     # foundax weight_1 = upper-H slice → neuralop quadrant 0 (++)
     # foundax weight_2 = lower-H slice → neuralop quadrant 1 (-+)
     eqx_conv = _copy_complex_weight(
-        eqx_conv, [("weight_1_real", None)], [("weight_1_imag", None)], w0,
+        eqx_conv,
+        [("weight_1_real", None)],
+        [("weight_1_imag", None)],
+        w0,
     )
     eqx_conv = _copy_complex_weight(
-        eqx_conv, [("weight_2_real", None)], [("weight_2_imag", None)], w1,
+        eqx_conv,
+        [("weight_2_real", None)],
+        [("weight_2_imag", None)],
+        w1,
     )
 
     x_t = torch.randn(1, in_ch, H, W, dtype=torch.float32)
@@ -140,20 +157,25 @@ def compare_3d(neuralop_root: Path, seed: int) -> bool:
 
     torch.manual_seed(seed)
     sc = SpectralConv(
-        in_channels=in_ch, out_channels=out_ch,
+        in_channels=in_ch,
+        out_channels=out_ch,
         n_modes=(2 * m1, 2 * m2, 2 * m3),
-        factorization=None, bias=False, fft_norm="ortho",
+        factorization=None,
+        bias=False,
+        fft_norm="ortho",
     ).eval()
     # Neuralop quadrant order over (D, H) axes: (++), (+-), (-+), (--).
     # Maps directly to foundax weight_1, weight_2, weight_3, weight_4.
     weights = [sc.weight[i].to_tensor().detach().cpu().numpy() for i in range(4)]
 
-    eqx_conv = SpectralConv3d(in_ch, out_ch, m1, m2, m3,
-                              linear_conv=False, key=jax.random.PRNGKey(seed))
+    eqx_conv = SpectralConv3d(
+        in_ch, out_ch, m1, m2, m3, linear_conv=False, key=jax.random.PRNGKey(seed)
+    )
     for i, w in enumerate(weights, start=1):
         eqx_conv = _copy_complex_weight(
             eqx_conv,
-            [(f"weight_{i}_real", None)], [(f"weight_{i}_imag", None)],
+            [(f"weight_{i}_real", None)],
+            [(f"weight_{i}_imag", None)],
             w,
         )
 
@@ -166,11 +188,14 @@ def compare_3d(neuralop_root: Path, seed: int) -> bool:
 
 
 def run_structural_check(seed: int) -> int:
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     import foundax as fx
 
     print("[FNO] Structural check (JAX only)")
-    m = fx.fno2d(in_features=2, hidden_channels=16, n_modes=8, key=jax.random.PRNGKey(seed))
+    m = fx.fno2d(
+        in_features=2, hidden_channels=16, n_modes=8, key=jax.random.PRNGKey(seed)
+    )
     x = jax.random.normal(jax.random.PRNGKey(seed + 1), (16, 16, 2))
     y = m(x)
     print(f"  output shape: {y.shape}, finite: {bool(jnp.all(jnp.isfinite(y)))}")
@@ -190,10 +215,7 @@ def parse_args(argv=None):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    if (
-        find_spec("torch") is None
-        or not (args.neuralop_root / "neuralop").exists()
-    ):
+    if find_spec("torch") is None or not (args.neuralop_root / "neuralop").exists():
         print("torch or upstream missing — JAX-only structural check.")
         return run_structural_check(args.seed)
 
