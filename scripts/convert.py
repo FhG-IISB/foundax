@@ -108,6 +108,7 @@ def main() -> None:
             "wno",
             "dit",
             "gnot",
+            "timesfm",
         ],
         help="Model family to convert",
     )
@@ -181,6 +182,11 @@ def main() -> None:
         code = 0
     elif args.model == "gnot":
         print("  [convert] gnot: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "timesfm":
+        # Native HF checkpoint loaded by the Flax backend directly;
+        # no msgpack conversion needed.
+        print("  [convert] timesfm: native HF checkpoint — no msgpack needed")
         code = 0
     else:
         print(f"Unsupported model: {args.model}")

@@ -57,6 +57,7 @@ def main() -> None:
             "wno",
             "dit",
             "gnot",
+            "timesfm",
         ],
         help="Model family to compare",
     )
@@ -164,6 +165,16 @@ def main() -> None:
         import sys as _sys
 
         script = Path(__file__).resolve().parent / "compare_gnot.py"
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
+    elif args.model == "timesfm":
+        # Wrapped (not vendored) foundation model: dispatch to the
+        # top-level compare script.
+        import sys as _sys
+
+        script = Path(__file__).resolve().parent / "compare_timesfm.py"
         code = _run(
             [_sys.executable, str(script), *extra],
             cwd=Path(__file__).resolve().parents[1],

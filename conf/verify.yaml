@@ -19,6 +19,7 @@ models:
   - wno
   - dit
   - gnot
+  - timesfm
 
 # Root for downloaded/cloned artefacts
 outdir: ${hydra:runtime.cwd}/verify_output

@@ -140,6 +140,7 @@ torchtune = ">=0.6.1, <0.7"
 torchao = ">=0.17.0, <0.18"
 torch-harmonics = ">=0.8.0, <0.9"
 python-dotenv = ">=1.2.2, <2"
+timesfm = { git = "https://github.com/google-research/timesfm.git", extras = ["flax"] }
 
 [tool.pixi.feature.dev.tasks]
 test-train = "pytest --tb=short -m train -v"
@@ -160,3 +161,4 @@ verify-fno = "python scripts/verify.py 'models=[fno]'"
 verify-wno = "python scripts/verify.py 'models=[wno]'"
 verify-dit = "python scripts/verify.py 'models=[dit]'"
 verify-gnot = "python scripts/verify.py 'models=[gnot]'"
+verify-timesfm = "python scripts/verify.py 'models=[timesfm]'"

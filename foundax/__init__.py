@@ -1,4 +1,15 @@
-from . import bcat, dpot, kan, morph, mpp, pdeformer2, poseidon, prose, walrus
+from . import (
+    bcat,
+    dpot,
+    kan,
+    morph,
+    mpp,
+    pdeformer2,
+    poseidon,
+    prose,
+    timesfm,
+    walrus,
+)
 from . import layers
 from .pipe import block, Block, Pipe, ShapeMismatchError
 from .combinators import dot, add, cat
@@ -101,6 +112,7 @@ __all__ = [
     "pdeformer2",
     "dpot",
     "prose",
+    "timesfm",
     # architecture factories
     "linear",
     "mlp",
