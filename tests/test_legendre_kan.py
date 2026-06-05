@@ -57,7 +57,7 @@ def test_dtype():
 
 
 def test_network_train():
-    network_train_overfit_sin(lambda **kw: fx.legendre_kan(**kw, degree=8))
+    network_train_overfit_sin(lambda **kw: fx.kan.legendre(**kw, degree=8))
 
 
 def test_legendre_matches_numpy_polynomial():

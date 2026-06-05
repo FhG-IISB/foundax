@@ -4,6 +4,8 @@ import pytest
 
 jax = pytest.importorskip("jax")
 jnp = pytest.importorskip("jax.numpy")
+np = pytest.importorskip("numpy")
+sp = pytest.importorskip("scipy.special")
 
 import foundax as fx
 from foundax.architectures.kan import JacobiKANLayer, JacobiBasis
@@ -59,7 +61,7 @@ def test_dtype():
 
 def test_network_train():
     network_train_overfit_sin(
-        lambda **kw: fx.jacobi_kan(**kw, degree=8, alpha=1.0, beta=1.0)
+        lambda **kw: fx.kan.jacobi(**kw, degree=8, alpha=1.0, beta=1.0)
     )
 
 
@@ -72,6 +74,25 @@ def test_jacobi_at_zero():
     xt = jnp.tanh(x[:, 0])
     expected = 0.5 * ((2.0 - 1.0) + (2.0 + 1.0 + 2.0) * xt)
     assert jnp.allclose(phi[:, 1], expected, atol=1e-6)
+
+
+@pytest.mark.parametrize("alpha,beta", [(0.5, 0.5), (1.0, 1.0), (2.0, 1.5)])
+def test_jacobi_matches_scipy_eval_jacobi(alpha, beta):
+    """JacobiBasis must match scipy.special.eval_jacobi for all degrees, all
+    (alpha, beta). This exercises the full three-term recurrence, not just
+    P_0 and P_1."""
+    degree = 6
+    basis = JacobiBasis(degree=degree, alpha=alpha, beta=beta)
+    x = jnp.linspace(-0.9, 0.9, 25).reshape(-1, 1)
+    phi = np.asarray(basis(x))[:, 0, :]  # (25, degree+1)
+    xn = np.tanh(np.asarray(x)[:, 0])
+    ref = np.stack(
+        [sp.eval_jacobi(n, alpha, beta, xn) for n in range(degree + 1)],
+        axis=-1,
+    )
+    assert np.allclose(phi, ref, atol=1e-5), (
+        f"max diff = {np.max(np.abs(phi - ref)):.3e}"
+    )
 
 
 # ── Extended correctness / robustness suite ────────────────────────────────

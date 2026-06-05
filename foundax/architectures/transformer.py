@@ -1,4 +1,4 @@
-# https://github.com/voyager-jhk/JaxTransformer
+# Originally adapted from https://github.com/voyager-jhk/JaxTransformer
 import jax
 import jax.numpy as jnp
 import equinox as eqx
@@ -10,27 +10,43 @@ def _default_float_dtype():
     return jnp.asarray(0.0).dtype
 
 
+def causal_mask(seq_len: int) -> jnp.ndarray:
+    """Lower-triangular boolean mask of shape ``(seq_len, seq_len)``.
+
+    ``True`` entries are kept, ``False`` entries are zeroed by softmax.
+    Pass as ``decoder_self_attention_mask`` so each query position can
+    only attend to keys at the same or earlier positions.
+    """
+    return jnp.tril(jnp.ones((seq_len, seq_len), dtype=jnp.bool_))
+
+
 class PositionalEncoding(eqx.Module):
+    """Sinusoidal positional encoding (Vaswani et al. 2017, §3.5).
+
+    Precomputed once at construction. Added along the last-but-one
+    (sequence) axis, so both unbatched ``(seq, embed_dim)`` and batched
+    ``(..., seq, embed_dim)`` inputs are supported.
+    """
+
+    pe: jax.Array
     max_len: int = eqx.field(static=True)
     embed_dim: int = eqx.field(static=True)
 
     def __init__(self, max_len, embed_dim, **kwargs):
         self.max_len = max_len
         self.embed_dim = embed_dim
+        position = jnp.arange(max_len, dtype=_default_float_dtype())[:, None]
+        div_term = jnp.exp(
+            jnp.arange(0, embed_dim, 2) * -(jnp.log(10000.0) / embed_dim)
+        )
+        pe = jnp.zeros((max_len, embed_dim))
+        pe = pe.at[:, 0::2].set(jnp.sin(position * div_term))
+        pe = pe.at[:, 1::2].set(jnp.cos(position * div_term))
+        self.pe = pe
 
     def __call__(self, inputs: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        seq_len = inputs.shape[1]
-        position = jnp.arange(self.max_len, dtype=_default_float_dtype())[
-            jnp.newaxis, :
-        ]
-        div_term = jnp.exp(
-            jnp.arange(0, self.embed_dim, 2) * -(jnp.log(10000.0) / self.embed_dim)
-        )
-        pe = jnp.zeros((self.max_len, self.embed_dim))
-        pe = pe.at[:, 0::2].set(jnp.sin(position.T * div_term))
-        pe = pe.at[:, 1::2].set(jnp.cos(position.T * div_term))
-        pe = pe[jnp.newaxis, :seq_len, :]
-        return inputs + jnp.array(pe, dtype=inputs.dtype)
+        seq_len = inputs.shape[-2]
+        return inputs + self.pe[:seq_len].astype(inputs.dtype)
 
 
 class TransformerMLP(eqx.Module):
@@ -53,7 +69,13 @@ class TransformerMLP(eqx.Module):
         return x
 
 
-class SelfAttention(eqx.Module):
+class MultiHeadAttention(eqx.Module):
+    """Multi-head scaled dot-product attention.
+
+    Used for both self- and cross-attention — the call signature takes
+    separate ``inputs_q`` and ``inputs_kv``.
+    """
+
     query_proj: Linear
     key_proj: Linear
     value_proj: Linear
@@ -72,6 +94,10 @@ class SelfAttention(eqx.Module):
         *,
         key,
     ):
+        if qkv_features % num_heads != 0:
+            raise ValueError(
+                f"qkv_features ({qkv_features}) must be divisible by num_heads ({num_heads})"
+            )
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.query_proj = Linear(in_features, qkv_features, key=k1)
         self.key_proj = Linear(in_features, qkv_features, key=k2)
@@ -117,11 +143,18 @@ class SelfAttention(eqx.Module):
         return self.output_proj(attn_output)
 
 
+def _maybe_dropout(x, rate, key):
+    if rate > 0 and key is not None:
+        return eqx.nn.Dropout(p=rate)(x, key=key)
+    return x
+
+
 class EncoderBlock(eqx.Module):
     norm1: eqx.nn.LayerNorm
     norm2: eqx.nn.LayerNorm
-    self_attention: SelfAttention
+    self_attention: MultiHeadAttention
     mlp: TransformerMLP
+    dropout_rate: float = eqx.field(static=True)
 
     def __init__(
         self, embed_dim, num_heads, qkv_features, mlp_features, dropout_rate=0.1, *, key
@@ -129,7 +162,7 @@ class EncoderBlock(eqx.Module):
         k1, k2 = jax.random.split(key)
         self.norm1 = eqx.nn.LayerNorm(embed_dim)
         self.norm2 = eqx.nn.LayerNorm(embed_dim)
-        self.self_attention = SelfAttention(
+        self.self_attention = MultiHeadAttention(
             embed_dim,
             qkv_features,
             embed_dim,
@@ -140,14 +173,20 @@ class EncoderBlock(eqx.Module):
         self.mlp = TransformerMLP(
             embed_dim, mlp_features, embed_dim, dropout_rate=dropout_rate, key=k2
         )
+        self.dropout_rate = dropout_rate
 
     def __call__(self, inputs, mask=None, *, key=None, **kwargs):
-        k1, k2 = jax.random.split(key) if key is not None else (None, None)
+        if key is not None:
+            k_attn, k_attn_drop, k_mlp, k_mlp_drop = jax.random.split(key, 4)
+        else:
+            k_attn = k_attn_drop = k_mlp = k_mlp_drop = None
         norm_inputs = jax.vmap(self.norm1)(inputs)
-        attn_out = self.self_attention(norm_inputs, norm_inputs, mask, key=k1)
+        attn_out = self.self_attention(norm_inputs, norm_inputs, mask, key=k_attn)
+        attn_out = _maybe_dropout(attn_out, self.dropout_rate, k_attn_drop)
         x = inputs + attn_out
         norm_x = jax.vmap(self.norm2)(x)
-        mlp_out = self.mlp(norm_x, key=k2)
+        mlp_out = self.mlp(norm_x, key=k_mlp)
+        mlp_out = _maybe_dropout(mlp_out, self.dropout_rate, k_mlp_drop)
         return x + mlp_out
 
 
@@ -155,9 +194,10 @@ class DecoderBlock(eqx.Module):
     norm1: eqx.nn.LayerNorm
     norm2: eqx.nn.LayerNorm
     norm3: eqx.nn.LayerNorm
-    self_attention: SelfAttention
-    cross_attention: SelfAttention
+    self_attention: MultiHeadAttention
+    cross_attention: MultiHeadAttention
     mlp: TransformerMLP
+    dropout_rate: float = eqx.field(static=True)
 
     def __init__(
         self, embed_dim, num_heads, qkv_features, mlp_features, dropout_rate=0.1, *, key
@@ -166,7 +206,7 @@ class DecoderBlock(eqx.Module):
         self.norm1 = eqx.nn.LayerNorm(embed_dim)
         self.norm2 = eqx.nn.LayerNorm(embed_dim)
         self.norm3 = eqx.nn.LayerNorm(embed_dim)
-        self.self_attention = SelfAttention(
+        self.self_attention = MultiHeadAttention(
             embed_dim,
             qkv_features,
             embed_dim,
@@ -174,7 +214,7 @@ class DecoderBlock(eqx.Module):
             dropout_rate=dropout_rate,
             key=k1,
         )
-        self.cross_attention = SelfAttention(
+        self.cross_attention = MultiHeadAttention(
             embed_dim,
             qkv_features,
             embed_dim,
@@ -185,6 +225,7 @@ class DecoderBlock(eqx.Module):
         self.mlp = TransformerMLP(
             embed_dim, mlp_features, embed_dim, dropout_rate=dropout_rate, key=k3
         )
+        self.dropout_rate = dropout_rate
 
     def __call__(
         self,
@@ -196,19 +237,26 @@ class DecoderBlock(eqx.Module):
         key=None,
         **kwargs,
     ):
-        k1, k2, k3 = jax.random.split(key, 3) if key is not None else (None, None, None)
+        if key is not None:
+            keys = jax.random.split(key, 6)
+            k_sa, k_sa_drop, k_ca, k_ca_drop, k_mlp, k_mlp_drop = keys
+        else:
+            k_sa = k_sa_drop = k_ca = k_ca_drop = k_mlp = k_mlp_drop = None
         norm_inputs = jax.vmap(self.norm1)(inputs)
         self_attn_out = self.self_attention(
-            norm_inputs, norm_inputs, self_attention_mask, key=k1
+            norm_inputs, norm_inputs, self_attention_mask, key=k_sa
         )
+        self_attn_out = _maybe_dropout(self_attn_out, self.dropout_rate, k_sa_drop)
         x = inputs + self_attn_out
         norm_x = jax.vmap(self.norm2)(x)
         cross_attn_out = self.cross_attention(
-            norm_x, encoder_outputs, cross_attention_mask, key=k2
+            norm_x, encoder_outputs, cross_attention_mask, key=k_ca
         )
+        cross_attn_out = _maybe_dropout(cross_attn_out, self.dropout_rate, k_ca_drop)
         x = x + cross_attn_out
         norm_x = jax.vmap(self.norm3)(x)
-        mlp_out = self.mlp(norm_x, key=k3)
+        mlp_out = self.mlp(norm_x, key=k_mlp)
+        mlp_out = _maybe_dropout(mlp_out, self.dropout_rate, k_mlp_drop)
         return x + mlp_out
 
 
@@ -217,6 +265,7 @@ class TransformerEncoder(eqx.Module):
     pos_enc: PositionalEncoding
     blocks: list
     final_norm: eqx.nn.LayerNorm
+    embed_dim: int = eqx.field(static=True)
     dropout_rate: float = eqx.field(static=True)
 
     def __init__(
@@ -247,10 +296,13 @@ class TransformerEncoder(eqx.Module):
             for i in range(num_layers)
         ]
         self.final_norm = eqx.nn.LayerNorm(embed_dim)
+        self.embed_dim = embed_dim
         self.dropout_rate = dropout_rate
 
     def __call__(self, input_tokens, attention_mask=None, *, key=None, **kwargs):
         x = jax.vmap(self.token_embeddings)(input_tokens)
+        # Vaswani §3.4: scale embeddings by sqrt(d_model) before adding PE.
+        x = x * jnp.sqrt(jnp.array(self.embed_dim, dtype=x.dtype))
         x = self.pos_enc(x)
         if self.dropout_rate > 0 and key is not None:
             key, subkey = jax.random.split(key)
@@ -270,6 +322,7 @@ class TransformerDecoder(eqx.Module):
     blocks: list
     final_norm: eqx.nn.LayerNorm
     logits_layer: Linear
+    embed_dim: int = eqx.field(static=True)
     dropout_rate: float = eqx.field(static=True)
 
     def __init__(
@@ -301,6 +354,7 @@ class TransformerDecoder(eqx.Module):
         ]
         self.final_norm = eqx.nn.LayerNorm(embed_dim)
         self.logits_layer = Linear(embed_dim, vocab_size, key=keys[-1])
+        self.embed_dim = embed_dim
         self.dropout_rate = dropout_rate
 
     def __call__(
@@ -314,6 +368,7 @@ class TransformerDecoder(eqx.Module):
         **kwargs,
     ):
         x = jax.vmap(self.token_embeddings)(target_tokens)
+        x = x * jnp.sqrt(jnp.array(self.embed_dim, dtype=x.dtype))
         x = self.pos_enc(x)
         if self.dropout_rate > 0 and key is not None:
             key, subkey = jax.random.split(key)
@@ -331,10 +386,23 @@ class TransformerDecoder(eqx.Module):
                 key=subkey,
             )
         x = jax.vmap(self.final_norm)(x)
-        return jax.vmap(self.logits_layer)(x)
+        return self.logits_layer(x)
 
 
 class Transformer(eqx.Module):
+    """Encoder-decoder Transformer (Vaswani et al. 2017, pre-norm variant).
+
+    Uses **pre-norm** blocks (``x + Sublayer(LayerNorm(x))``), which
+    deviates from Vaswani's original post-norm formulation but matches
+    the modern default (GPT-2, T5) for training stability. The rest
+    follows the original spec: sinusoidal positional encoding,
+    embeddings scaled by √d_model, scaled dot-product multi-head
+    attention, ReLU FFN.
+
+    Operates on **unbatched** inputs ``(seq_len,)`` of integer token
+    ids. Use ``jax.vmap`` externally to batch.
+    """
+
     encoder: TransformerEncoder
     decoder: TransformerDecoder
 

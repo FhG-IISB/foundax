@@ -181,41 +181,41 @@ def test_kan_attention_block_grad():
 
 def test_all_new_factories_exposed():
     for name in (
-        "hermite_kan",
-        "laguerre_kan",
-        "bernstein_kan",
-        "relu_kan",
-        "rational_kan",
-        "sinc_kan",
-        "gram_kan",
-        "bsrbf_kan",
-        "kan_conv1d",
-        "kan_conv3d",
-        "kan_res_block",
-        "kan_attention_block",
-        "kan_spectral_block1d",
-        "kan_spectral_block2d",
-        "kan_spectral_block3d",
+        "hermite",
+        "laguerre",
+        "bernstein",
+        "relu",
+        "rational",
+        "sinc",
+        "gram",
+        "bsrbf",
+        "conv1d",
+        "conv3d",
+        "res_block",
+        "attention_block",
+        "spectral_block1d",
+        "spectral_block2d",
+        "spectral_block3d",
     ):
-        assert hasattr(fx, name), f"foundax missing factory '{name}'"
+        assert hasattr(fx.kan, name), f"fx.kan missing factory '{name}'"
 
 
 def test_all_new_layers_in_layers_namespace():
     for name in (
-        "HermiteKANLayer",
-        "LaguerreKANLayer",
-        "BernsteinKANLayer",
-        "ReLUKANLayer",
-        "RationalKANLayer",
-        "SincKANLayer",
-        "GramKANLayer",
-        "BSRBFKANLayer",
-        "KANConv1d",
-        "KANConv3d",
-        "KANResBlock",
-        "KANAttentionBlock",
-        "KANSpectralBlock1d",
-        "KANSpectralBlock2d",
-        "KANSpectralBlock3d",
+        "hermite",
+        "laguerre",
+        "bernstein",
+        "relu",
+        "rational",
+        "sinc",
+        "gram",
+        "bsrbf",
+        "conv1d",
+        "conv3d",
+        "res_block",
+        "attention_block",
+        "spectral_block1d",
+        "spectral_block2d",
+        "spectral_block3d",
     ):
-        assert hasattr(fx.layers, name), f"fx.layers missing '{name}'"
+        assert hasattr(fx.layers.kan, name), f"fx.layers.kan missing '{name}'"

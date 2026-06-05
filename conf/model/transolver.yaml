@@ -1,0 +1,9 @@
+name: transolver
+github_url: https://github.com/thuml/Transolver
+hf_checkpoint: null            # no canonical published weights; uses seeded random weights
+compare_needs_pt_repo: true
+has_compare: true
+convert_extra_args: []          # no PT→msgpack conversion needed (in-memory weight transfer)
+compare_extra_args:
+  - "--transolver-root"
+  - "{repos_dir}/transolver"

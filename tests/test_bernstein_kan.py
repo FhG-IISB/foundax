@@ -57,7 +57,7 @@ def test_dtype():
 
 
 def test_network_train():
-    network_train_overfit_sin(lambda **kw: fx.bernstein_kan(**kw, degree=8))
+    network_train_overfit_sin(lambda **kw: fx.kan.bernstein(**kw, degree=8))
 
 
 def test_bernstein_partition_of_unity():

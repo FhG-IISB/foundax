@@ -173,7 +173,7 @@ def test_kan_conv1d_kernel_sizes(k):
 
 def test_kan_network_single_layer():
     """num_layers=1 → just (in_features → output_dim) with no hidden layers."""
-    model = fx.fastkan(
+    model = fx.kan.fast(
         in_features=3, output_dim=2, hidden_dims=4, num_layers=1, key=_k()
     )
     y = model(jnp.ones((5, 3)))

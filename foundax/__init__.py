@@ -1,4 +1,15 @@
-from . import bcat, dpot, morph, mpp, pdeformer2, poseidon, prose, timesfm, walrus
+from . import (
+    bcat,
+    dpot,
+    kan,
+    morph,
+    mpp,
+    pdeformer2,
+    poseidon,
+    prose,
+    timesfm,
+    walrus,
+)
 from . import layers
 from .pipe import block, Block, Pipe, ShapeMismatchError
 from .combinators import dot, add, cat
@@ -30,32 +41,7 @@ from .nn import (
     moegptno,
     pit,
     pointnet,
-    # KAN family
-    kan,
-    efficient_kan,
-    fastkan,
-    fourier_kan,
-    chebyshev_kan,
-    jacobi_kan,
-    legendre_kan,
-    wavelet_kan,
-    taylor_kan,
-    hermite_kan,
-    laguerre_kan,
-    bernstein_kan,
-    relu_kan,
-    rational_kan,
-    sinc_kan,
-    gram_kan,
-    bsrbf_kan,
-    kan_conv1d,
-    kan_conv2d,
-    kan_conv3d,
-    kan_res_block,
-    kan_spectral_block1d,
-    kan_spectral_block2d,
-    kan_spectral_block3d,
-    kan_attention_block,
+    # KAN family is exposed as the ``fx.kan`` namespace (see foundax/kan.py).
     # foundation model shortcuts
     poseidonT,
     poseidonB,
@@ -88,6 +74,12 @@ from .nn import (
     wno1d,
     wno2d,
     wno3d,
+    # physics-attention transformer
+    transolver,
+    transolver2d,
+    transolver3d,
+    # spherical fourier neural operator
+    sfno2d,
 )
 
 __version__ = "0.2.0"
@@ -111,6 +103,7 @@ __all__ = [
     "AdaLayerNorm",
     "AdaLayerNormZero",
     # submodule namespaces
+    "kan",
     "poseidon",
     "walrus",
     "morph",
@@ -141,32 +134,6 @@ __all__ = [
     "moegptno",
     "pit",
     "pointnet",
-    # KAN family
-    "kan",
-    "efficient_kan",
-    "fastkan",
-    "fourier_kan",
-    "chebyshev_kan",
-    "jacobi_kan",
-    "legendre_kan",
-    "wavelet_kan",
-    "taylor_kan",
-    "hermite_kan",
-    "laguerre_kan",
-    "bernstein_kan",
-    "relu_kan",
-    "rational_kan",
-    "sinc_kan",
-    "gram_kan",
-    "bsrbf_kan",
-    "kan_conv1d",
-    "kan_conv2d",
-    "kan_conv3d",
-    "kan_res_block",
-    "kan_spectral_block1d",
-    "kan_spectral_block2d",
-    "kan_spectral_block3d",
-    "kan_attention_block",
     # foundation model factories
     "poseidonT",
     "poseidonB",
@@ -199,4 +166,10 @@ __all__ = [
     "wno1d",
     "wno2d",
     "wno3d",
+    # physics-attention transformer
+    "transolver",
+    "transolver2d",
+    "transolver3d",
+    # spherical fourier neural operator
+    "sfno2d",
 ]
