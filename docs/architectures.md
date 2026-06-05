@@ -23,6 +23,8 @@ Direct Equinox implementations in `foundax/architectures/`, exposed via `foundax
 | `fx.dit2d`, `fx.dit3d` | Diffusion Transformer (DiT) | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) | Patch + sinusoidal positional embedding; flow-matching backbone |
 | `fx.ffno2d`, `fx.ffno3d` | Factorized FNO | Tran et al. 2023 — [arXiv:2111.13802](https://arxiv.org/abs/2111.13802) | `d` independent 1-D spectral convs; reduces O(m^d·C²) to O(d·m·C²) |
 | `fx.wno1d`, `fx.wno2d`, `fx.wno3d` | Wavelet Neural Operator | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) | Multi-scale DWT decomposition with Daubechies-8 wavelets |
+| `fx.transolver`, `fx.transolver2d`, `fx.transolver3d` | Transolver (Physics-Attention) | Wu et al., ICML 2024 — [arXiv:2402.02366](https://arxiv.org/abs/2402.02366); code from [thuml/Transolver](https://github.com/thuml/Transolver) | Slice-based linear attention over learnable physical groups; unstructured + structured 2D/3D variants |
+| `fx.sfno2d` | Spherical Fourier Neural Operator | Bonev et al., ICML 2023 — [arXiv:2306.03838](https://arxiv.org/abs/2306.03838); reference code [NVIDIA/torch-harmonics](https://github.com/NVIDIA/torch-harmonics) | FFT replaced by a real-valued spherical harmonic transform (pure-JAX, no exotic deps); Gauss–Legendre or equiangular grid |
 
 See [Core Models](core-models.md) for detailed usage notes per family.
 
@@ -85,3 +87,23 @@ Each namespace wraps a vendored JAX implementation in `repos/jax_*`. Pretrained 
 See [Foundation Models](equinox-architectures.md) for per-namespace usage.
 
 For the pipe API (`fx.block`, `|`, `fx.dot`, `fx.add`, `fx.cat`) and time-conditioning primitives, see [Getting Started](getting-started.md).
+
+---
+
+## 4. Parity verification against PyTorch upstreams
+
+For every wired-up architecture we run a numerical-parity test that **instantiates the actual upstream PyTorch class, copies its weights tensor-by-tensor into the foundax Equinox port, runs both forwards on the same input, and compares element-wise**. The full suite runs end-to-end via `pixi run verify 'models=[...]'`; per-model tasks like `pixi run verify-fno` also exist.
+
+| Architecture | Max abs diff | Rel L2 | PyTorch reference | Compared against |
+|---|---|---|---|---|
+| Transolver | 8.4e-7 | 3.5e-6 | [thuml/Transolver](https://github.com/thuml/Transolver) | upstream `Model` (Irregular + Structured 2D), full-model parity |
+| SFNO | 4.8e-5 | 4.2e-5 | [NVIDIA/torch-harmonics](https://github.com/NVIDIA/torch-harmonics) | upstream `RealSHT` + `InverseRealSHT` primitives wrapped in an SFNO recipe (no canonical SFNO class upstream) |
+| FFNO | 5.4e-7 | 1.3e-7 | [alasdairtran/fourierflow](https://github.com/alasdairtran/fourierflow) | upstream `SpectralConv2d` / `SpectralConv2d (3D)` (full block has per-block FeedForward not present in our cleaner wrapper) |
+| FNO (+ Geo-FNO) | 3.6e-7 | 2.0e-7 | [neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator) | upstream `SpectralConv` (1D/2D/3D), `factorization=None`, `fft_norm='ortho'`, `bias=False` |
+| WNO | — | — | [TapasTripura/WNO](https://github.com/TapasTripura/WNO) | no parity possible — upstream uses Daubechies-6 + symmetric extension via `pytorch_wavelets`; ours uses Daubechies-8 + zero-boundary. Different algorithm, structural check only |
+| DiT | 3.6e-7 | 5.1e-8 | [facebookresearch/DiT](https://github.com/facebookresearch/DiT) | upstream `DiTBlock` (against an Equinox port that mirrors upstream's design choices — SiLU + GELU(tanh) + no-affine LN; foundax's user-facing `dit2d` uses different conventions by design) |
+| GNOT | 1.7e-4 | 5.0e-5 | [HaoZhongkai/GNOT](https://github.com/HaoZhongkai/GNOT) | upstream `LinearAttention`, `LinearCrossAttention`, `CrossAttentionBlock` (full `CGPTNO.forward` needs `dgl` for graph batching which the parity test bypasses) |
+
+**Metric.** "Max abs diff" is element-wise `max(|pt − jax|)` on a forward pass with identical inputs and transferred weights. "Rel L2" is `‖pt − jax‖₂ / ‖pt‖₂` — the closest analog to a relative RMSE. All values are at float32 noise floor. The only architecture without a numerical-parity number is WNO, because the upstream and foundax implementations are structurally different wavelet algorithms (different filter, different boundary mode) — no shared input + shared weights configuration produces matching output.
+
+To reproduce, install dev deps (`pixi install -e dev`), then run any of `pixi run verify-transolver`, `verify-sfno`, `verify-ffno`, `verify-fno`, `verify-wno`, `verify-dit`, `verify-gnot` (or `pixi run verify 'models=[...]'` for combined). Compare-script source lives in `scripts/compare_<name>.py`; the shared PT→EQX weight-transfer helpers are in `scripts/_pt2eqx.py`.

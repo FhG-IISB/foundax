@@ -3273,3 +3273,223 @@ def wno3d(
         depth,
         key=_resolve_key(key),
     )
+
+
+def sfno2d(
+    in_channels: int,
+    out_channels: int | None = None,
+    hidden_channels: int = 32,
+    L: int = 32,
+    nlat: int = 64,
+    nlon: int = 128,
+    n_layers: int = 4,
+    grid: str = "legendre-gauss",
+    activation: str = "gelu",
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a 2-D Spherical Fourier Neural Operator (SFNO).
+
+    Replaces FNO's FFT-based spectral conv with a real-valued spherical
+    harmonic transform, giving rotational equivariance on the sphere and
+    long-horizon stability for global weather / climate fields.
+
+    Reference:
+        Bonev et al. *Spherical Fourier Neural Operators: Learning
+        Stable Dynamics on the Sphere* (ICML 2023).
+        https://arxiv.org/abs/2306.03838
+
+    Input shape ``(nlat, nlon, in_channels)``, channel-last unbatched.
+    Batch with ``jax.vmap`` externally.
+
+    Args:
+        in_channels: Number of input channels.
+        out_channels: Output channels (defaults to ``in_channels``).
+        hidden_channels: Width of the latent representation.
+        L: Spherical-harmonic bandlimit (number of l-modes kept).
+            Must satisfy ``L ≤ nlat`` and ``L ≤ nlon//2 + 1``.
+        nlat: Number of latitude points on the grid.
+        nlon: Number of longitude points on the grid.
+        n_layers: Number of SphericalBlock2d layers.
+        grid: Latitude grid: ``"legendre-gauss"`` (default, exact
+            quadrature) or ``"equiangular"`` (ERA5-style, approximate).
+        activation: Activation function name (e.g. ``"gelu"``,
+            ``"silu"``).
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (SFNO2d).
+    """
+    from .architectures.sfno import SFNO2d
+
+    return SFNO2d(
+        in_channels=in_channels,
+        hidden_channels=hidden_channels,
+        out_channels=out_channels if out_channels is not None else in_channels,
+        L=L,
+        nlat=nlat,
+        nlon=nlon,
+        n_layers=n_layers,
+        grid=grid,
+        activation=activation,
+        key=_resolve_key(key),
+    )
+
+
+def transolver(
+    space_dim: int,
+    fun_dim: int,
+    out_features: int = 1,
+    hidden_dim: int = 128,
+    n_layers: int = 8,
+    n_heads: int = 8,
+    n_slices: int = 64,
+    mlp_ratio: int = 4,
+    act: str = "gelu",
+    dropout: float = 0.0,
+    time_input: bool = False,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a Transolver for unstructured 1-D / 2-D / 3-D point clouds.
+
+    Physics-Attention transformer with O(N·M·D + M²·D) cost via learnable
+    slicing into M physical groups per head.
+
+    Reference:
+        Wu et al. *Transolver: A Fast Transformer Solver for PDEs on
+        General Geometries* (ICML 2024). https://arxiv.org/abs/2402.02366
+
+    Call signature: ``model(x_coords, x_func=None, t=None)`` where
+    ``x_coords`` has shape ``(N, space_dim)`` and ``x_func`` has shape
+    ``(N, fun_dim)``.
+
+    Args:
+        space_dim: Spatial dimensionality of the coordinates.
+        fun_dim: Number of input function channels.
+        out_features: Number of output channels.
+        hidden_dim: Hidden dimension (must be divisible by ``n_heads``).
+        n_layers: Number of Transolver blocks.
+        n_heads: Number of attention heads.
+        n_slices: Number of physical slices per head.
+        mlp_ratio: FFN hidden ratio.
+        act: Activation function name.
+        dropout: Dropout probability inside attention and FFN.
+        time_input: If True, model accepts a scalar timestep ``t``.
+        key: JAX PRNG key.
+
+    Returns:
+        An ``equinox.Module`` (TransolverIrregular).
+    """
+    from .architectures.transolver import TransolverIrregular
+
+    return TransolverIrregular(
+        space_dim=space_dim,
+        fun_dim=fun_dim,
+        out_features=out_features,
+        hidden_dim=hidden_dim,
+        n_layers=n_layers,
+        n_heads=n_heads,
+        n_slices=n_slices,
+        mlp_ratio=mlp_ratio,
+        act=act,
+        dropout=dropout,
+        time_input=time_input,
+        key=_resolve_key(key),
+    )
+
+
+def transolver2d(
+    space_dim: int = 2,
+    fun_dim: int = 1,
+    out_features: int = 1,
+    hidden_dim: int = 128,
+    n_layers: int = 8,
+    n_heads: int = 8,
+    n_slices: int = 64,
+    mlp_ratio: int = 4,
+    act: str = "gelu",
+    dropout: float = 0.0,
+    kernel: int = 3,
+    time_input: bool = False,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a Transolver for structured 2-D grids.
+
+    Same as :func:`transolver`, but uses ``Conv2d`` projections inside
+    Physics-Attention so each pixel sees a local ``kernel × kernel``
+    neighbourhood before being assigned to slices. Inputs are channel-last
+    grids: ``(H, W, space_dim)`` and ``(H, W, fun_dim)``.
+
+    Reference:
+        Wu et al. *Transolver: A Fast Transformer Solver for PDEs on
+        General Geometries* (ICML 2024). https://arxiv.org/abs/2402.02366
+
+    Returns:
+        An ``equinox.Module`` (TransolverStructured2D).
+    """
+    from .architectures.transolver import TransolverStructured2D
+
+    return TransolverStructured2D(
+        space_dim=space_dim,
+        fun_dim=fun_dim,
+        out_features=out_features,
+        hidden_dim=hidden_dim,
+        n_layers=n_layers,
+        n_heads=n_heads,
+        n_slices=n_slices,
+        mlp_ratio=mlp_ratio,
+        act=act,
+        dropout=dropout,
+        kernel=kernel,
+        time_input=time_input,
+        key=_resolve_key(key),
+    )
+
+
+def transolver3d(
+    space_dim: int = 3,
+    fun_dim: int = 1,
+    out_features: int = 1,
+    hidden_dim: int = 128,
+    n_layers: int = 8,
+    n_heads: int = 8,
+    n_slices: int = 32,
+    mlp_ratio: int = 4,
+    act: str = "gelu",
+    dropout: float = 0.0,
+    kernel: int = 3,
+    time_input: bool = False,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a Transolver for structured 3-D grids.
+
+    Same as :func:`transolver2d` but with ``Conv3d`` projections. Inputs:
+    ``(D, H, W, space_dim)`` and ``(D, H, W, fun_dim)``.
+
+    Reference:
+        Wu et al. *Transolver: A Fast Transformer Solver for PDEs on
+        General Geometries* (ICML 2024). https://arxiv.org/abs/2402.02366
+
+    Returns:
+        An ``equinox.Module`` (TransolverStructured3D).
+    """
+    from .architectures.transolver import TransolverStructured3D
+
+    return TransolverStructured3D(
+        space_dim=space_dim,
+        fun_dim=fun_dim,
+        out_features=out_features,
+        hidden_dim=hidden_dim,
+        n_layers=n_layers,
+        n_heads=n_heads,
+        n_slices=n_slices,
+        mlp_ratio=mlp_ratio,
+        act=act,
+        dropout=dropout,
+        kernel=kernel,
+        time_input=time_input,
+        key=_resolve_key(key),
+    )

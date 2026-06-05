@@ -45,6 +45,19 @@ from foundax.architectures.wno import (
     WaveletBlock3d,
 )
 
+from foundax.architectures.transolver import (
+    PhysicsAttentionIrregular,
+    PhysicsAttentionStructured2D,
+    PhysicsAttentionStructured3D,
+    TransolverBlock,
+    TransolverFFN,
+)
+from foundax.architectures.sfno import (
+    RealSHT2d,
+    SphericalConv2d,
+    SphericalBlock2d,
+)
+
 from foundax.architectures.kan import (
     KANLayer,
     EfficientKANLayer,
@@ -88,6 +101,16 @@ __all__ = [
     "WaveletBlock1d",
     "WaveletBlock2d",
     "WaveletBlock3d",
+    # Physics-Attention (Transolver) primitives
+    "PhysicsAttentionIrregular",
+    "PhysicsAttentionStructured2D",
+    "PhysicsAttentionStructured3D",
+    "TransolverBlock",
+    "TransolverFFN",
+    # SFNO primitives
+    "RealSHT2d",
+    "SphericalConv2d",
+    "SphericalBlock2d",
     # KAN layer primitives
     "KANLayer",
     "EfficientKANLayer",

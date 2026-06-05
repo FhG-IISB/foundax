@@ -88,6 +88,12 @@ from .nn import (
     wno1d,
     wno2d,
     wno3d,
+    # physics-attention transformer
+    transolver,
+    transolver2d,
+    transolver3d,
+    # spherical fourier neural operator
+    sfno2d,
 )
 
 __version__ = "0.2.0"
@@ -198,4 +204,10 @@ __all__ = [
     "wno1d",
     "wno2d",
     "wno3d",
+    # physics-attention transformer
+    "transolver",
+    "transolver2d",
+    "transolver3d",
+    # spherical fourier neural operator
+    "sfno2d",
 ]

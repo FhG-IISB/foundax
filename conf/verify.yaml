@@ -12,6 +12,13 @@ models:
   - dpot
   - pdeformer2
   - prose
+  - transolver
+  - sfno
+  - ffno
+  - fno
+  - wno
+  - dit
+  - gnot
 
 # Root for downloaded/cloned artefacts
 outdir: ${hydra:runtime.cwd}/verify_output

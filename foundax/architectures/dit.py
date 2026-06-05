@@ -17,7 +17,7 @@ import equinox as eqx
 
 from .linear import Linear
 from .time_embed import SinusoidalTimeEmbedding
-from .transformer import SelfAttention
+from .transformer import MultiHeadAttention
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ class DiTBlock(eqx.Module):
 
     norm1: eqx.nn.LayerNorm
     norm2: eqx.nn.LayerNorm
-    attn: SelfAttention
+    attn: MultiHeadAttention
     mlp1: Linear
     mlp2: Linear
     adaLN_proj: Linear  # zero-initialised, emb_dim → 6*hidden_size
@@ -161,7 +161,7 @@ class DiTBlock(eqx.Module):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.norm1 = eqx.nn.LayerNorm(hidden_size)
         self.norm2 = eqx.nn.LayerNorm(hidden_size)
-        self.attn = SelfAttention(
+        self.attn = MultiHeadAttention(
             hidden_size, hidden_size, hidden_size, num_heads, key=k1
         )
         self.mlp1 = Linear(hidden_size, mlp_hidden, key=k2)

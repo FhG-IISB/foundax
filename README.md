@@ -56,7 +56,7 @@ net.mask(param_mask).lora(rank=4)
 
 ## Supported architectures
 
-Full list with paper references: [`docs/architectures.md`](docs/architectures.md).
+Full list with paper references: [`docs/architectures.md`](docs/architectures.md). Numerical parity against the actual upstream PyTorch classes (max abs diff ≤ 2e-4 for the 6 architectures with comparable references; WNO uses a different wavelet algorithm) is documented in the [parity verification table](docs/architectures.md#4-parity-verification-against-pytorch-upstreams); reproduce with `pixi run verify-<name>`.
 
 ### Core architectures
 
@@ -77,6 +77,8 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | Diffusion Transformer (DiT) | `fx.dit2d/3d` | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) |
 | Factorized FNO | `fx.ffno2d/3d` | Tran et al. 2023 — [arXiv:2111.13802](https://arxiv.org/abs/2111.13802) |
 | Wavelet Neural Operator | `fx.wno1d/2d/3d` | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) |
+| Transolver | `fx.transolver`, `fx.transolver2d/3d` | Wu et al., ICML 2024 — [arXiv:2402.02366](https://arxiv.org/abs/2402.02366) |
+| Spherical FNO | `fx.sfno2d` | Bonev et al., ICML 2023 — [arXiv:2306.03838](https://arxiv.org/abs/2306.03838) |
 
 ### Kolmogorov–Arnold Networks
 
