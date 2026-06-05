@@ -58,33 +58,9 @@ from foundax.architectures.sfno import (
     SphericalBlock2d,
 )
 
-from foundax.architectures.kan import (
-    KANLayer,
-    EfficientKANLayer,
-    FastKANLayer,
-    FourierKANLayer,
-    ChebyshevKANLayer,
-    JacobiKANLayer,
-    LegendreKANLayer,
-    WaveletKANLayer,
-    TaylorKANLayer,
-    HermiteKANLayer,
-    LaguerreKANLayer,
-    BernsteinKANLayer,
-    ReLUKANLayer,
-    RationalKANLayer,
-    SincKANLayer,
-    GramKANLayer,
-    BSRBFKANLayer,
-    KANConv1d,
-    KANConv2d,
-    KANConv3d,
-    KANResBlock,
-    KANSpectralBlock1d,
-    KANSpectralBlock2d,
-    KANSpectralBlock3d,
-    KANAttentionBlock,
-)
+# KAN layers + structural blocks live under the ``fx.layers.kan`` namespace
+# (see foundax/layers/kan.py).
+from . import kan
 
 __all__ = [
     "SpectralBlock1d",
@@ -111,31 +87,6 @@ __all__ = [
     "RealSHT2d",
     "SphericalConv2d",
     "SphericalBlock2d",
-    # KAN layer primitives
-    "KANLayer",
-    "EfficientKANLayer",
-    "FastKANLayer",
-    "FourierKANLayer",
-    "ChebyshevKANLayer",
-    "JacobiKANLayer",
-    "LegendreKANLayer",
-    "WaveletKANLayer",
-    "TaylorKANLayer",
-    "HermiteKANLayer",
-    "LaguerreKANLayer",
-    "BernsteinKANLayer",
-    "ReLUKANLayer",
-    "RationalKANLayer",
-    "SincKANLayer",
-    "GramKANLayer",
-    "BSRBFKANLayer",
-    # KAN convolutional + structural blocks
-    "KANConv1d",
-    "KANConv2d",
-    "KANConv3d",
-    "KANResBlock",
-    "KANSpectralBlock1d",
-    "KANSpectralBlock2d",
-    "KANSpectralBlock3d",
-    "KANAttentionBlock",
+    # KAN namespace
+    "kan",
 ]

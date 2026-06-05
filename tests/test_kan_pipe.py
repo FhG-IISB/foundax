@@ -102,8 +102,8 @@ def test_mixed_basis_pipeline_jit():
 def test_dot_combinator_kan_branches():
     """fx.dot of a KAN branch and a KAN trunk."""
     k = _ks(2)
-    branch = fx.block(fx.fastkan(in_features=3, output_dim=16, key=k[0]))
-    trunk = fx.block(fx.chebyshev_kan(in_features=2, output_dim=16, key=k[1]))
+    branch = fx.block(fx.kan.fast(in_features=3, output_dim=16, key=k[0]))
+    trunk = fx.block(fx.kan.chebyshev(in_features=2, output_dim=16, key=k[1]))
     op = fx.dot(branch, trunk)
     u = jnp.ones((3,))
     y = jnp.ones((10, 2))
@@ -113,8 +113,8 @@ def test_dot_combinator_kan_branches():
 
 def test_add_combinator_kan_branches():
     k = _ks(2)
-    a = fx.block(fx.layers.FastKANLayer(2, 4, key=k[0]))
-    b = fx.block(fx.layers.ChebyshevKANLayer(2, 4, degree=3, key=k[1]))
+    a = fx.block(fx.layers.kan.fast(2, 4, key=k[0]))
+    b = fx.block(fx.layers.kan.chebyshev(2, 4, degree=3, key=k[1]))
     op = fx.add(a, b)
     out = op(jnp.ones((5, 2)))
     assert out.shape == (5, 4)
@@ -123,40 +123,44 @@ def test_add_combinator_kan_branches():
 def test_kan_mlp_hybrid():
     k = _ks(2)
     pipe = fx.block(
-        fx.fastkan(in_features=2, output_dim=16, hidden_dims=16, num_layers=2, key=k[0])
+        fx.kan.fast(
+            in_features=2, output_dim=16, hidden_dims=16, num_layers=2, key=k[0]
+        )
     ) | fx.block(fx.mlp(in_features=16, output_dim=1, hidden_dims=16, key=k[1]))
     y = pipe(jnp.ones((4, 2)))
     assert y.shape == (4, 1)
 
 
 def test_all_factories_exposed():
-    """Every documented factory must be importable from foundax."""
+    """Every documented factory must be importable from the fx.kan namespace."""
     for name in (
         "kan",
-        "efficient_kan",
-        "fastkan",
-        "fourier_kan",
-        "chebyshev_kan",
-        "jacobi_kan",
-        "legendre_kan",
-        "wavelet_kan",
-        "taylor_kan",
-        "kan_conv2d",
+        "efficient",
+        "fast",
+        "fourier",
+        "chebyshev",
+        "jacobi",
+        "legendre",
+        "wavelet",
+        "taylor",
+        "conv2d",
     ):
-        assert hasattr(fx, name), f"foundax missing factory '{name}'"
+        assert hasattr(fx.kan, name), f"fx.kan missing factory '{name}'"
+    # fx.kan(...) callable shortcut == fx.kan.kan(...)
+    assert callable(fx.kan)
 
 
 def test_all_layers_exposed():
     for name in (
-        "KANLayer",
-        "EfficientKANLayer",
-        "FastKANLayer",
-        "FourierKANLayer",
-        "ChebyshevKANLayer",
-        "JacobiKANLayer",
-        "LegendreKANLayer",
-        "WaveletKANLayer",
-        "TaylorKANLayer",
-        "KANConv2d",
+        "kan",
+        "efficient",
+        "fast",
+        "fourier",
+        "chebyshev",
+        "jacobi",
+        "legendre",
+        "wavelet",
+        "taylor",
+        "conv2d",
     ):
-        assert hasattr(fx.layers, name), f"fx.layers missing '{name}'"
+        assert hasattr(fx.layers.kan, name), f"fx.layers.kan missing '{name}'"

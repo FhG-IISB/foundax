@@ -60,7 +60,7 @@ def test_network_train():
     # Hermite polynomials grow rapidly outside [-1, 1] and converge slower than
     # bounded bases on the sin overfit task, so allow a looser tolerance.
     network_train_overfit_sin(
-        lambda **kw: fx.hermite_kan(**kw, degree=8), loss_threshold=2e-1
+        lambda **kw: fx.kan.hermite(**kw, degree=8), loss_threshold=2e-1
     )
 
 

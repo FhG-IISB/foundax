@@ -37,31 +37,31 @@ All 17 variants share the same constructor surface (`in_features`, `output_dim`,
 | Factory | Basis | Key hyperparameters | Reference |
 |---|---|---|---|
 | `fx.kan` | B-spline + SiLU residual | `grid_size`, `spline_order` | Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) |
-| `fx.efficient_kan` | B-spline (memory-optimised) | `grid_size`, `spline_order` | Blealtan 2024 — [github.com/Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) |
-| `fx.fastkan` | Gaussian RBF | `grid_size`, `grid_range` | Li 2024 — [arXiv:2405.06721](https://arxiv.org/abs/2405.06721) |
-| `fx.fourier_kan` | sin/cos series | `num_frequencies` | GistNoesis 2024 — [github.com/GistNoesis/FourierKAN](https://github.com/GistNoesis/FourierKAN) |
-| `fx.chebyshev_kan` | Chebyshev T_n | `degree` | SS 2024 — [arXiv:2405.07200](https://arxiv.org/abs/2405.07200) |
-| `fx.jacobi_kan` | Jacobi P_n^(α,β) | `degree`, `alpha`, `beta` | Aghaei 2024 (*fKAN*) — [arXiv:2406.07456](https://arxiv.org/abs/2406.07456) |
-| `fx.legendre_kan` | Legendre P_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.wavelet_kan` | Mexican hat / Morlet / Shannon / DoG | `num_scales`, `wavelet_type` | Bozorgasl & Chen 2024 (*Wav-KAN*) — [arXiv:2405.12832](https://arxiv.org/abs/2405.12832) |
-| `fx.taylor_kan` | Truncated power series | `degree` | Muyuzhierchengse 2024 — [github.com/Muyuzhierchengse/TaylorKAN](https://github.com/Muyuzhierchengse/TaylorKAN) |
-| `fx.hermite_kan` | Hermite He_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.laguerre_kan` | Laguerre L_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.bernstein_kan` | Bernstein polynomials | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.relu_kan` | (ReLU·ReLU)^order on a grid | `grid_size`, `order` | Qiu et al. 2024 — [arXiv:2406.02075](https://arxiv.org/abs/2406.02075) |
-| `fx.rational_kan` | Padé-style rational Chebyshev | `degree` | Aghaei 2024 (*rKAN*) — [arXiv:2406.14495](https://arxiv.org/abs/2406.14495) |
-| `fx.sinc_kan` | sinc basis on a grid | `grid_size`, `grid_range` | Yu et al. 2024 (*SincKAN*) — [arXiv:2410.04096](https://arxiv.org/abs/2410.04096) |
-| `fx.gram_kan` | Orthonormal Legendre (Gram limit) | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.bsrbf_kan` | B-spline + RBF concatenation | `grid_size`, `rbf_grid_size` | Ta 2024 (*BSRBF-KAN*) — [arXiv:2406.11173](https://arxiv.org/abs/2406.11173) |
+| `fx.kan.efficient` | B-spline (memory-optimised) | `grid_size`, `spline_order` | Blealtan 2024 — [github.com/Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) |
+| `fx.kan.fast` | Gaussian RBF | `grid_size`, `grid_range` | Li 2024 — [arXiv:2405.06721](https://arxiv.org/abs/2405.06721) |
+| `fx.kan.fourier` | sin/cos series | `num_frequencies` | GistNoesis 2024 — [github.com/GistNoesis/FourierKAN](https://github.com/GistNoesis/FourierKAN) |
+| `fx.kan.chebyshev` | Chebyshev T_n | `degree` | SS 2024 — [arXiv:2405.07200](https://arxiv.org/abs/2405.07200) |
+| `fx.kan.jacobi` | Jacobi P_n^(α,β) | `degree`, `alpha`, `beta` | Aghaei 2024 (*fKAN*) — [arXiv:2406.07456](https://arxiv.org/abs/2406.07456) |
+| `fx.kan.legendre` | Legendre P_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.wavelet` | Mexican hat / Morlet / Shannon / DoG | `num_scales`, `wavelet_type` | Bozorgasl & Chen 2024 (*Wav-KAN*) — [arXiv:2405.12832](https://arxiv.org/abs/2405.12832) |
+| `fx.kan.taylor` | Truncated power series | `degree` | Muyuzhierchengse 2024 — [github.com/Muyuzhierchengse/TaylorKAN](https://github.com/Muyuzhierchengse/TaylorKAN) |
+| `fx.kan.hermite` | Hermite He_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.laguerre` | Laguerre L_n | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.bernstein` | Bernstein polynomials | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.relu` | (ReLU·ReLU)^order on a grid | `grid_size`, `order` | Qiu et al. 2024 — [arXiv:2406.02075](https://arxiv.org/abs/2406.02075) |
+| `fx.kan.rational` | Padé-style rational Chebyshev | `degree` | Aghaei 2024 (*rKAN*) — [arXiv:2406.14495](https://arxiv.org/abs/2406.14495) |
+| `fx.kan.sinc` | sinc basis on a grid | `grid_size`, `grid_range` | Yu et al. 2024 (*SincKAN*) — [arXiv:2410.04096](https://arxiv.org/abs/2410.04096) |
+| `fx.kan.gram` | Orthonormal Legendre (Gram limit) | `degree` | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.bsrbf` | B-spline + RBF concatenation | `grid_size`, `rbf_grid_size` | Ta 2024 (*BSRBF-KAN*) — [arXiv:2406.11173](https://arxiv.org/abs/2406.11173) |
 
 ### Structural blocks
 
 | Factory | Description | Reference |
 |---|---|---|
-| `fx.kan_conv1d`, `fx.kan_conv2d`, `fx.kan_conv3d` | KAN convolution (any basis) | Bodner et al. 2024 — [arXiv:2406.13155](https://arxiv.org/abs/2406.13155) |
-| `fx.kan_spectral_block1d/2d/3d` | FNO spectral block + KAN channel mixer | FNO: Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895); KAN: Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) |
-| `fx.kan_res_block` | Residual KAN block | ResNet pattern: He et al. 2015 — [arXiv:1512.03385](https://arxiv.org/abs/1512.03385) |
-| `fx.kan_attention_block` | Pre-norm transformer block with KAN feed-forward | Yang & Wang 2024 (*KAT*) — [arXiv:2409.10594](https://arxiv.org/abs/2409.10594); attention: Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) |
+| `fx.kan.conv1d`, `fx.kan.conv2d`, `fx.kan.conv3d` | KAN convolution (any basis) | Bodner et al. 2024 — [arXiv:2406.13155](https://arxiv.org/abs/2406.13155) |
+| `fx.kan.spectral_block1d/2d/3d` | FNO spectral block + KAN channel mixer | FNO: Li et al. 2020 — [arXiv:2010.08895](https://arxiv.org/abs/2010.08895); KAN: Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) |
+| `fx.kan.res_block` | Residual KAN block | ResNet pattern: He et al. 2015 — [arXiv:1512.03385](https://arxiv.org/abs/1512.03385) |
+| `fx.kan.attention_block` | Pre-norm transformer block with KAN feed-forward | Yang & Wang 2024 (*KAT*) — [arXiv:2409.10594](https://arxiv.org/abs/2409.10594); attention: Vaswani et al. 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) |
 
 See the dedicated [KAN page](kan.md) for basis details, choice guidance, and runnable pipe examples.
 
@@ -92,18 +92,46 @@ For the pipe API (`fx.block`, `|`, `fx.dot`, `fx.add`, `fx.cat`) and time-condit
 
 ## 4. Parity verification against PyTorch upstreams
 
-For every wired-up architecture we run a numerical-parity test that **instantiates the actual upstream PyTorch class, copies its weights tensor-by-tensor into the foundax Equinox port, runs both forwards on the same input, and compares element-wise**. The full suite runs end-to-end via `pixi run verify 'models=[...]'`; per-model tasks like `pixi run verify-fno` also exist.
+For every wired-up architecture we run a numerical-parity test that **instantiates the actual upstream PyTorch class, copies its weights tensor-by-tensor into the foundax Equinox port, runs both forwards on the same input, and compares element-wise**. Numbers below are generated by `scripts/parity_table.py` (which calls every compare script and parses its output), and confirmed to match end-to-end via `pixi run verify 'models=[...]'`.
 
-| Architecture | Max abs diff | Rel L2 | PyTorch reference | Compared against |
-|---|---|---|---|---|
-| Transolver | 8.4e-7 | 3.5e-6 | [thuml/Transolver](https://github.com/thuml/Transolver) | upstream `Model` (Irregular + Structured 2D), full-model parity |
-| SFNO | 4.8e-5 | 4.2e-5 | [NVIDIA/torch-harmonics](https://github.com/NVIDIA/torch-harmonics) | upstream `RealSHT` + `InverseRealSHT` primitives wrapped in an SFNO recipe (no canonical SFNO class upstream) |
-| FFNO | 5.4e-7 | 1.3e-7 | [alasdairtran/fourierflow](https://github.com/alasdairtran/fourierflow) | upstream `SpectralConv2d` / `SpectralConv2d (3D)` (full block has per-block FeedForward not present in our cleaner wrapper) |
-| FNO (+ Geo-FNO) | 3.6e-7 | 2.0e-7 | [neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator) | upstream `SpectralConv` (1D/2D/3D), `factorization=None`, `fft_norm='ortho'`, `bias=False` |
-| WNO | — | — | [TapasTripura/WNO](https://github.com/TapasTripura/WNO) | no parity possible — upstream uses Daubechies-6 + symmetric extension via `pytorch_wavelets`; ours uses Daubechies-8 + zero-boundary. Different algorithm, structural check only |
-| DiT | 3.6e-7 | 5.1e-8 | [facebookresearch/DiT](https://github.com/facebookresearch/DiT) | upstream `DiTBlock` (against an Equinox port that mirrors upstream's design choices — SiLU + GELU(tanh) + no-affine LN; foundax's user-facing `dit2d` uses different conventions by design) |
-| GNOT | 1.7e-4 | 5.0e-5 | [HaoZhongkai/GNOT](https://github.com/HaoZhongkai/GNOT) | upstream `LinearAttention`, `LinearCrossAttention`, `CrossAttentionBlock` (full `CGPTNO.forward` needs `dgl` for graph batching which the parity test bypasses) |
+| Architecture | Test | Input → Output | Max abs diff | Rel L2 | PyTorch reference |
+|---|---|---|---|---|---|
+| Transolver | Transolver Irregular | (64, 2) coords + (64, 1) func → (64, 1) | 3.066e-06 | 3.514e-05 | [thuml/Transolver](https://github.com/thuml/Transolver) |
+|  | Transolver Structured2D | (16, 16, 2) coords + (16, 16, 1) func → (256, 1)¹ | 8.401e-07 | 3.529e-06 |  |
+| SFNO | SHT forward | (32, 64) lat-lon → (8, 8) | 3.332e-08 | 1.610e-07 | [NVIDIA/torch-harmonics](https://github.com/NVIDIA/torch-harmonics) |
+|  | SHT inverse | (8, 8) spectral → (32, 64) | 1.192e-07 | 1.105e-07 |  |
+|  | SphericalConv2d | (32, 64, 2) → (32, 64, 3) | 3.353e-08 | 2.249e-07 |  |
+|  | SFNO2d full | (16, 32, 3) → (16, 32, 2) | 4.780e-05 | 4.182e-05 |  |
+| FFNO | FactorizedSpectralConv2d | (16, 16, 8) → (16, 16, 8) | 2.384e-07 | 1.159e-07 | [alasdairtran/fourierflow](https://github.com/alasdairtran/fourierflow) |
+|  | FactorizedSpectralConv3d | (8, 10, 12, 6) → (8, 10, 12, 6) | 5.364e-07 | 1.340e-07 |  |
+| FNO (+ Geo-FNO) | SpectralConv1d | (32, 4) → (32, 6) | 3.576e-07 | 1.797e-07 | [neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator) |
+|  | SpectralConv2d | (16, 20, 3) → (16, 20, 5) | 3.576e-07 | 1.921e-07 |  |
+|  | SpectralConv3d | (12, 14, 16, 3) → (12, 14, 16, 4) | 3.576e-07 | 2.049e-07 |  |
+| WNO² | WNO1d structural | (32, 2) → (32, 2) | — | — | [TapasTripura/WNO](https://github.com/TapasTripura/WNO) |
+|  | WNO2d structural | (32, 32, 2) → (32, 32, 2) | — | — |  |
+|  | WNO3d gradient-flow | (16, 16, 16, 1) → (16, 16, 16, 1) | — | — |  |
+| DiT | DiTBlock | (16, 32) tokens + (32,) cond → (16, 32) | 3.576e-07 | 5.117e-08 | [facebookresearch/DiT](https://github.com/facebookresearch/DiT) |
+| GNOT | LinearAttention | (1, 12, 32) → (1, 12, 32) | 5.960e-08 | 1.269e-07 | [HaoZhongkai/GNOT](https://github.com/HaoZhongkai/GNOT) |
+|  | LinearCrossAttention | (1, 10, 32) query + 2×(1, 16, 32) branches → (1, 10, 32) | 1.192e-07 | 1.179e-07 |  |
+|  | CrossAttentionBlock | (1, 10, 32) query + 2×(1, 16, 32) branches → (1, 10, 32) | 1.725e-04 | 5.043e-05 |  |
 
-**Metric.** "Max abs diff" is element-wise `max(|pt − jax|)` on a forward pass with identical inputs and transferred weights. "Rel L2" is `‖pt − jax‖₂ / ‖pt‖₂` — the closest analog to a relative RMSE. All values are at float32 noise floor. The only architecture without a numerical-parity number is WNO, because the upstream and foundax implementations are structurally different wavelet algorithms (different filter, different boundary mode) — no shared input + shared weights configuration produces matching output.
+¹ foundax's structured-2D input is `(16, 16, …)` channel-last; the parity output shape is flattened to `(256, 1)` only to match upstream's `(B, N, C)` layout for the diff. The foundax model returns `(16, 16, 1)` natively.
 
-To reproduce, install dev deps (`pixi install -e dev`), then run any of `pixi run verify-transolver`, `verify-sfno`, `verify-ffno`, `verify-fno`, `verify-wno`, `verify-dit`, `verify-gnot` (or `pixi run verify 'models=[...]'` for combined). Compare-script source lives in `scripts/compare_<name>.py`; the shared PT→EQX weight-transfer helpers are in `scripts/_pt2eqx.py`.
+² WNO is a structural-only check rather than a numerical parity test because upstream uses Daubechies-6 with symmetric extension via `pytorch_wavelets`, while foundax uses Daubechies-8 with zero-boundary in pure JAX. No shared input + shared weights configuration produces matching output.
+
+**Notes on what's compared.**
+- *Transolver*: full upstream `Model` class, both Irregular and Structured 2D variants. The most complete comparison in the table.
+- *SFNO*: upstream `RealSHT` / `InverseRealSHT` primitives are real; the wrapping SFNO recipe is built in PT to match foundax's own (no canonical SFNO class exists upstream).
+- *FFNO*: upstream `SpectralConv2d` / 3D primitives directly. The full upstream `FNOFactorized2DBlock` has per-block FeedForward MLPs not present in our cleaner wrapper.
+- *FNO*: upstream `SpectralConv` (legacy module) with `factorization=None`, `fft_norm='ortho'`, `bias=False` to match foundax conventions.
+- *DiT*: upstream `DiTBlock` against an Equinox port that mirrors upstream's design choices (SiLU + GELU-tanh + no-affine LN). foundax's user-facing `dit2d` uses different conventions by design (no class labels, exact GELU, no `learn_sigma`).
+- *GNOT*: upstream `LinearAttention`, `LinearCrossAttention`, and `CrossAttentionBlock` primitives. The full `CGPTNO.forward` needs `dgl` for graph batching, which the parity test bypasses via sys.modules stub.
+
+**Metric.** "Max abs diff" is element-wise `max(|pt − jax|)` on a forward pass with identical inputs and transferred weights. "Rel L2" is `‖pt − jax‖₂ / ‖pt‖₂` — the closest analog to a relative RMSE. All numerical values are at float32 noise floor.
+
+**Reproduce.** Install dev deps (`pixi install -e dev`), then either:
+- Generate the table from scratch: `pixi run --environment dev python scripts/parity_table.py`
+- Run the orchestrated Hydra pipeline: `pixi run verify 'models=[transolver,sfno,ffno,fno,wno,dit,gnot]'`
+- Per-model: `pixi run verify-transolver`, `verify-sfno`, `verify-ffno`, `verify-fno`, `verify-wno`, `verify-dit`, `verify-gnot`
+
+Compare-script source lives in `scripts/compare_<name>.py`; the shared PT→EQX weight-transfer helpers are in `scripts/_pt2eqx.py`.

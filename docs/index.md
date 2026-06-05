@@ -62,7 +62,7 @@ mlp = fx.mlp(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 fno = fx.fno2d(in_features=1, hidden_channels=32, n_modes=16)
 
 # Kolmogorov–Arnold Networks (one of 17 variants)
-kan = fx.fastkan(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
+kan = fx.kan.fast(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 
 # Foundation wrappers (preferred namespace style)
 poseidon = fx.poseidon.T()

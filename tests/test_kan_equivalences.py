@@ -151,9 +151,9 @@ def test_block_is_transparent_for_all_variants():
 
 def test_pipe_equals_sequential_apply():
     k1, k2, k3 = jax.random.split(_k(), 3)
-    l1 = fx.layers.FastKANLayer(2, 16, key=k1)
-    l2 = fx.layers.ChebyshevKANLayer(16, 8, degree=4, key=k2)
-    l3 = fx.layers.TaylorKANLayer(8, 1, degree=4, key=k3)
+    l1 = fx.layers.kan.fast(2, 16, key=k1)
+    l2 = fx.layers.kan.chebyshev(16, 8, degree=4, key=k2)
+    l3 = fx.layers.kan.taylor(8, 1, degree=4, key=k3)
     pipe = fx.block(l1) | fx.block(l2) | fx.block(l3)
     x = jax.random.normal(jax.random.PRNGKey(7), (5, 2))
     expected = l3(l2(l1(x)))
