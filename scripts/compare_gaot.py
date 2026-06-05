@@ -485,14 +485,18 @@ def run_one(name: str, gaot_root: Path, seed: int,
     enc_nbrs_j = [_to_jax_csr(d) for d in enc_nbrs_pt]
     dec_nbrs_j = [_to_jax_csr(d) for d in dec_nbrs_pt]
 
-    eqx_out = eqx_model(
-        jnp.asarray(latent_coord_np),
-        jnp.asarray(x_coord_np),
-        jnp.asarray(pndata_np),
-        jnp.asarray(q_coord_np),
-        enc_nbrs_j,
-        dec_nbrs_j,
-    )
+    # foundax convention: model is single-example; vmap externally for batch.
+    # PT keeps the leading batch dim, so we strip it for the per-sample compare.
+    eqx_out = jax.vmap(
+        lambda f: eqx_model(
+            jnp.asarray(latent_coord_np),
+            jnp.asarray(x_coord_np),
+            f,
+            jnp.asarray(q_coord_np),
+            enc_nbrs_j,
+            dec_nbrs_j,
+        )
+    )(jnp.asarray(pndata_np))
 
     return _compare_arrays(name, pt_out, eqx_out, atol=1e-4, rtol=1e-4)
 
@@ -516,7 +520,7 @@ def run_structural_check(seed: int) -> int:
     rng = np.random.default_rng(seed)
     x = jnp.asarray(rng.random((40, 2)).astype(np.float32))
     q = jnp.asarray(rng.random((20, 2)).astype(np.float32))
-    pn = jnp.asarray(rng.random((3, 40, 2)).astype(np.float32))
+    pn = jnp.asarray(rng.random((40, 2)).astype(np.float32))  # single-example
     en = [compute_neighbors_csr(np.asarray(x), np.asarray(latent), 0.3)]
     dn = [compute_neighbors_csr(np.asarray(latent), np.asarray(q), 0.3)]
     y = m(latent, x, pn, q, en, dn)

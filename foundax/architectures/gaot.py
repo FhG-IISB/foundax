@@ -27,9 +27,17 @@ Usage::
     latent_coord = np.stack(np.meshgrid(xs, xs, indexing="ij"), -1).reshape(-1, 2)
 
     model = fx.gaot.S(input_size=2, output_size=1)
-    enc_nbrs = compute_neighbors_csr(x_coord, latent_coord, radius=0.033)
-    dec_nbrs = compute_neighbors_csr(latent_coord, query_coord, radius=0.033)
+    enc_nbrs = [compute_neighbors_csr(x_coord, latent_coord, radius=0.033)]
+    dec_nbrs = [compute_neighbors_csr(latent_coord, query_coord, radius=0.033)]
+
+    # Single-example forward (foundax convention) — pndata: [N, in_channels]
     out = model(latent_coord, x_coord, pndata, query_coord, enc_nbrs, dec_nbrs)
+    # → [M, out_channels]
+
+    # For a batch of pndata samples, vmap externally:
+    out_batched = jax.vmap(
+        lambda f: model(latent_coord, x_coord, f, query_coord, enc_nbrs, dec_nbrs)
+    )(pndata_batch)  # [B, N, in_channels] → [B, M, out_channels]
 """
 
 from __future__ import annotations
@@ -261,8 +269,9 @@ class AGNO(eqx.Module):
         y: jnp.ndarray,                  # [N_y, coord_dim] (source)
         neighbors: dict,                 # CSR with seg_ids + counts
         x: Optional[jnp.ndarray] = None,  # [N_x, coord_dim] (query)
-        f_y: Optional[jnp.ndarray] = None,  # [N_y, C] or [B, N_y, C]
+        f_y: Optional[jnp.ndarray] = None,  # [N_y, C] (single example)
     ) -> jnp.ndarray:
+        """Single-example AGNO. Vmap externally for batches (foundax convention)."""
         if x is None:
             x = y
         nbr_idx = neighbors["neighbors_index"]
@@ -270,22 +279,13 @@ class AGNO(eqx.Module):
         counts = neighbors["counts"]
         num_query = counts.shape[0]
 
-        # Gather edge endpoints (source / target coords expanded to per-edge)
         rep_features = y[nbr_idx]              # [E, coord_dim]
         self_features = x[seg_ids]             # [E, coord_dim]
 
-        batched = False
         in_features = None
         if f_y is not None:
-            if f_y.ndim == 3:
-                batched = True
-                in_features = f_y[:, nbr_idx, :]     # [B, E, C_in]
-            elif f_y.ndim == 2:
-                in_features = f_y[nbr_idx]            # [E, C_in]
-            else:
-                raise ValueError(f"f_y has unexpected ndim: {f_y.ndim}")
+            in_features = f_y[nbr_idx]         # [E, C_in]
 
-        # Attention weights -----------------------------------------------------
         attention_weights = None
         if self.use_attn:
             qc = self_features[:, : self.coord_dim]
@@ -300,47 +300,23 @@ class AGNO(eqx.Module):
                 scores = jnp.sum(q_n * k_n, axis=-1)
             attention_weights = _segment_softmax(scores, seg_ids, counts, num_query)
 
-        # Kernel MLP input (order: [rep, self] — y first, x second) -------------
+        # Kernel MLP input (order: [rep, self] — y first, x second)
         agg_features = jnp.concatenate([rep_features, self_features], axis=-1)
         if f_y is not None and self.transform_type in (
             "nonlinear", "nonlinear_kernelonly"
         ):
-            if batched:
-                agg_features = jnp.broadcast_to(
-                    agg_features[None, ...],
-                    (in_features.shape[0],) + agg_features.shape,
-                )
             agg_features = jnp.concatenate([agg_features, in_features], axis=-1)
 
-        # Apply kernel MLP element-wise
-        rep = self.channel_mlp(agg_features)  # [E, C_out] or [B, E, C_out]
-
-        # Multiply by f_y for non-kernel-only transforms
+        rep = self.channel_mlp(agg_features)  # [E, C_out]
         if f_y is not None and self.transform_type != "nonlinear_kernelonly":
-            rep = rep * in_features  # element-wise
-
-        # Apply attention weights
+            rep = rep * in_features
         if self.use_attn:
-            if batched:
-                rep = rep * attention_weights[None, :, None]
-            else:
-                rep = rep * attention_weights[:, None]
+            rep = rep * attention_weights[:, None]
 
-        # Aggregate
         if self.use_attn:
-            if batched:
-                out = jax.vmap(
-                    lambda d: _segment_sum(d, seg_ids, num_query)
-                )(rep)
-            else:
-                out = _segment_sum(rep, seg_ids, num_query)
+            out = _segment_sum(rep, seg_ids, num_query)
         else:
-            if batched:
-                out = jax.vmap(
-                    lambda d: _segment_mean(d, seg_ids, counts, num_query)
-                )(rep)
-            else:
-                out = _segment_mean(rep, seg_ids, counts, num_query)
+            out = _segment_mean(rep, seg_ids, counts, num_query)
         return out
 
 
@@ -647,13 +623,11 @@ class MAGNOEncoder(eqx.Module):
     def __call__(
         self,
         x_coord: jnp.ndarray,           # [N, D]
-        pndata: jnp.ndarray,            # [B, N, C_in]
+        pndata: jnp.ndarray,            # [N, C_in]  (single example)
         latent_tokens_coord: jnp.ndarray,  # [L, D]
         encoder_nbrs: list,             # list[dict] per scale
-    ) -> jnp.ndarray:                   # [B, L, C_out]
-        batch_size = pndata.shape[0]
-        # Lift features (per-batch, per-point linear)
-        pndata = self.lifting(pndata)   # [B, N, C_out]
+    ) -> jnp.ndarray:                   # [L, C_out]
+        pndata = self.lifting(pndata)   # [N, C_out]
 
         if self.use_scale_weights:
             sw = self.scale_weighting_l1(latent_tokens_coord)
@@ -672,7 +646,7 @@ class MAGNOEncoder(eqx.Module):
                 y = x_coord
                 xq = latent_tokens_coord
 
-            enc = self.agno(y=y, neighbors=nbrs, x=xq, f_y=pndata)  # [B, L, C_out]
+            enc = self.agno(y=y, neighbors=nbrs, x=xq, f_y=pndata)  # [L, C_out]
 
             if self.use_geoembed:
                 ge = self.geoembed(
@@ -680,7 +654,6 @@ class MAGNOEncoder(eqx.Module):
                     latent_queries=latent_tokens_coord,
                     spatial_nbrs=nbrs,
                 )  # [L, C_out]
-                ge = jnp.broadcast_to(ge[None, ...], enc.shape)
                 enc = jnp.concatenate([enc, ge], axis=-1)
                 enc = self.recovery(enc)
             encoded_scales.append(enc)
@@ -688,8 +661,8 @@ class MAGNOEncoder(eqx.Module):
         if len(encoded_scales) == 1:
             return encoded_scales[0]
         if self.use_scale_weights:
-            stack = jnp.stack(encoded_scales, axis=0)         # [S, B, L, C]
-            w = sw.T[:, None, :, None]                         # [S, 1, L, 1]
+            stack = jnp.stack(encoded_scales, axis=0)         # [S, L, C]
+            w = sw.T[:, :, None]                               # [S, L, 1]
             return (stack * w).sum(axis=0)
         return jnp.mean(jnp.stack(encoded_scales, axis=0), axis=0)
 
@@ -773,10 +746,10 @@ class MAGNODecoder(eqx.Module):
     def __call__(
         self,
         latent_tokens_coord: jnp.ndarray,  # [L, D]
-        rndata: jnp.ndarray,               # [B, L, C_in]
+        rndata: jnp.ndarray,               # [L, C_in]  (single example)
         query_coord: jnp.ndarray,          # [M, D]
         decoder_nbrs: list,                # list[dict] per scale
-    ) -> jnp.ndarray:                       # [B, M, C_out]
+    ) -> jnp.ndarray:                       # [M, C_out]
         if self.use_scale_weights:
             sw = self.scale_weighting_l1(query_coord)
             sw = jax.nn.relu(sw)
@@ -793,14 +766,13 @@ class MAGNODecoder(eqx.Module):
             else:
                 y = latent_tokens_coord
                 xq = query_coord
-            dec = self.agno(y=y, neighbors=nbrs, x=xq, f_y=rndata)  # [B, M, C_in]
+            dec = self.agno(y=y, neighbors=nbrs, x=xq, f_y=rndata)  # [M, C_in]
             if self.use_geoembed:
                 ge = self.geoembed(
                     input_geom=latent_tokens_coord,
                     latent_queries=query_coord,
                     spatial_nbrs=nbrs,
                 )
-                ge = jnp.broadcast_to(ge[None, ...], dec.shape)
                 dec = jnp.concatenate([dec, ge], axis=-1)
                 dec = self.recovery(dec)
             decoded_scales.append(dec)
@@ -809,7 +781,7 @@ class MAGNODecoder(eqx.Module):
             decoded = decoded_scales[0]
         elif self.use_scale_weights:
             stack = jnp.stack(decoded_scales, axis=0)
-            w = sw.T[:, None, :, None]
+            w = sw.T[:, :, None]
             decoded = (stack * w).sum(axis=0)
         else:
             decoded = jnp.mean(jnp.stack(decoded_scales, axis=0), axis=0)
@@ -913,30 +885,30 @@ class GroupQueryAttention(eqx.Module):
         self.o_proj = eqx.nn.Linear(hidden_size, input_size, use_bias=False, key=k4)
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        # x: [B, S, C]
-        q = jax.vmap(jax.vmap(self.q_proj))(x)
-        k = jax.vmap(jax.vmap(self.k_proj))(x)
-        v = jax.vmap(jax.vmap(self.v_proj))(x)
-        B, S, _ = x.shape
-        q = q.reshape(B, S, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
-        k = k.reshape(B, S, self.num_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
-        v = v.reshape(B, S, self.num_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
+        # x: [S, C]  (single example)
+        q = jax.vmap(self.q_proj)(x)
+        k = jax.vmap(self.k_proj)(x)
+        v = jax.vmap(self.v_proj)(x)
+        S = x.shape[0]
+        q = q.reshape(S, self.num_heads, self.head_dim).transpose(1, 0, 2)
+        k = k.reshape(S, self.num_kv_heads, self.head_dim).transpose(1, 0, 2)
+        v = v.reshape(S, self.num_kv_heads, self.head_dim).transpose(1, 0, 2)
 
         if self.num_kv_heads != self.num_heads:
             r = self.num_heads // self.num_kv_heads
-            k = jnp.repeat(k, r, axis=1)
-            v = jnp.repeat(v, r, axis=1)
+            k = jnp.repeat(k, r, axis=0)
+            v = jnp.repeat(v, r, axis=0)
 
         if self.use_rope:
             q = _rope_apply(q)
             k = _rope_apply(k)
 
         scale = self.head_dim ** -0.5
-        scores = jnp.einsum("bhqd,bhkd->bhqk", q, k) * scale
+        scores = jnp.einsum("hqd,hkd->hqk", q, k) * scale
         attn = jax.nn.softmax(scores, axis=-1)
-        out = jnp.einsum("bhqk,bhkd->bhqd", attn, v)             # [B, H, S, Dh]
-        out = out.transpose(0, 2, 1, 3).reshape(B, S, -1)
-        return jax.vmap(jax.vmap(self.o_proj))(out)
+        out = jnp.einsum("hqk,hkd->hqd", attn, v)                 # [H, S, Dh]
+        out = out.transpose(1, 0, 2).reshape(S, -1)
+        return jax.vmap(self.o_proj)(out)
 
 
 class TransformerBlock(eqx.Module):
@@ -979,13 +951,14 @@ class TransformerBlock(eqx.Module):
         )
 
     def __call__(self, x, skip=None):
+        # x: [S, C]  (single example)
         if self.skip_connection and skip is not None:
             x = jnp.concatenate([x, skip], axis=-1)
-            x = jax.vmap(jax.vmap(self.skip_proj))(x)
+            x = jax.vmap(self.skip_proj)(x)
         h = x if self.attn_norm is None else self.attn_norm(x)
         h = x + self.attn(h)
         h = h if self.ffn_norm is None else self.ffn_norm(h)
-        out = h + jax.vmap(jax.vmap(self.ffn))(h)
+        out = h + jax.vmap(self.ffn)(h)
         return out
 
 
@@ -1074,9 +1047,9 @@ class _Transformer(eqx.Module):
         self.decoder_layers = [_make_block(sub_keys[idx + i], True) for i in range(n_dec)]
 
     def __call__(self, x):
-        # x : [B, S, C]
+        # x : [S, C]  (single example)
         if self.input_proj is not None:
-            x = jax.vmap(jax.vmap(self.input_proj))(x)
+            x = jax.vmap(self.input_proj)(x)
         skips = []
         for layer in self.encoder_layers:
             x = layer(x)
@@ -1087,7 +1060,7 @@ class _Transformer(eqx.Module):
             skip = skips.pop() if self.use_long_range_skip else None
             x = layer(x, skip=skip)
         if self.output_proj is not None:
-            x = jax.vmap(jax.vmap(self.output_proj))(x)
+            x = jax.vmap(self.output_proj)(x)
         return x
 
 
@@ -1198,53 +1171,52 @@ class GAOT(eqx.Module):
         )
 
     def process(self, rndata: jnp.ndarray) -> jnp.ndarray:
-        # rndata: [B, L, C]
-        B, n_regional, C = rndata.shape
+        # rndata: [L, C]  (single example)
+        n_regional, C = rndata.shape
         P = self.patch_size
         if self.coord_dim == 2:
             H, W = self.H, self.W
             assert n_regional == H * W, (n_regional, H * W)
             assert H % P == 0 and W % P == 0
             nph, npw = H // P, W // P
-            rndata = rndata.reshape(B, H, W, C)
-            rndata = rndata.reshape(B, nph, P, npw, P, C)
-            rndata = rndata.transpose(0, 1, 3, 2, 4, 5).reshape(B, nph * npw, P * P * C)
+            rndata = rndata.reshape(H, W, C)
+            rndata = rndata.reshape(nph, P, npw, P, C)
+            rndata = rndata.transpose(0, 2, 1, 3, 4).reshape(nph * npw, P * P * C)
         else:
             H, W, D = self.H, self.W, self.D
             assert n_regional == H * W * D
             assert H % P == 0 and W % P == 0 and D % P == 0
             nph, npw, npd = H // P, W // P, D // P
-            rndata = rndata.reshape(B, H, W, D, C)
-            rndata = rndata.reshape(B, nph, P, npw, P, npd, P, C)
-            rndata = rndata.transpose(0, 1, 3, 5, 2, 4, 6, 7).reshape(
-                B, nph * npw * npd, P * P * P * C
+            rndata = rndata.reshape(H, W, D, C)
+            rndata = rndata.reshape(nph, P, npw, P, npd, P, C)
+            rndata = rndata.transpose(0, 2, 4, 1, 3, 5, 6).reshape(
+                nph * npw * npd, P * P * P * C
             )
 
-        rndata = jax.vmap(jax.vmap(self.patch_linear))(rndata)
+        rndata = jax.vmap(self.patch_linear)(rndata)
 
         if self.positional_embedding_name == "absolute":
             patch_volume = P ** self.coord_dim
             pos_emb = _compute_absolute_embeddings(
                 self.positions, patch_volume * self.node_latent_size
             )
-            # Truncate or pad to match if integer division left a remainder
             d_have = pos_emb.shape[-1]
             d_want = patch_volume * self.node_latent_size
             if d_have < d_want:
                 pos_emb = jnp.pad(pos_emb, ((0, 0), (0, d_want - d_have)))
             elif d_have > d_want:
                 pos_emb = pos_emb[:, :d_want]
-            rndata = rndata + pos_emb[None, :, :]
+            rndata = rndata + pos_emb
 
         rndata = self.processor(rndata)
 
         # Unpatchify
         if self.coord_dim == 2:
-            rndata = rndata.reshape(B, nph, npw, P, P, C)
-            rndata = rndata.transpose(0, 1, 3, 2, 4, 5).reshape(B, H * W, C)
+            rndata = rndata.reshape(nph, npw, P, P, C)
+            rndata = rndata.transpose(0, 2, 1, 3, 4).reshape(H * W, C)
         else:
-            rndata = rndata.reshape(B, nph, npw, npd, P, P, P, C)
-            rndata = rndata.transpose(0, 1, 4, 2, 5, 3, 6, 7).reshape(B, H * W * D, C)
+            rndata = rndata.reshape(nph, npw, npd, P, P, P, C)
+            rndata = rndata.transpose(0, 3, 1, 4, 2, 5, 6).reshape(H * W * D, C)
         return rndata
 
     def decode(self, latent_tokens_coord, rndata, query_coord, decoder_nbrs):
@@ -1255,18 +1227,24 @@ class GAOT(eqx.Module):
 
     def __call__(
         self,
-        latent_tokens_coord: jnp.ndarray,
-        xcoord: jnp.ndarray,
-        pndata: jnp.ndarray,
-        query_coord: Optional[jnp.ndarray] = None,
-        encoder_nbrs: Optional[list] = None,
-        decoder_nbrs: Optional[list] = None,
-    ) -> jnp.ndarray:
-        """Forward pass.
+        latent_tokens_coord: jnp.ndarray,  # [L, D]
+        xcoord: jnp.ndarray,               # [N, D]
+        pndata: jnp.ndarray,               # [N, input_size]  single-example
+        query_coord: Optional[jnp.ndarray] = None,  # [M, D]  (None → xcoord)
+        encoder_nbrs: Optional[list] = None,        # list[dict] per scale
+        decoder_nbrs: Optional[list] = None,        # list[dict] per scale
+    ) -> jnp.ndarray:                       # [M, output_size]
+        """Single-example forward pass (foundax convention).
 
-        ``encoder_nbrs`` / ``decoder_nbrs`` must be lists of CSR-dict objects,
-        one per scale (length == len(magno_config.scales)). For the default
-        single-scale config they are length-1 lists.
+        ``encoder_nbrs`` / ``decoder_nbrs`` must be lists of CSR-dict
+        objects, one per scale (length == len(magno_config.scales)). For
+        the default single-scale config they are length-1 lists.
+
+        Vmap externally for batched ``pndata``::
+
+            out = jax.vmap(
+                lambda f: model(latent, x, f, q, en, dn)
+            )(pndata_batch)
         """
         rndata = self.encode(xcoord, pndata, latent_tokens_coord, encoder_nbrs)
         rndata = self.process(rndata)
