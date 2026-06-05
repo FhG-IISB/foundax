@@ -69,7 +69,7 @@ def test_kan_conv2d_unknown_basis_raises():
 
 
 def test_kan_conv2d_factory():
-    m = fx.kan_conv2d(
+    m = fx.kan.conv2d(
         3, 6, kernel_size=3, basis="fourier", num_frequencies=4, key=ks(1)[0]
     )
     y = m(jnp.ones((8, 8, 3)))

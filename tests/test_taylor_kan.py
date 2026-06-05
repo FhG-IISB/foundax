@@ -59,7 +59,7 @@ def test_dtype():
 def test_network_train():
     # Taylor basis is weakest expressively — give it a fatter network and tolerate
     # a higher loss threshold via direct adam (helper threshold still OK if it converges).
-    network_train_overfit_sin(lambda **kw: fx.taylor_kan(**kw, degree=8))
+    network_train_overfit_sin(lambda **kw: fx.kan.taylor(**kw, degree=8))
 
 
 def test_taylor_power_series():

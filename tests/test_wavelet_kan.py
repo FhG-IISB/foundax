@@ -60,7 +60,7 @@ def test_dtype():
 
 def test_network_train():
     network_train_overfit_sin(
-        lambda **kw: fx.wavelet_kan(**kw, num_scales=6, wavelet_type="morlet")
+        lambda **kw: fx.kan.wavelet(**kw, num_scales=6, wavelet_type="morlet")
     )
 
 

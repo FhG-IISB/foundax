@@ -56,7 +56,7 @@ net.mask(param_mask).lora(rank=4)
 
 ## Supported architectures
 
-Full list with paper references: [`docs/architectures.md`](docs/architectures.md).
+Full list with paper references: [`docs/architectures.md`](docs/architectures.md). Numerical parity against the actual upstream PyTorch classes (max abs diff ≤ 2e-4 for the 6 architectures with comparable references; WNO uses a different wavelet algorithm) is documented in the [parity verification table](docs/architectures.md#4-parity-verification-against-pytorch-upstreams); reproduce with `pixi run verify-<name>`.
 
 ### Core architectures
 
@@ -77,28 +77,30 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | Diffusion Transformer (DiT) | `fx.dit2d/3d` | Peebles & Xie 2022 — [arXiv:2212.09748](https://arxiv.org/abs/2212.09748) |
 | Factorized FNO | `fx.ffno2d/3d` | Tran et al. 2023 — [arXiv:2111.13802](https://arxiv.org/abs/2111.13802) |
 | Wavelet Neural Operator | `fx.wno1d/2d/3d` | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) |
+| Transolver | `fx.transolver`, `fx.transolver2d/3d` | Wu et al., ICML 2024 — [arXiv:2402.02366](https://arxiv.org/abs/2402.02366) |
+| Spherical FNO | `fx.sfno2d` | Bonev et al., ICML 2023 — [arXiv:2306.03838](https://arxiv.org/abs/2306.03838) |
 
 ### Kolmogorov–Arnold Networks
 
 | Factory                   | Basis                                | Reference |
 |---------------------------|--------------------------------------|-----------|
 | `fx.kan`                  | B-spline + SiLU residual             | Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) |
-| `fx.efficient_kan`        | B-spline (memory-optimised)          | Blealtan 2024 — [github.com/Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) |
-| `fx.fastkan`              | Gaussian RBF                         | Li 2024 — [arXiv:2405.06721](https://arxiv.org/abs/2405.06721) |
-| `fx.fourier_kan`          | sin/cos series                       | GistNoesis 2024 — [github.com/GistNoesis/FourierKAN](https://github.com/GistNoesis/FourierKAN) |
-| `fx.chebyshev_kan`        | Chebyshev T_n                        | SS 2024 — [arXiv:2405.07200](https://arxiv.org/abs/2405.07200) |
-| `fx.jacobi_kan`           | Jacobi P_n^(α,β)                     | Aghaei 2024 (*fKAN*) — [arXiv:2406.07456](https://arxiv.org/abs/2406.07456) |
-| `fx.legendre_kan`         | Legendre P_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.wavelet_kan`          | Mexican hat / Morlet / Shannon / DoG | Bozorgasl & Chen 2024 (*Wav-KAN*) — [arXiv:2405.12832](https://arxiv.org/abs/2405.12832) |
-| `fx.taylor_kan`           | Truncated power series               | [github.com/Muyuzhierchengse/TaylorKAN](https://github.com/Muyuzhierchengse/TaylorKAN) |
-| `fx.hermite_kan`          | Hermite He_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.laguerre_kan`         | Laguerre L_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.bernstein_kan`        | Bernstein polynomials                | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.relu_kan`             | (ReLU·ReLU)^order on a grid          | Qiu et al. 2024 — [arXiv:2406.02075](https://arxiv.org/abs/2406.02075) |
-| `fx.rational_kan`         | Padé-style rational Chebyshev        | Aghaei 2024 (*rKAN*) — [arXiv:2406.14495](https://arxiv.org/abs/2406.14495) |
-| `fx.sinc_kan`             | sinc basis on a grid                 | Yu et al. 2024 (*SincKAN*) — [arXiv:2410.04096](https://arxiv.org/abs/2410.04096) |
-| `fx.gram_kan`             | Orthonormal Legendre (Gram limit)    | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
-| `fx.bsrbf_kan`            | B-spline + RBF concatenation         | Ta 2024 (*BSRBF-KAN*) — [arXiv:2406.11173](https://arxiv.org/abs/2406.11173) |
+| `fx.kan.efficient`        | B-spline (memory-optimised)          | Blealtan 2024 — [github.com/Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) |
+| `fx.kan.fast`              | Gaussian RBF                         | Li 2024 — [arXiv:2405.06721](https://arxiv.org/abs/2405.06721) |
+| `fx.kan.fourier`          | sin/cos series                       | GistNoesis 2024 — [github.com/GistNoesis/FourierKAN](https://github.com/GistNoesis/FourierKAN) |
+| `fx.kan.chebyshev`        | Chebyshev T_n                        | SS 2024 — [arXiv:2405.07200](https://arxiv.org/abs/2405.07200) |
+| `fx.kan.jacobi`           | Jacobi P_n^(α,β)                     | Aghaei 2024 (*fKAN*) — [arXiv:2406.07456](https://arxiv.org/abs/2406.07456) |
+| `fx.kan.legendre`         | Legendre P_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.wavelet`          | Mexican hat / Morlet / Shannon / DoG | Bozorgasl & Chen 2024 (*Wav-KAN*) — [arXiv:2405.12832](https://arxiv.org/abs/2405.12832) |
+| `fx.kan.taylor`           | Truncated power series               | [github.com/Muyuzhierchengse/TaylorKAN](https://github.com/Muyuzhierchengse/TaylorKAN) |
+| `fx.kan.hermite`          | Hermite He_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.laguerre`         | Laguerre L_n                         | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.bernstein`        | Bernstein polynomials                | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.relu`             | (ReLU·ReLU)^order on a grid          | Qiu et al. 2024 — [arXiv:2406.02075](https://arxiv.org/abs/2406.02075) |
+| `fx.kan.rational`         | Padé-style rational Chebyshev        | Aghaei 2024 (*rKAN*) — [arXiv:2406.14495](https://arxiv.org/abs/2406.14495) |
+| `fx.kan.sinc`             | sinc basis on a grid                 | Yu et al. 2024 (*SincKAN*) — [arXiv:2410.04096](https://arxiv.org/abs/2410.04096) |
+| `fx.kan.gram`             | Orthonormal Legendre (Gram limit)    | Seydi 2024 — [arXiv:2406.02583](https://arxiv.org/abs/2406.02583) |
+| `fx.kan.bsrbf`            | B-spline + RBF concatenation         | Ta 2024 (*BSRBF-KAN*) — [arXiv:2406.11173](https://arxiv.org/abs/2406.11173) |
 ### Foundation-model wrappers
 
 | Namespace | Variants | Backbone | Reference |
@@ -126,7 +128,7 @@ model = fx.unet2d(in_channels=1, out_channels=1)
 model = fx.deeponet(branch_type="mlp", trunk_type="mlp")
 
 # KAN family (one of 17 variants)
-model = fx.fastkan(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
+model = fx.kan.fast(in_features=2, output_dim=1, hidden_dims=64, num_layers=3)
 
 # Foundation wrappers (namespace style)
 model = fx.poseidon.T()           # T/B/L
@@ -195,6 +197,10 @@ def step(model, state, u, y, target):
 ## Citation
 
 If you use foundax in academic work, the accompanying paper is the [jNO preprint](https://arxiv.org/abs/2605.10159) (`arXiv:2605.10159`). A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
+
+## AI Disclosure
+
+Parts of this codebase — including model ports, tests, and documentation — were developed with the assistance of AI coding tools. All contributions are reviewed and tested to the best of our ability, but mistakes may remain; please open an issue if you spot one.
 
 ## License
 

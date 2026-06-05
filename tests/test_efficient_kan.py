@@ -6,7 +6,7 @@ jax = pytest.importorskip("jax")
 jnp = pytest.importorskip("jax.numpy")
 
 import foundax as fx
-from foundax.architectures.kan import EfficientKANLayer
+from foundax.architectures.kan import EfficientKANLayer, BSplineBasis, KANLayer
 from tests._kan_helpers import (
     shape_checks,
     sniff_checks,
@@ -59,8 +59,58 @@ def test_dtype():
 
 def test_network_train():
     network_train_overfit_sin(
-        lambda **kw: fx.efficient_kan(**kw, grid_size=8, spline_order=3)
+        lambda **kw: fx.kan.efficient(**kw, grid_size=8, spline_order=3)
     )
+
+
+def test_efficient_basis_matches_bspline():
+    """EfficientKAN wraps the same B-spline basis as the original KAN.
+
+    The functional difference in the upstream reference is a memory/layout
+    optimisation, not a different basis. So the layer's ``basis`` must be a
+    ``BSplineBasis`` and produce identical values to a standalone one with
+    matching config."""
+    grid_size, spline_order, grid_range = 5, 3, (-1.0, 1.0)
+    in_features = 4
+    layer = EfficientKANLayer(
+        in_features,
+        8,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        grid_range=grid_range,
+        key=jax.random.PRNGKey(0),
+    )
+    assert isinstance(layer.basis, BSplineBasis)
+
+    standalone = BSplineBasis(in_features, grid_size, spline_order, grid_range)
+    x = jax.random.normal(jax.random.PRNGKey(3), (9, in_features)) * 0.5
+    assert jnp.allclose(layer.basis(x), standalone(x), atol=1e-6)
+
+
+def test_efficient_basis_matches_original_kan():
+    """EfficientKANLayer and KANLayer with matching config use the same
+    basis function (B-spline). Both should produce identical basis values
+    on the same input."""
+    grid_size, spline_order, grid_range = 5, 3, (-1.0, 1.0)
+    in_features = 4
+    eff = EfficientKANLayer(
+        in_features,
+        8,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        grid_range=grid_range,
+        key=jax.random.PRNGKey(0),
+    )
+    orig = KANLayer(
+        in_features,
+        8,
+        grid_size=grid_size,
+        spline_order=spline_order,
+        grid_range=grid_range,
+        key=jax.random.PRNGKey(0),
+    )
+    x = jax.random.normal(jax.random.PRNGKey(5), (7, in_features)) * 0.5
+    assert jnp.allclose(eff.basis(x), orig.basis(x), atol=1e-6)
 
 
 # ── Extended correctness / robustness suite ────────────────────────────────

@@ -25,6 +25,7 @@ from .transformer import (
     Transformer as Transformer,
     TransformerEncoder as TransformerEncoder,
     TransformerDecoder as TransformerDecoder,
+    causal_mask as causal_mask,
 )
 from .deeponet import DeepONet as DeepONet
 from .cno import CNO2D as CNO2D

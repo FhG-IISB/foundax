@@ -1,0 +1,7 @@
+name: wno
+github_url: null               # upstream uses different wavelet (db6) and boundary mode — no PT parity meaningful, see compare_wno.py docstring
+hf_checkpoint: null
+compare_needs_pt_repo: false
+has_compare: true
+convert_extra_args: []
+compare_extra_args: []

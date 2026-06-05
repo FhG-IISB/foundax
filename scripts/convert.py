@@ -101,6 +101,13 @@ def main() -> None:
             "walrus",
             "dpot",
             "bcat",
+            "transolver",
+            "sfno",
+            "ffno",
+            "fno",
+            "wno",
+            "dit",
+            "gnot",
         ],
         help="Model family to convert",
     )
@@ -152,6 +159,29 @@ def main() -> None:
         )
     elif args.model == "bcat":
         code = _convert_bcat(args.projects_root, extra)
+    elif args.model == "transolver":
+        # No PT→msgpack conversion: weights are transferred in-memory inside
+        # compare_transolver.py so the convert step is a no-op.
+        print("  [convert] transolver: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "sfno":
+        print("  [convert] sfno: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "ffno":
+        print("  [convert] ffno: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "fno":
+        print("  [convert] fno: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "wno":
+        print("  [convert] wno: structural check only — no msgpack needed")
+        code = 0
+    elif args.model == "dit":
+        print("  [convert] dit: in-memory weight transfer — no msgpack needed")
+        code = 0
+    elif args.model == "gnot":
+        print("  [convert] gnot: in-memory weight transfer — no msgpack needed")
+        code = 0
     else:
         print(f"Unsupported model: {args.model}")
         code = 2

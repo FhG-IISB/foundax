@@ -57,7 +57,7 @@ def test_dtype():
 
 
 def test_network_train():
-    network_train_overfit_sin(lambda **kw: fx.fourier_kan(**kw, num_frequencies=8))
+    network_train_overfit_sin(lambda **kw: fx.kan.fourier(**kw, num_frequencies=8))
 
 
 def test_fourier_matches_closed_form():

@@ -56,7 +56,7 @@ def test_dtype():
 
 
 def test_network_train():
-    network_train_overfit_sin(lambda **kw: fx.relu_kan(**kw, grid_size=12))
+    network_train_overfit_sin(lambda **kw: fx.kan.relu(**kw, grid_size=12))
 
 
 def test_relu_basis_compact_support():

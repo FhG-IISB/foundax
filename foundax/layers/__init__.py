@@ -45,33 +45,22 @@ from foundax.architectures.wno import (
     WaveletBlock3d,
 )
 
-from foundax.architectures.kan import (
-    KANLayer,
-    EfficientKANLayer,
-    FastKANLayer,
-    FourierKANLayer,
-    ChebyshevKANLayer,
-    JacobiKANLayer,
-    LegendreKANLayer,
-    WaveletKANLayer,
-    TaylorKANLayer,
-    HermiteKANLayer,
-    LaguerreKANLayer,
-    BernsteinKANLayer,
-    ReLUKANLayer,
-    RationalKANLayer,
-    SincKANLayer,
-    GramKANLayer,
-    BSRBFKANLayer,
-    KANConv1d,
-    KANConv2d,
-    KANConv3d,
-    KANResBlock,
-    KANSpectralBlock1d,
-    KANSpectralBlock2d,
-    KANSpectralBlock3d,
-    KANAttentionBlock,
+from foundax.architectures.transolver import (
+    PhysicsAttentionIrregular,
+    PhysicsAttentionStructured2D,
+    PhysicsAttentionStructured3D,
+    TransolverBlock,
+    TransolverFFN,
 )
+from foundax.architectures.sfno import (
+    RealSHT2d,
+    SphericalConv2d,
+    SphericalBlock2d,
+)
+
+# KAN layers + structural blocks live under the ``fx.layers.kan`` namespace
+# (see foundax/layers/kan.py).
+from . import kan
 
 __all__ = [
     "SpectralBlock1d",
@@ -88,31 +77,16 @@ __all__ = [
     "WaveletBlock1d",
     "WaveletBlock2d",
     "WaveletBlock3d",
-    # KAN layer primitives
-    "KANLayer",
-    "EfficientKANLayer",
-    "FastKANLayer",
-    "FourierKANLayer",
-    "ChebyshevKANLayer",
-    "JacobiKANLayer",
-    "LegendreKANLayer",
-    "WaveletKANLayer",
-    "TaylorKANLayer",
-    "HermiteKANLayer",
-    "LaguerreKANLayer",
-    "BernsteinKANLayer",
-    "ReLUKANLayer",
-    "RationalKANLayer",
-    "SincKANLayer",
-    "GramKANLayer",
-    "BSRBFKANLayer",
-    # KAN convolutional + structural blocks
-    "KANConv1d",
-    "KANConv2d",
-    "KANConv3d",
-    "KANResBlock",
-    "KANSpectralBlock1d",
-    "KANSpectralBlock2d",
-    "KANSpectralBlock3d",
-    "KANAttentionBlock",
+    # Physics-Attention (Transolver) primitives
+    "PhysicsAttentionIrregular",
+    "PhysicsAttentionStructured2D",
+    "PhysicsAttentionStructured3D",
+    "TransolverBlock",
+    "TransolverFFN",
+    # SFNO primitives
+    "RealSHT2d",
+    "SphericalConv2d",
+    "SphericalBlock2d",
+    # KAN namespace
+    "kan",
 ]

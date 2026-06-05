@@ -1,0 +1,7 @@
+name: sfno
+github_url: null               # torch-harmonics is a pip dep, no upstream repo to clone
+hf_checkpoint: null            # no canonical published weights; uses seeded random weights
+compare_needs_pt_repo: false
+has_compare: true
+convert_extra_args: []          # no PT→msgpack conversion needed
+compare_extra_args: []

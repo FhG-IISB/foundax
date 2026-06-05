@@ -57,7 +57,7 @@ def test_dtype():
 
 
 def test_network_train():
-    network_train_overfit_sin(lambda **kw: fx.sinc_kan(**kw, grid_size=16))
+    network_train_overfit_sin(lambda **kw: fx.kan.sinc(**kw, grid_size=16))
 
 
 def test_sinc_basis_matches_closed_form():
