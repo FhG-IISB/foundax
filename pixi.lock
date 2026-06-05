@@ -186,7 +186,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/virtualenv-21.4.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - pypi: .
-      - pypi: /home/fleef/Work/projects/foundax/og_repos/timesfm
+      - pypi: git+https://github.com/google-research/timesfm#d720daa6786539c2566a44464fbda1019c0a82c0
       - pypi: https://files.pythonhosted.org/packages/02/ca/2eaa5359f2ccb8c2e1656bc26305ad0cf438aa392ce4b29ae67a315c186e/transformers-5.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/5f/9ff93450ba96b09c7c2b3f81c94de31c89f92292f1380261bd7195bea4ea/contourpy-1.3.3-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -1448,8 +1448,9 @@ packages:
   - equinox>=0.11
   - einops
   requires_python: '>=3.10'
-- pypi: /home/fleef/Work/projects/foundax/og_repos/timesfm
+- pypi: git+https://github.com/google-research/timesfm#d720daa6786539c2566a44464fbda1019c0a82c0
   name: timesfm
+  version: 2.0.0
   requires_dist:
   - numpy>=1.26.4
   - huggingface-hub[cli]>=0.23.0
