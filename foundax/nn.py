@@ -1034,19 +1034,27 @@ def gaot(
         An ``equinox.Module`` (GAOT).
     """
     from .architectures.gaot import (
-        gaot as _gaot, MAGNOConfig, TransformerConfig, AttentionConfig,
+        gaot as _gaot,
+        MAGNOConfig,
+        TransformerConfig,
+        AttentionConfig,
     )
 
     if num_kv_heads is None:
         num_kv_heads = num_heads
 
     mc = MAGNOConfig(
-        coord_dim=coord_dim, radius=radius,
-        hidden_size=hidden_size_mlp, mlp_layers=mlp_layers,
+        coord_dim=coord_dim,
+        radius=radius,
+        hidden_size=hidden_size_mlp,
+        mlp_layers=mlp_layers,
         lifting_channels=lifting_channels,
-        use_attention=use_attention, attention_type=attention_type,
-        use_geoembed=use_geoembed, embedding_method=embedding_method,
-        pooling=pooling, transform_type=transform_type,
+        use_attention=use_attention,
+        attention_type=attention_type,
+        use_geoembed=use_geoembed,
+        embedding_method=embedding_method,
+        pooling=pooling,
+        transform_type=transform_type,
     )
     tc = TransformerConfig(
         patch_size=patch_size,
@@ -1058,9 +1066,12 @@ def gaot(
         attn_config=AttentionConfig(num_heads=num_heads, num_kv_heads=num_kv_heads),
     )
     return _gaot(
-        input_size=input_size, output_size=output_size,
-        magno_config=mc, transformer_config=tc,
-        latent_tokens_size=latent_tokens_size, key=_resolve_key(key),
+        input_size=input_size,
+        output_size=output_size,
+        magno_config=mc,
+        transformer_config=tc,
+        latent_tokens_size=latent_tokens_size,
+        key=_resolve_key(key),
     )
 
 

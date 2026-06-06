@@ -36,9 +36,11 @@ import numpy as np
 # not installed — the upstream GAOT imports it unconditionally in gemb.py).
 # ---------------------------------------------------------------------------
 
+
 def _install_torch_scatter_shim():
     try:
         import torch_scatter  # noqa: F401
+
         return
     except ImportError:
         pass
@@ -102,7 +104,8 @@ def _install_torch_scatter_shim():
             out = torch.zeros(shape, dtype=src.dtype, device=src.device)
         for i in range(n_out):
             if src.dim() == 3:
-                start = int(indptr[0, i].item()); end = int(indptr[0, i + 1].item())
+                start = int(indptr[0, i].item())
+                end = int(indptr[0, i + 1].item())
                 sub = src[:, start:end]
                 if end > start:
                     if reduce == "max":
@@ -112,7 +115,8 @@ def _install_torch_scatter_shim():
                     else:
                         out[:, i] = sub.sum(dim=1)
             else:
-                start = int(indptr[i].item()); end = int(indptr[i + 1].item())
+                start = int(indptr[i].item())
+                end = int(indptr[i + 1].item())
                 sub = src[start:end]
                 if end > start:
                     if reduce == "max":
@@ -166,17 +170,16 @@ def _copy_conv1d_as_linear(eqx_module, prefix, pt_conv):
     w = pt_conv.weight.detach().cpu().numpy().squeeze(-1)
     eqx_module = _set(eqx_module, prefix + [("weight", None)], w)
     if pt_conv.bias is not None:
-        eqx_module = _set(eqx_module, prefix + [("bias", None)],
-                          pt_conv.bias.detach().cpu().numpy())
+        eqx_module = _set(
+            eqx_module, prefix + [("bias", None)], pt_conv.bias.detach().cpu().numpy()
+        )
     return eqx_module
 
 
 def _copy_channel_mlp(eqx_module, prefix, pt_cmlp):
     """ChannelMLP holds Conv1d kernel=1 layers; our port stores Linears."""
     for i, fc in enumerate(pt_cmlp.fcs):
-        eqx_module = _copy_conv1d_as_linear(
-            eqx_module, prefix + [("fcs", i)], fc
-        )
+        eqx_module = _copy_conv1d_as_linear(eqx_module, prefix + [("fcs", i)], fc)
     return eqx_module
 
 
@@ -197,15 +200,18 @@ def _copy_geoembed(eqx_module, prefix, pt_geoembed):
         )
     else:  # pointnet
         eqx_module = _copy_linear(
-            eqx_module, prefix + [("pointnet_mlp", None), ("l1", None)],
+            eqx_module,
+            prefix + [("pointnet_mlp", None), ("l1", None)],
             pt_geoembed.pointnet_mlp[0],
         )
         eqx_module = _copy_linear(
-            eqx_module, prefix + [("pointnet_mlp", None), ("l2", None)],
+            eqx_module,
+            prefix + [("pointnet_mlp", None), ("l2", None)],
             pt_geoembed.pointnet_mlp[2],
         )
         eqx_module = _copy_linear(
-            eqx_module, prefix + [("fc", None), ("l", None)],
+            eqx_module,
+            prefix + [("fc", None), ("linear", None)],
             pt_geoembed.fc[0],
         )
     return eqx_module
@@ -216,7 +222,8 @@ def _copy_magno(eqx_module, prefix, pt_magno, is_encoder: bool):
     # AGNO
     agno_prefix = prefix + [("agno", None)]
     eqx_module = _copy_linear_channel_mlp(
-        eqx_module, agno_prefix + [("channel_mlp", None)],
+        eqx_module,
+        agno_prefix + [("channel_mlp", None)],
         pt_magno.agno.channel_mlp,
     )
     if pt_magno.agno.use_attn and pt_magno.agno.attention_type == "dot_product":
@@ -229,9 +236,13 @@ def _copy_magno(eqx_module, prefix, pt_magno, is_encoder: bool):
 
     # lifting (encoder) or projection (decoder)
     if is_encoder:
-        eqx_module = _copy_channel_mlp(eqx_module, prefix + [("lifting", None)], pt_magno.lifting)
+        eqx_module = _copy_channel_mlp(
+            eqx_module, prefix + [("lifting", None)], pt_magno.lifting
+        )
     else:
-        eqx_module = _copy_channel_mlp(eqx_module, prefix + [("projection", None)], pt_magno.projection)
+        eqx_module = _copy_channel_mlp(
+            eqx_module, prefix + [("projection", None)], pt_magno.projection
+        )
 
     # geoembed + recovery (optional)
     if pt_magno.use_geoembed:
@@ -247,25 +258,31 @@ def _copy_magno(eqx_module, prefix, pt_magno, is_encoder: bool):
 
 def _copy_transformer_block(eqx_module, prefix, pt_block):
     eqx_module = _set(
-        eqx_module, prefix + [("attn_norm", None), ("weight", None)],
+        eqx_module,
+        prefix + [("attn_norm", None), ("weight", None)],
         pt_block.attn_norm.weight.detach().cpu().numpy(),
     )
     eqx_module = _set(
-        eqx_module, prefix + [("ffn_norm", None), ("weight", None)],
+        eqx_module,
+        prefix + [("ffn_norm", None), ("weight", None)],
         pt_block.ffn_norm.weight.detach().cpu().numpy(),
     )
     # attention sub-module
     ap = prefix + [("attn", None)]
     for name in ("q_proj", "k_proj", "v_proj", "o_proj"):
         eqx_module = _copy_linear(
-            eqx_module, ap + [(name, None)], getattr(pt_block.attn, name),
+            eqx_module,
+            ap + [(name, None)],
+            getattr(pt_block.attn, name),
             has_bias=False,
         )
     # FFN
     fp = prefix + [("ffn", None)]
     for name in ("w1", "w2", "w3"):
         eqx_module = _copy_linear(
-            eqx_module, fp + [(name, None)], getattr(pt_block.ffn, name),
+            eqx_module,
+            fp + [(name, None)],
+            getattr(pt_block.ffn, name),
             has_bias=False,
         )
     if pt_block.skip_connection:
@@ -283,14 +300,17 @@ def _copy_processor(eqx_module, pt_processor, pt_gaot):
 
     # processor.input_proj (may be Identity)
     import torch.nn as nn
+
     if not isinstance(pt_processor.input_proj, nn.Identity):
         eqx_module = _copy_linear(
-            eqx_module, [("processor", None), ("input_proj", None)],
+            eqx_module,
+            [("processor", None), ("input_proj", None)],
             pt_processor.input_proj,
         )
     if not isinstance(pt_processor.output_proj, nn.Identity):
         eqx_module = _copy_linear(
-            eqx_module, [("processor", None), ("output_proj", None)],
+            eqx_module,
+            [("processor", None), ("output_proj", None)],
             pt_processor.output_proj,
         )
 
@@ -316,8 +336,12 @@ def _copy_processor(eqx_module, pt_processor, pt_gaot):
 
 
 def transfer_gaot_weights(pt_gaot, eqx_gaot):
-    eqx_gaot = _copy_magno(eqx_gaot, [("encoder", None)], pt_gaot.encoder, is_encoder=True)
-    eqx_gaot = _copy_magno(eqx_gaot, [("decoder", None)], pt_gaot.decoder, is_encoder=False)
+    eqx_gaot = _copy_magno(
+        eqx_gaot, [("encoder", None)], pt_gaot.encoder, is_encoder=True
+    )
+    eqx_gaot = _copy_magno(
+        eqx_gaot, [("decoder", None)], pt_gaot.decoder, is_encoder=False
+    )
     eqx_gaot = _copy_processor(eqx_gaot, pt_gaot.processor, pt_gaot)
     return eqx_gaot
 
@@ -325,6 +349,7 @@ def transfer_gaot_weights(pt_gaot, eqx_gaot):
 # ---------------------------------------------------------------------------
 # Test configurations
 # ---------------------------------------------------------------------------
+
 
 class _Args:
     def __init__(self, magno, transformer):
@@ -382,18 +407,29 @@ def _build_configs(
     pt_config = _GaotConfig(pt_magno, pt_tf, (H, W))
 
     from foundax.architectures.gaot import (
-        MAGNOConfig, TransformerConfig, AttentionConfig as JAttnCfg,
+        MAGNOConfig,
+        TransformerConfig,
+        AttentionConfig as JAttnCfg,
     )
+
     j_magno = MAGNOConfig(
-        coord_dim=2, radius=0.3,
-        hidden_size=16, mlp_layers=2, lifting_channels=lifting_channels,
-        use_attention=use_attention, attention_type=attention_type,
-        use_geoembed=use_geoembed, embedding_method=embedding_method,
-        pooling=pooling, transform_type=transform_type,
+        coord_dim=2,
+        radius=0.3,
+        hidden_size=16,
+        mlp_layers=2,
+        lifting_channels=lifting_channels,
+        use_attention=use_attention,
+        attention_type=attention_type,
+        use_geoembed=use_geoembed,
+        embedding_method=embedding_method,
+        pooling=pooling,
+        transform_type=transform_type,
     )
     j_tf = TransformerConfig(
-        patch_size=patch_size, hidden_size=transformer_hidden,
-        num_layers=num_layers, positional_embedding="absolute",
+        patch_size=patch_size,
+        hidden_size=transformer_hidden,
+        num_layers=num_layers,
+        positional_embedding="absolute",
         attn_config=JAttnCfg(num_heads=2, num_kv_heads=2),
     )
     return pt_config, j_magno, j_tf, (H, W)
@@ -403,11 +439,21 @@ def _build_configs(
 # Comparison drivers
 # ---------------------------------------------------------------------------
 
-def run_one(name: str, gaot_root: Path, seed: int,
-            use_attention, attention_type,
-            use_geoembed, embedding_method="statistical", pooling="max",
-            transform_type="linear", num_layers=2) -> bool:
+
+def run_one(
+    name: str,
+    gaot_root: Path,
+    seed: int,
+    use_attention,
+    attention_type,
+    use_geoembed,
+    embedding_method="statistical",
+    pooling="max",
+    transform_type="linear",
+    num_layers=2,
+) -> bool:
     import torch
+
     sys.path.insert(0, str(gaot_root))
     from src.model.gaot import GAOT as PtGAOT
     from src.model.layers.utils.neighbor_search import NeighborSearch
@@ -427,9 +473,12 @@ def run_one(name: str, gaot_root: Path, seed: int,
 
     import jax
     from foundax.architectures.gaot import GAOT as JaxGAOT
+
     eqx_model = JaxGAOT(
-        input_size=2, output_size=1,
-        magno_config=j_magno, transformer_config=j_tf,
+        input_size=2,
+        output_size=1,
+        magno_config=j_magno,
+        transformer_config=j_tf,
         latent_tokens_size=latent_size,
         key=jax.random.PRNGKey(seed),
     )
@@ -438,9 +487,11 @@ def run_one(name: str, gaot_root: Path, seed: int,
     # Inputs
     H, W = latent_size
     xs = np.linspace(0, 1, H, dtype=np.float32)
-    latent_coord_np = np.stack(
-        np.meshgrid(xs, xs, indexing="ij"), -1
-    ).reshape(-1, 2).astype(np.float32)
+    latent_coord_np = (
+        np.stack(np.meshgrid(xs, xs, indexing="ij"), -1)
+        .reshape(-1, 2)
+        .astype(np.float32)
+    )
     rng = np.random.default_rng(seed)
     x_coord_np = rng.random((40, 2)).astype(np.float32)
     q_coord_np = rng.random((20, 2)).astype(np.float32)
@@ -502,21 +553,33 @@ def run_one(name: str, gaot_root: Path, seed: int,
 
 
 def run_structural_check(seed: int) -> int:
-    import jax, jax.numpy as jnp
+    import jax
+    import jax.numpy as jnp
     from foundax.architectures.gaot import (
-        GAOT, MAGNOConfig, TransformerConfig, compute_neighbors_csr,
+        GAOT,
+        MAGNOConfig,
+        TransformerConfig,
+        compute_neighbors_csr,
     )
+
     print("[GAOT] Structural check (JAX only, random weights)")
     m = GAOT(
-        input_size=2, output_size=1,
-        magno_config=MAGNOConfig(radius=0.3, lifting_channels=8, hidden_size=16, mlp_layers=2),
-        transformer_config=TransformerConfig(patch_size=2, hidden_size=16, num_layers=2),
+        input_size=2,
+        output_size=1,
+        magno_config=MAGNOConfig(
+            radius=0.3, lifting_channels=8, hidden_size=16, mlp_layers=2
+        ),
+        transformer_config=TransformerConfig(
+            patch_size=2, hidden_size=16, num_layers=2
+        ),
         latent_tokens_size=(8, 8),
         key=jax.random.PRNGKey(seed),
     )
-    H = W = 8
+    H = 8
     xs = np.linspace(0, 1, H, dtype=np.float32)
-    latent = jnp.asarray(np.stack(np.meshgrid(xs, xs, indexing="ij"), -1).reshape(-1, 2))
+    latent = jnp.asarray(
+        np.stack(np.meshgrid(xs, xs, indexing="ij"), -1).reshape(-1, 2)
+    )
     rng = np.random.default_rng(seed)
     x = jnp.asarray(rng.random((40, 2)).astype(np.float32))
     q = jnp.asarray(rng.random((20, 2)).astype(np.float32))
@@ -531,6 +594,7 @@ def run_structural_check(seed: int) -> int:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser()
@@ -566,15 +630,78 @@ def main(argv=None) -> int:
 
     cases = [
         # (name, use_attention, attention_type, use_geoembed, method, pooling, transform_type, num_layers)
-        ("(a) linear / no attn / no geoembed", False, "cosine", False, "statistical", "max", "linear", 2),
-        ("(b) linear / cosine attn / no geoembed", True, "cosine", False, "statistical", "max", "linear", 2),
-        ("(c1) linear / dot_product attn / no geoembed", True, "dot_product", False, "statistical", "max", "linear", 2),
-        ("(c2) linear / cosine attn / geoembed=statistical", True, "cosine", True, "statistical", "max", "linear", 2),
-        ("(c) linear / dot_product attn / geoembed=statistical", True, "dot_product", True, "statistical", "max", "linear", 2),
-        ("(d) linear / cosine attn / geoembed=pointnet/mean", True, "cosine", True, "pointnet", "mean", "linear", 2),
+        (
+            "(a) linear / no attn / no geoembed",
+            False,
+            "cosine",
+            False,
+            "statistical",
+            "max",
+            "linear",
+            2,
+        ),
+        (
+            "(b) linear / cosine attn / no geoembed",
+            True,
+            "cosine",
+            False,
+            "statistical",
+            "max",
+            "linear",
+            2,
+        ),
+        (
+            "(c1) linear / dot_product attn / no geoembed",
+            True,
+            "dot_product",
+            False,
+            "statistical",
+            "max",
+            "linear",
+            2,
+        ),
+        (
+            "(c2) linear / cosine attn / geoembed=statistical",
+            True,
+            "cosine",
+            True,
+            "statistical",
+            "max",
+            "linear",
+            2,
+        ),
+        (
+            "(c) linear / dot_product attn / geoembed=statistical",
+            True,
+            "dot_product",
+            True,
+            "statistical",
+            "max",
+            "linear",
+            2,
+        ),
+        (
+            "(d) linear / cosine attn / geoembed=pointnet/mean",
+            True,
+            "cosine",
+            True,
+            "pointnet",
+            "mean",
+            "linear",
+            2,
+        ),
         # NOTE: upstream's `nonlinear` AGNO has a channel-dim bug when lifting
         # changes the feature width — both sides hit it, so we skip that case.
-        ("(e) linear / cosine attn / geoembed=statistical / 5 layers", True, "cosine", True, "statistical", "max", "linear", 5),
+        (
+            "(e) linear / cosine attn / geoembed=statistical / 5 layers",
+            True,
+            "cosine",
+            True,
+            "statistical",
+            "max",
+            "linear",
+            5,
+        ),
     ]
     ok_all = True
     for case in cases:

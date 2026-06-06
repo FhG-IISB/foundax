@@ -44,12 +44,24 @@ from .architectures.gaot import (
 from .nn import gaot as _build
 
 __all__ = [
-    "compute_neighbors_csr", "compute_neighbors",
-    "MAGNOConfig", "TransformerConfig", "AttentionConfig",
-    "GAOT", "AGNO", "GeometricEmbedding",
-    "MAGNOEncoder", "MAGNODecoder",
-    "S", "M", "L", "s", "m", "l",
+    "compute_neighbors_csr",
+    "compute_neighbors",
+    "MAGNOConfig",
+    "TransformerConfig",
+    "AttentionConfig",
+    "GAOT",
+    "AGNO",
+    "GeometricEmbedding",
+    "MAGNOEncoder",
+    "MAGNODecoder",
+    "S",
+    "M",
+    "L",
+    "s",
+    "m",
+    "l",
 ]
 
 from . import _callable_module
+
 _callable_module.install(__name__, _build)

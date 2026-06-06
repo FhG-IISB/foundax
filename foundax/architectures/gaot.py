@@ -43,7 +43,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -54,6 +54,7 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Neighbor search (outside JIT — scipy KDTree, returns CSR + helper arrays)
 # ---------------------------------------------------------------------------
+
 
 def compute_neighbors_csr(
     data: np.ndarray,
@@ -84,8 +85,11 @@ def compute_neighbors_csr(
     tree = cKDTree(src)
     raw = tree.query_ball_point(qry, r=radius, workers=-1)
     counts = np.array([len(n) for n in raw], dtype=np.int64)
-    nbr_index = np.concatenate([np.asarray(n, dtype=np.int64) for n in raw]) \
-        if counts.sum() > 0 else np.zeros((0,), dtype=np.int64)
+    nbr_index = (
+        np.concatenate([np.asarray(n, dtype=np.int64) for n in raw])
+        if counts.sum() > 0
+        else np.zeros((0,), dtype=np.int64)
+    )
     row_splits = np.concatenate([[0], np.cumsum(counts)]).astype(np.int64)
     seg_ids = np.repeat(np.arange(len(qry), dtype=np.int64), counts)
     return {
@@ -103,6 +107,7 @@ compute_neighbors = compute_neighbors_csr
 # ---------------------------------------------------------------------------
 # CSR segment reductions (JAX equivalents of torch_scatter)
 # ---------------------------------------------------------------------------
+
 
 def _segment_sum(data, seg_ids, num_segments):
     return jax.ops.segment_sum(data, seg_ids, num_segments=num_segments)
@@ -123,16 +128,17 @@ def _segment_mean(data, seg_ids, counts, num_segments):
 
 def _segment_softmax(scores, seg_ids, counts, num_segments):
     """Numerically stable per-segment softmax over a flat edge list."""
-    max_vals = _segment_max(scores, seg_ids, num_segments)        # [N_q]
-    shifted = scores - max_vals[seg_ids]                            # [E]
+    max_vals = _segment_max(scores, seg_ids, num_segments)  # [N_q]
+    shifted = scores - max_vals[seg_ids]  # [E]
     exp = jnp.exp(shifted)
-    denom = _segment_sum(exp, seg_ids, num_segments)              # [N_q]
+    denom = _segment_sum(exp, seg_ids, num_segments)  # [N_q]
     return exp / denom[seg_ids]
 
 
 # ---------------------------------------------------------------------------
 # Linear / channel MLP building blocks (Conv1d-kernel-1 == Linear)
 # ---------------------------------------------------------------------------
+
 
 class LinearChannelMLP(eqx.Module):
     """Stack of Linear layers with non-linearity between (but not after) layers.
@@ -158,6 +164,7 @@ class LinearChannelMLP(eqx.Module):
                 if i < self.n_layers - 1:
                     v = jax.nn.gelu(v)
             return v
+
         for _ in range(x.ndim - 1):
             apply_one = jax.vmap(apply_one)
         return apply_one(x)
@@ -218,6 +225,7 @@ class ChannelMLP(eqx.Module):
 # AGNO
 # ---------------------------------------------------------------------------
 
+
 class AGNO(eqx.Module):
     """Attentional Graph Neural Operator (faithful port of upstream)."""
 
@@ -242,7 +250,10 @@ class AGNO(eqx.Module):
         key,
     ):
         if transform_type not in (
-            "linear", "linear_kernelonly", "nonlinear", "nonlinear_kernelonly"
+            "linear",
+            "linear_kernelonly",
+            "nonlinear",
+            "nonlinear_kernelonly",
         ):
             raise ValueError(f"Invalid transform_type: {transform_type}")
 
@@ -258,7 +269,7 @@ class AGNO(eqx.Module):
             attention_dim = 64
             self.query_proj = eqx.nn.Linear(coord_dim, attention_dim, key=k2)
             self.key_proj = eqx.nn.Linear(coord_dim, attention_dim, key=k3)
-            self.scaling_factor = 1.0 / (attention_dim ** 0.5)
+            self.scaling_factor = 1.0 / (attention_dim**0.5)
         else:
             self.query_proj = None
             self.key_proj = None
@@ -266,8 +277,8 @@ class AGNO(eqx.Module):
 
     def __call__(
         self,
-        y: jnp.ndarray,                  # [N_y, coord_dim] (source)
-        neighbors: dict,                 # CSR with seg_ids + counts
+        y: jnp.ndarray,  # [N_y, coord_dim] (source)
+        neighbors: dict,  # CSR with seg_ids + counts
         x: Optional[jnp.ndarray] = None,  # [N_x, coord_dim] (query)
         f_y: Optional[jnp.ndarray] = None,  # [N_y, C] (single example)
     ) -> jnp.ndarray:
@@ -279,12 +290,12 @@ class AGNO(eqx.Module):
         counts = neighbors["counts"]
         num_query = counts.shape[0]
 
-        rep_features = y[nbr_idx]              # [E, coord_dim]
-        self_features = x[seg_ids]             # [E, coord_dim]
+        rep_features = y[nbr_idx]  # [E, coord_dim]
+        self_features = x[seg_ids]  # [E, coord_dim]
 
         in_features = None
         if f_y is not None:
-            in_features = f_y[nbr_idx]         # [E, C_in]
+            in_features = f_y[nbr_idx]  # [E, C_in]
 
         attention_weights = None
         if self.use_attn:
@@ -303,7 +314,8 @@ class AGNO(eqx.Module):
         # Kernel MLP input (order: [rep, self] — y first, x second)
         agg_features = jnp.concatenate([rep_features, self_features], axis=-1)
         if f_y is not None and self.transform_type in (
-            "nonlinear", "nonlinear_kernelonly"
+            "nonlinear",
+            "nonlinear_kernelonly",
         ):
             agg_features = jnp.concatenate([agg_features, in_features], axis=-1)
 
@@ -324,17 +336,19 @@ class AGNO(eqx.Module):
 # Geometric embedding
 # ---------------------------------------------------------------------------
 
+
 def node_pos_encode(x: jnp.ndarray, freq: int = 4) -> jnp.ndarray:
     """Sin/cos positional encoding of 2D coordinates (matches upstream)."""
     freqs = jnp.arange(1, freq + 1, dtype=x.dtype)
     phi = jnp.pi * (x + 1.0)
-    out = freqs[None, :, None] * phi[:, None, :]     # [N, freq, D]
+    out = freqs[None, :, None] * phi[:, None, :]  # [N, freq, D]
     out = jnp.concatenate([jnp.sin(out), jnp.cos(out)], axis=2)  # [N, freq, 2D]
     return out.reshape(out.shape[0], -1)
 
 
 class _StatMLP(eqx.Module):
     """Linear(stat → 64) → ReLU → Linear(64 → out) → ReLU (upstream)."""
+
     l1: eqx.nn.Linear
     l2: eqx.nn.Linear
 
@@ -351,6 +365,7 @@ class _StatMLP(eqx.Module):
 
 class _PointNetMLP(eqx.Module):
     """Linear(D → 64) → ReLU → Linear(64 → 64) → ReLU."""
+
     l1: eqx.nn.Linear
     l2: eqx.nn.Linear
 
@@ -367,13 +382,14 @@ class _PointNetMLP(eqx.Module):
 
 class _PointNetFC(eqx.Module):
     """Linear(64 → out) → ReLU."""
-    l: eqx.nn.Linear
+
+    linear: eqx.nn.Linear
 
     def __init__(self, out_dim, *, key):
-        self.l = eqx.nn.Linear(64, out_dim, key=key)
+        self.linear = eqx.nn.Linear(64, out_dim, key=key)
 
     def __call__(self, x):
-        return jax.nn.relu(self.l(x))
+        return jax.nn.relu(self.linear(x))
 
 
 class GeometricEmbedding(eqx.Module):
@@ -427,8 +443,8 @@ class GeometricEmbedding(eqx.Module):
         seg_ids = spatial_nbrs["seg_ids"]
         counts = spatial_nbrs["counts"]
 
-        nbr_coords = input_geom[nbr_idx]                  # [E, D]
-        query_coords_pe = latent_queries[seg_ids]         # [E, D]
+        nbr_coords = input_geom[nbr_idx]  # [E, D]
+        query_coords_pe = latent_queries[seg_ids]  # [E, D]
 
         distances = jnp.linalg.norm(nbr_coords - query_coords_pe, axis=1)
         counts_f = counts.astype(jnp.float32)
@@ -439,9 +455,9 @@ class GeometricEmbedding(eqx.Module):
         D_avg = D_sum / jnp.maximum(counts_f, 1.0)
 
         # D_var = E[X^2] - E[X]^2  (clamped >= 0)
-        dist_sq = distances ** 2
+        dist_sq = distances**2
         E_X2 = _segment_sum(dist_sq, seg_ids, num_queries) / jnp.maximum(counts_f, 1.0)
-        D_var = jnp.clip(E_X2 - D_avg ** 2, min=0.0)
+        D_var = jnp.clip(E_X2 - D_avg**2, min=0.0)
 
         # centroid offset
         nbr_centroid_sum = _segment_sum(nbr_coords, seg_ids, num_queries)
@@ -450,15 +466,15 @@ class GeometricEmbedding(eqx.Module):
 
         # covariance + PCA eigenvalues (descending)
         centered = nbr_coords - nbr_centroid[seg_ids]
-        cov_components = centered[:, :, None] * centered[:, None, :]   # [E, D, D]
-        cov_sum = _segment_sum(cov_components, seg_ids, num_queries)   # [Q, D, D]
+        cov_components = centered[:, :, None] * centered[:, None, :]  # [E, D, D]
+        cov_sum = _segment_sum(cov_components, seg_ids, num_queries)  # [Q, D, D]
         cov_matrix = cov_sum / jnp.maximum(counts_f[:, None, None], 1.0)
         # avoid NaN for empty queries by substituting identity
         safe_cov = jnp.where(
             has_nbrs[:, None, None], cov_matrix, jnp.eye(D)[None, :, :]
         )
-        eigenvalues = jnp.linalg.eigvalsh(safe_cov)          # ascending
-        PCA = jnp.flip(eigenvalues, axis=1)                  # descending
+        eigenvalues = jnp.linalg.eigvalsh(safe_cov)  # ascending
+        PCA = jnp.flip(eigenvalues, axis=1)  # descending
         PCA = jnp.where(has_nbrs[:, None], PCA, 0.0)
 
         geo = jnp.concatenate(
@@ -483,13 +499,12 @@ class GeometricEmbedding(eqx.Module):
         counts = spatial_nbrs["counts"]
         has_nbrs = counts > 0
 
-        nbr_coords = input_geom[nbr_idx]              # [E, D]
-        q_per_e = latent_queries[seg_ids]              # [E, D]
+        nbr_coords = input_geom[nbr_idx]  # [E, D]
+        q_per_e = latent_queries[seg_ids]  # [E, D]
         centered = nbr_coords - q_per_e
-        feat = jax.vmap(self.pointnet_mlp)(centered)   # [E, 64]
+        feat = jax.vmap(self.pointnet_mlp)(centered)  # [E, 64]
 
         if self.pooling == "max":
-            very_neg = jnp.full((num_queries, feat.shape[-1]), -jnp.inf, dtype=feat.dtype)
             pooled = _segment_max(feat, seg_ids, num_queries)
             # segment_max returns -inf for empty segments; zero them out
             pooled = jnp.where(has_nbrs[:, None], pooled, 0.0)
@@ -499,7 +514,7 @@ class GeometricEmbedding(eqx.Module):
                 counts.astype(feat.dtype)[:, None], 1.0
             )
 
-        out = jax.vmap(self.fc)(pooled)               # [Q, output_dim]
+        out = jax.vmap(self.fc)(pooled)  # [Q, output_dim]
         out = jnp.where(has_nbrs[:, None], out, 0.0)
         return out
 
@@ -513,6 +528,7 @@ class GeometricEmbedding(eqx.Module):
 # ---------------------------------------------------------------------------
 # MAGNO Encoder / Decoder
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class MAGNOConfig:
@@ -533,7 +549,7 @@ class MAGNOConfig:
     max_neighbors: Optional[int] = None
     sample_ratio: Optional[float] = None
     node_embedding: bool = False
-    precompute_edges: bool = True   # always True in our JIT-friendly port
+    precompute_edges: bool = True  # always True in our JIT-friendly port
 
 
 def _kernel_coord_dim(coord_dim: int, node_embedding: bool) -> int:
@@ -557,7 +573,9 @@ class MAGNOEncoder(eqx.Module):
     node_embedding: bool = eqx.field(static=True)
     transform_type: str = eqx.field(static=True)
 
-    def __init__(self, in_channels: int, out_channels: int, config: MAGNOConfig, *, key):
+    def __init__(
+        self, in_channels: int, out_channels: int, config: MAGNOConfig, *, key
+    ):
         self.coord_dim = config.coord_dim
         self.scales = tuple(config.scales)
         self.use_scale_weights = config.use_scale_weights
@@ -612,7 +630,9 @@ class MAGNOEncoder(eqx.Module):
             self.recovery = None
 
         if self.use_scale_weights:
-            self.scale_weighting_l1 = eqx.nn.Linear(kdim, config.hidden_size // 4, key=k5)
+            self.scale_weighting_l1 = eqx.nn.Linear(
+                kdim, config.hidden_size // 4, key=k5
+            )
             self.scale_weighting_l2 = eqx.nn.Linear(
                 config.hidden_size // 4, len(self.scales), key=k6
             )
@@ -622,12 +642,12 @@ class MAGNOEncoder(eqx.Module):
 
     def __call__(
         self,
-        x_coord: jnp.ndarray,           # [N, D]
-        pndata: jnp.ndarray,            # [N, C_in]  (single example)
+        x_coord: jnp.ndarray,  # [N, D]
+        pndata: jnp.ndarray,  # [N, C_in]  (single example)
         latent_tokens_coord: jnp.ndarray,  # [L, D]
-        encoder_nbrs: list,             # list[dict] per scale
-    ) -> jnp.ndarray:                   # [L, C_out]
-        pndata = self.lifting(pndata)   # [N, C_out]
+        encoder_nbrs: list,  # list[dict] per scale
+    ) -> jnp.ndarray:  # [L, C_out]
+        pndata = self.lifting(pndata)  # [N, C_out]
 
         if self.use_scale_weights:
             sw = self.scale_weighting_l1(latent_tokens_coord)
@@ -661,8 +681,8 @@ class MAGNOEncoder(eqx.Module):
         if len(encoded_scales) == 1:
             return encoded_scales[0]
         if self.use_scale_weights:
-            stack = jnp.stack(encoded_scales, axis=0)         # [S, L, C]
-            w = sw.T[:, :, None]                               # [S, L, 1]
+            stack = jnp.stack(encoded_scales, axis=0)  # [S, L, C]
+            w = sw.T[:, :, None]  # [S, L, 1]
             return (stack * w).sum(axis=0)
         return jnp.mean(jnp.stack(encoded_scales, axis=0), axis=0)
 
@@ -683,7 +703,9 @@ class MAGNODecoder(eqx.Module):
     use_geoembed: bool = eqx.field(static=True)
     node_embedding: bool = eqx.field(static=True)
 
-    def __init__(self, in_channels: int, out_channels: int, config: MAGNOConfig, *, key):
+    def __init__(
+        self, in_channels: int, out_channels: int, config: MAGNOConfig, *, key
+    ):
         self.coord_dim = config.coord_dim
         self.scales = tuple(config.scales)
         self.use_scale_weights = config.use_scale_weights
@@ -735,7 +757,9 @@ class MAGNODecoder(eqx.Module):
             self.geoembed = None
             self.recovery = None
         if self.use_scale_weights:
-            self.scale_weighting_l1 = eqx.nn.Linear(kdim, config.hidden_size // 4, key=k5)
+            self.scale_weighting_l1 = eqx.nn.Linear(
+                kdim, config.hidden_size // 4, key=k5
+            )
             self.scale_weighting_l2 = eqx.nn.Linear(
                 config.hidden_size // 4, len(self.scales), key=k6
             )
@@ -746,10 +770,10 @@ class MAGNODecoder(eqx.Module):
     def __call__(
         self,
         latent_tokens_coord: jnp.ndarray,  # [L, D]
-        rndata: jnp.ndarray,               # [L, C_in]  (single example)
-        query_coord: jnp.ndarray,          # [M, D]
-        decoder_nbrs: list,                # list[dict] per scale
-    ) -> jnp.ndarray:                       # [M, C_out]
+        rndata: jnp.ndarray,  # [L, C_in]  (single example)
+        query_coord: jnp.ndarray,  # [M, D]
+        decoder_nbrs: list,  # list[dict] per scale
+    ) -> jnp.ndarray:  # [M, C_out]
         if self.use_scale_weights:
             sw = self.scale_weighting_l1(query_coord)
             sw = jax.nn.relu(sw)
@@ -793,6 +817,7 @@ class MAGNODecoder(eqx.Module):
 # Transformer blocks (UViT-style)
 # ---------------------------------------------------------------------------
 
+
 class RMSNorm(eqx.Module):
     weight: jnp.ndarray
     eps: float = eqx.field(static=True)
@@ -802,12 +827,13 @@ class RMSNorm(eqx.Module):
         self.eps = eps
 
     def __call__(self, x):
-        rms = jnp.sqrt(jnp.mean(x ** 2, axis=-1, keepdims=True) + self.eps)
+        rms = jnp.sqrt(jnp.mean(x**2, axis=-1, keepdims=True) + self.eps)
         return x / rms * self.weight
 
 
 class FFN(eqx.Module):
     """SwiGLU: ``w2(silu(w1(x)) * w3(x))`` (no bias)."""
+
     w1: eqx.nn.Linear
     w2: eqx.nn.Linear
     w3: eqx.nn.Linear
@@ -832,10 +858,10 @@ def _rope_apply(x: jnp.ndarray) -> jnp.ndarray:
     half = D // 2
     freqs = 1.0 / (10000.0 ** (jnp.arange(0, half, dtype=jnp.float32) / half))
     t = jnp.arange(seq, dtype=jnp.float32)
-    angles = t[:, None] * freqs[None, :]                         # [seq, half]
+    angles = t[:, None] * freqs[None, :]  # [seq, half]
     # The rotary_embedding_torch convention is repeat-then-interleave on the half axis
-    sin = jnp.repeat(jnp.sin(angles), 2, axis=-1)                # [seq, D]
-    cos = jnp.repeat(jnp.cos(angles), 2, axis=-1)                # [seq, D]
+    sin = jnp.repeat(jnp.sin(angles), 2, axis=-1)  # [seq, D]
+    cos = jnp.repeat(jnp.cos(angles), 2, axis=-1)  # [seq, D]
 
     def rotate_half(t):
         t1 = t[..., 0::2]
@@ -903,10 +929,10 @@ class GroupQueryAttention(eqx.Module):
             q = _rope_apply(q)
             k = _rope_apply(k)
 
-        scale = self.head_dim ** -0.5
+        scale = self.head_dim**-0.5
         scores = jnp.einsum("hqd,hkd->hqk", q, k) * scale
         attn = jax.nn.softmax(scores, axis=-1)
-        out = jnp.einsum("hqk,hkd->hqd", attn, v)                 # [H, S, Dh]
+        out = jnp.einsum("hqk,hkd->hqd", attn, v)  # [H, S, Dh]
         out = out.transpose(1, 0, 2).reshape(S, -1)
         return jax.vmap(self.o_proj)(out)
 
@@ -937,9 +963,12 @@ class TransformerBlock(eqx.Module):
     ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.attn = GroupQueryAttention(
-            input_size=input_size, hidden_size=hidden_size,
-            num_heads=num_heads, num_kv_heads=num_kv_heads,
-            positional_embedding=positional_embedding, key=k1,
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_heads=num_heads,
+            num_kv_heads=num_kv_heads,
+            positional_embedding=positional_embedding,
+            key=k1,
         )
         self.ffn = FFN(input_size, ffn_hidden_size, key=k2)
         self.attn_norm = RMSNorm(input_size, eps=norm_eps) if use_attn_norm else None
@@ -947,7 +976,8 @@ class TransformerBlock(eqx.Module):
         self.skip_connection = skip_connection
         self.skip_proj = (
             eqx.nn.Linear(2 * input_size, input_size, key=k3)
-            if skip_connection else None
+            if skip_connection
+            else None
         )
 
     def __call__(self, x, skip=None):
@@ -994,7 +1024,9 @@ class _Transformer(eqx.Module):
 
     use_long_range_skip: bool = eqx.field(static=True)
 
-    def __init__(self, input_size: int, output_size: int, config: TransformerConfig, *, key):
+    def __init__(
+        self, input_size: int, output_size: int, config: TransformerConfig, *, key
+    ):
         self.use_long_range_skip = config.use_long_range_skip
         hidden_size = config.hidden_size
         ffn_hidden_size = hidden_size * config.ffn_multiplier
@@ -1037,14 +1069,18 @@ class _Transformer(eqx.Module):
                 key=sk,
             )
 
-        self.encoder_layers = [_make_block(sub_keys[idx + i], False) for i in range(n_enc)]
+        self.encoder_layers = [
+            _make_block(sub_keys[idx + i], False) for i in range(n_enc)
+        ]
         idx += n_enc
         if n_mid:
             self.middle_layer = _make_block(sub_keys[idx], False)
             idx += 1
         else:
             self.middle_layer = None
-        self.decoder_layers = [_make_block(sub_keys[idx + i], True) for i in range(n_dec)]
+        self.decoder_layers = [
+            _make_block(sub_keys[idx + i], True) for i in range(n_dec)
+        ]
 
     def __call__(self, x):
         # x : [S, C]  (single example)
@@ -1067,6 +1103,7 @@ class _Transformer(eqx.Module):
 # ---------------------------------------------------------------------------
 # GAOT model (top level)
 # ---------------------------------------------------------------------------
+
 
 def _compute_absolute_embeddings(positions: jnp.ndarray, embed_dim: int) -> jnp.ndarray:
     """Match upstream ``_compute_absolute_embeddings``."""
@@ -1133,7 +1170,7 @@ class GAOT(eqx.Module):
         else:
             assert len(latent_tokens_size) == 3
             self.H, self.W, self.D = latent_tokens_size
-            patch_volume = self.patch_size ** 3
+            patch_volume = self.patch_size**3
             nph = self.H // self.patch_size
             npw = self.W // self.patch_size
             npd = self.D // self.patch_size
@@ -1149,8 +1186,12 @@ class GAOT(eqx.Module):
         self.positions = positions
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
-        self.encoder = MAGNOEncoder(input_size, self.node_latent_size, magno_config, key=k1)
-        self.decoder = MAGNODecoder(self.node_latent_size, output_size, magno_config, key=k2)
+        self.encoder = MAGNOEncoder(
+            input_size, self.node_latent_size, magno_config, key=k1
+        )
+        self.decoder = MAGNODecoder(
+            self.node_latent_size, output_size, magno_config, key=k2
+        )
         self.patch_linear = eqx.nn.Linear(
             patch_volume * self.node_latent_size,
             patch_volume * self.node_latent_size,
@@ -1166,8 +1207,10 @@ class GAOT(eqx.Module):
     # -- sub-stages --------------------------------------------------------------
     def encode(self, x_coord, pndata, latent_tokens_coord, encoder_nbrs):
         return self.encoder(
-            x_coord=x_coord, pndata=pndata,
-            latent_tokens_coord=latent_tokens_coord, encoder_nbrs=encoder_nbrs,
+            x_coord=x_coord,
+            pndata=pndata,
+            latent_tokens_coord=latent_tokens_coord,
+            encoder_nbrs=encoder_nbrs,
         )
 
     def process(self, rndata: jnp.ndarray) -> jnp.ndarray:
@@ -1196,7 +1239,7 @@ class GAOT(eqx.Module):
         rndata = jax.vmap(self.patch_linear)(rndata)
 
         if self.positional_embedding_name == "absolute":
-            patch_volume = P ** self.coord_dim
+            patch_volume = P**self.coord_dim
             pos_emb = _compute_absolute_embeddings(
                 self.positions, patch_volume * self.node_latent_size
             )
@@ -1221,19 +1264,21 @@ class GAOT(eqx.Module):
 
     def decode(self, latent_tokens_coord, rndata, query_coord, decoder_nbrs):
         return self.decoder(
-            latent_tokens_coord=latent_tokens_coord, rndata=rndata,
-            query_coord=query_coord, decoder_nbrs=decoder_nbrs,
+            latent_tokens_coord=latent_tokens_coord,
+            rndata=rndata,
+            query_coord=query_coord,
+            decoder_nbrs=decoder_nbrs,
         )
 
     def __call__(
         self,
         latent_tokens_coord: jnp.ndarray,  # [L, D]
-        xcoord: jnp.ndarray,               # [N, D]
-        pndata: jnp.ndarray,               # [N, input_size]  single-example
+        xcoord: jnp.ndarray,  # [N, D]
+        pndata: jnp.ndarray,  # [N, input_size]  single-example
         query_coord: Optional[jnp.ndarray] = None,  # [M, D]  (None → xcoord)
-        encoder_nbrs: Optional[list] = None,        # list[dict] per scale
-        decoder_nbrs: Optional[list] = None,        # list[dict] per scale
-    ) -> jnp.ndarray:                       # [M, output_size]
+        encoder_nbrs: Optional[list] = None,  # list[dict] per scale
+        decoder_nbrs: Optional[list] = None,  # list[dict] per scale
+    ) -> jnp.ndarray:  # [M, output_size]
         """Single-example forward pass (foundax convention).
 
         ``encoder_nbrs`` / ``decoder_nbrs`` must be lists of CSR-dict
@@ -1256,6 +1301,7 @@ class GAOT(eqx.Module):
 # ---------------------------------------------------------------------------
 # Factory functions
 # ---------------------------------------------------------------------------
+
 
 def gaot(
     input_size: int = 2,
@@ -1282,17 +1328,39 @@ def gaot(
     )
 
 
-def _variant(input_size, output_size, lifting_channels, hidden_size,
-             num_layers, patch_size, latent_tokens_size, key, **overrides):
-    mc = MAGNOConfig(lifting_channels=lifting_channels,
-                     **{k: v for k, v in overrides.items() if k in MAGNOConfig.__dataclass_fields__})
-    tc = TransformerConfig(
-        hidden_size=hidden_size, num_layers=num_layers, patch_size=patch_size,
-        **{k: v for k, v in overrides.items() if k in TransformerConfig.__dataclass_fields__},
+def _variant(
+    input_size,
+    output_size,
+    lifting_channels,
+    hidden_size,
+    num_layers,
+    patch_size,
+    latent_tokens_size,
+    key,
+    **overrides,
+):
+    mc = MAGNOConfig(
+        lifting_channels=lifting_channels,
+        **{k: v for k, v in overrides.items() if k in MAGNOConfig.__dataclass_fields__},
     )
-    return gaot(input_size=input_size, output_size=output_size,
-                magno_config=mc, transformer_config=tc,
-                latent_tokens_size=latent_tokens_size, key=key)
+    tc = TransformerConfig(
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+        patch_size=patch_size,
+        **{
+            k: v
+            for k, v in overrides.items()
+            if k in TransformerConfig.__dataclass_fields__
+        },
+    )
+    return gaot(
+        input_size=input_size,
+        output_size=output_size,
+        magno_config=mc,
+        transformer_config=tc,
+        latent_tokens_size=latent_tokens_size,
+        key=key,
+    )
 
 
 def S(input_size=2, output_size=1, *, latent_tokens_size=(32, 32), key=None) -> GAOT:
@@ -1313,9 +1381,25 @@ def L(input_size=2, output_size=1, *, latent_tokens_size=(32, 32), key=None) -> 
 s, m, l = S, M, L  # noqa: E741
 
 __all__ = [
-    "compute_neighbors_csr", "compute_neighbors",
-    "MAGNOConfig", "TransformerConfig", "AttentionConfig",
-    "AGNO", "GeometricEmbedding", "MAGNOEncoder", "MAGNODecoder",
-    "RMSNorm", "FFN", "GroupQueryAttention", "TransformerBlock",
-    "GAOT", "gaot", "S", "M", "L", "s", "m", "l",
+    "compute_neighbors_csr",
+    "compute_neighbors",
+    "MAGNOConfig",
+    "TransformerConfig",
+    "AttentionConfig",
+    "AGNO",
+    "GeometricEmbedding",
+    "MAGNOEncoder",
+    "MAGNODecoder",
+    "RMSNorm",
+    "FFN",
+    "GroupQueryAttention",
+    "TransformerBlock",
+    "GAOT",
+    "gaot",
+    "S",
+    "M",
+    "L",
+    "s",
+    "m",
+    "l",
 ]

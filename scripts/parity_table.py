@@ -54,20 +54,13 @@ INPUT_SHAPES = {
     "LinearCrossAttention": "(1, 10, 32) query + 2×(1, 16, 32) branches",
     "CrossAttentionBlock": "(1, 10, 32) query + 2×(1, 16, 32) branches",
     # GAOT — all 7 variants share the same toy I/O shape
-    "(a) linear / no attn / no geoembed":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(b) linear / cosine attn / no geoembed":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(c1) linear / dot_product attn / no geoembed":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(c2) linear / cosine attn / geoembed=statistical":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(c) linear / dot_product attn / geoembed=statistical":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(d) linear / cosine attn / geoembed=pointnet/mean":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
-    "(e) linear / cosine attn / geoembed=statistical / 5 layers":
-        "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(a) linear / no attn / no geoembed": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(b) linear / cosine attn / no geoembed": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(c1) linear / dot_product attn / no geoembed": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(c2) linear / cosine attn / geoembed=statistical": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(c) linear / dot_product attn / geoembed=statistical": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(d) linear / cosine attn / geoembed=pointnet/mean": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
+    "(e) linear / cosine attn / geoembed=statistical / 5 layers": "(40, 2) phys / 8×8 latent / 20 query (vmap B=3)",
 }
 
 LINE_RE = re.compile(
