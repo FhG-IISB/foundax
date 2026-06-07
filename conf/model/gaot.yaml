@@ -1,0 +1,9 @@
+name: gaot
+github_url: https://github.com/camlab-ethz/GAOT
+hf_checkpoint: null            # no canonical published weights; uses seeded random weights
+compare_needs_pt_repo: true
+has_compare: true
+convert_extra_args: []          # no PT→msgpack conversion needed (in-memory weight transfer)
+compare_extra_args:
+  - "--gaot-root"
+  - "{repos_dir}/gaot"

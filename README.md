@@ -79,6 +79,7 @@ Full list with paper references: [`docs/architectures.md`](docs/architectures.md
 | Wavelet Neural Operator | `fx.wno1d/2d/3d` | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) |
 | Transolver | `fx.transolver`, `fx.transolver2d/3d` | Wu et al., ICML 2024 — [arXiv:2402.02366](https://arxiv.org/abs/2402.02366) |
 | Spherical FNO | `fx.sfno2d` | Bonev et al., ICML 2023 — [arXiv:2306.03838](https://arxiv.org/abs/2306.03838) |
+| GAOT | `fx.gaot.S/M/L`, `fx.gaot_S/M/L` | Gao et al., NeurIPS 2025 — [arXiv:2505.18781](https://arxiv.org/abs/2505.18781) |
 
 ### Kolmogorov–Arnold Networks
 

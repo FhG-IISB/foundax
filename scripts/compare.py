@@ -57,6 +57,7 @@ def main() -> None:
             "wno",
             "dit",
             "gnot",
+            "gaot",
             "timesfm",
         ],
         help="Model family to compare",
@@ -165,6 +166,14 @@ def main() -> None:
         import sys as _sys
 
         script = Path(__file__).resolve().parent / "compare_gnot.py"
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
+    elif args.model == "gaot":
+        import sys as _sys
+
+        script = Path(__file__).resolve().parent / "compare_gaot.py"
         code = _run(
             [_sys.executable, str(script), *extra],
             cwd=Path(__file__).resolve().parents[1],

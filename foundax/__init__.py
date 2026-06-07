@@ -1,6 +1,7 @@
 from . import (
     bcat,
     dpot,
+    gaot,
     kan,
     morph,
     mpp,
@@ -41,6 +42,10 @@ from .nn import (
     moegptno,
     pit,
     pointnet,
+    # geometry-aware operator transformer shortcuts
+    gaot_S,
+    gaot_M,
+    gaot_L,
     # KAN family is exposed as the ``fx.kan`` namespace (see foundax/kan.py).
     # foundation model shortcuts
     poseidonT,
@@ -104,6 +109,7 @@ __all__ = [
     "AdaLayerNormZero",
     # submodule namespaces
     "kan",
+    "gaot",
     "poseidon",
     "walrus",
     "morph",
@@ -134,6 +140,11 @@ __all__ = [
     "moegptno",
     "pit",
     "pointnet",
+    # geometry-aware operator transformer
+    "gaot",
+    "gaot_S",
+    "gaot_M",
+    "gaot_L",
     # foundation model factories
     "poseidonT",
     "poseidonB",

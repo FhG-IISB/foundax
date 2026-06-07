@@ -5,3 +5,8 @@
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# local-only directories
+build/
+og_repos/
+verify_output/
