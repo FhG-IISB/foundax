@@ -25,6 +25,7 @@ Direct Equinox implementations in `foundax/architectures/`, exposed via `foundax
 | `fx.wno1d`, `fx.wno2d`, `fx.wno3d` | Wavelet Neural Operator | Tripura & Chakraborty 2022 — [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) | Multi-scale DWT decomposition with Daubechies-8 wavelets |
 | `fx.transolver`, `fx.transolver2d`, `fx.transolver3d` | Transolver (Physics-Attention) | Wu et al., ICML 2024 — [arXiv:2402.02366](https://arxiv.org/abs/2402.02366); code from [thuml/Transolver](https://github.com/thuml/Transolver) | Slice-based linear attention over learnable physical groups; unstructured + structured 2D/3D variants |
 | `fx.sfno2d` | Spherical Fourier Neural Operator | Bonev et al., ICML 2023 — [arXiv:2306.03838](https://arxiv.org/abs/2306.03838); reference code [NVIDIA/torch-harmonics](https://github.com/NVIDIA/torch-harmonics) | FFT replaced by a real-valued spherical harmonic transform (pure-JAX, no exotic deps); Gauss–Legendre or equiangular grid |
+| `fx.gaot`, `fx.gaot.S/M/L`, `fx.gaot_S/M/L` | GAOT | Gao et al., NeurIPS 2025 — [arXiv:2505.18781](https://arxiv.org/abs/2505.18781); code from [camlab-ethz/GAOT](https://github.com/camlab-ethz/GAOT) (**no upstream license**) | MAGNO encoder → UViT transformer → MAGNO decoder; geometry-aware operator learning on arbitrary meshes with CSR neighbor graphs |
 
 See [Core Models](core-models.md) for detailed usage notes per family.
 
@@ -135,6 +136,13 @@ For every wired-up architecture we run a numerical-parity test that **instantiat
 | GNOT | LinearAttention | (1, 12, 32) → (1, 12, 32) | 5.960e-08 | 1.269e-07 | [HaoZhongkai/GNOT](https://github.com/HaoZhongkai/GNOT) |
 |  | LinearCrossAttention | (1, 10, 32) query + 2×(1, 16, 32) branches → (1, 10, 32) | 1.192e-07 | 1.179e-07 |  |
 |  | CrossAttentionBlock | (1, 10, 32) query + 2×(1, 16, 32) branches → (1, 10, 32) | 1.725e-04 | 5.043e-05 |  |
+| GAOT | (a) linear / no attn / no geoembed | (40, 2) phys / 8×8 latent / 20 query (vmap B=3) → (3, 20, 1) | 1.162e-05 | 1.790e-05 | [camlab-ethz/GAOT](https://github.com/camlab-ethz/GAOT) |
+|  | (b) linear / cosine attn / no geoembed | same | 8.583e-06 | 1.587e-05 |  |
+|  | (c1) linear / dot_product attn / no geoembed | same | 2.518e-05 | 3.804e-05 |  |
+|  | (c2) linear / cosine attn / geoembed=statistical | same | 5.913e-05 | 1.136e-04 |  |
+|  | (c) linear / dot_product attn / geoembed=statistical | same | 6.774e-05 | 7.970e-05 |  |
+|  | (d) linear / cosine attn / geoembed=pointnet/mean | same | 1.573e-05 | 1.891e-04 |  |
+|  | (e) linear / cosine attn / geoembed=statistical / 5 layers | same | 5.858e-05 | 2.357e-04 |  |
 
 ¹ foundax's structured-2D input is `(16, 16, …)` channel-last; the parity output shape is flattened to `(256, 1)` only to match upstream's `(B, N, C)` layout for the diff. The foundax model returns `(16, 16, 1)` natively.
 
@@ -147,12 +155,13 @@ For every wired-up architecture we run a numerical-parity test that **instantiat
 - *FNO*: upstream `SpectralConv` (legacy module) with `factorization=None`, `fft_norm='ortho'`, `bias=False` to match foundax conventions.
 - *DiT*: upstream `DiTBlock` against an Equinox port that mirrors upstream's design choices (SiLU + GELU-tanh + no-affine LN). foundax's user-facing `dit2d` uses different conventions by design (no class labels, exact GELU, no `learn_sigma`).
 - *GNOT*: upstream `LinearAttention`, `LinearCrossAttention`, and `CrossAttentionBlock` primitives. The full `CGPTNO.forward` needs `dgl` for graph batching, which the parity test bypasses via sys.modules stub.
+- *GAOT*: the full upstream `GAOT` model class end-to-end (MAGNO encoder → UViT → MAGNO decoder), across 7 attention/geoembed/depth configurations. This is one of the most complete comparisons in the table. The upstream repo carries no code license; no pretrained weights have been released.
 
 **Metric.** "Max abs diff" is element-wise `max(|pt − jax|)` on a forward pass with identical inputs and transferred weights. "Rel L2" is `‖pt − jax‖₂ / ‖pt‖₂` — the closest analog to a relative RMSE. All numerical values are at float32 noise floor.
 
 **Reproduce.** Install dev deps (`pixi install -e dev`), then either:
 - Generate the table from scratch: `pixi run --environment dev python scripts/parity_table.py`
-- Run the orchestrated Hydra pipeline: `pixi run verify 'models=[transolver,sfno,ffno,fno,wno,dit,gnot]'`
-- Per-model: `pixi run verify-transolver`, `verify-sfno`, `verify-ffno`, `verify-fno`, `verify-wno`, `verify-dit`, `verify-gnot`
+- Run the orchestrated Hydra pipeline: `pixi run verify 'models=[transolver,sfno,ffno,fno,wno,dit,gnot,gaot]'`
+- Per-model: `pixi run verify-transolver`, `verify-sfno`, `verify-ffno`, `verify-fno`, `verify-wno`, `verify-dit`, `verify-gnot`, `verify-gaot`
 
 Compare-script source lives in `scripts/compare_<name>.py`; the shared PT→EQX weight-transfer helpers are in `scripts/_pt2eqx.py`.
