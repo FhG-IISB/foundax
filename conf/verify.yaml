@@ -19,6 +19,7 @@ models:
   - wno
   - dit
   - gnot
+  - geofno
   - timesfm
 
 # Root for downloaded/cloned artefacts

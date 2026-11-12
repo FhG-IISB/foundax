@@ -58,6 +58,7 @@ def main() -> None:
             "dit",
             "gnot",
             "gaot",
+            "geofno",
             "timesfm",
         ],
         help="Model family to compare",
@@ -174,6 +175,14 @@ def main() -> None:
         import sys as _sys
 
         script = Path(__file__).resolve().parent / "compare_gaot.py"
+        code = _run(
+            [_sys.executable, str(script), *extra],
+            cwd=Path(__file__).resolve().parents[1],
+        )
+    elif args.model == "geofno":
+        import sys as _sys
+
+        script = Path(__file__).resolve().parent / "compare_geofno.py"
         code = _run(
             [_sys.executable, str(script), *extra],
             cwd=Path(__file__).resolve().parents[1],
