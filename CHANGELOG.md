@@ -5,6 +5,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- `fx.geofno`: Geo-FNO of Li et al. 2022 (arXiv:2207.05209) ported from neuraloperator/Geo-FNO: learned deformation (`IPHI`, optional design code), non-uniform Fourier transform onto a latent grid and back, FFT Fourier layers on the grid. Unit tests in `tests/test_geofno.py`, parity script `scripts/compare_geofno.py` (`pixi run -e dev verify-geofno`).
 - `CITATION.cff`, `CONTRIBUTING.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md`.
 - `docs/architectures.md` — single-page overview of every supported architecture with paper references, split into Core / KAN / Foundation tables.
 - README badge row, status note, citation block, and a condensed architectures summary linking to the full docs page.
@@ -13,6 +14,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `pixi run fmt` and `pixi run all` tasks; format-check step in `.github/workflows/ci.yml`.
 
 ### Changed
+- **Breaking:** the previous `fx.geofno` (node-basis Fourier operator from PKU-CMEGroup/NeuralOperator, which has no learned deformation) is renamed `fx.geofno_nodal` / `GeoFNONodal`; same arguments as before.
 - `docs/core-models.md` summary table now includes a Reference column linking to the canonical paper for each family.
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
 

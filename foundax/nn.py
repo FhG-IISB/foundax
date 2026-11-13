@@ -736,6 +736,88 @@ def mgno2d(
 
 
 def geofno(
+    modes1: int = 12,
+    modes2: int = 12,
+    width: int = 32,
+    in_channels: int = 2,
+    out_channels: int = 1,
+    s1: int = 40,
+    s2: int = 40,
+    n_layers: int = 3,
+    fc_dim: int = 128,
+    act: str = "gelu",
+    deform: bool = True,
+    iphi_width: int = 32,
+    iphi_depth: int = 3,
+    iphi_act: str = "tanh",
+    iphi_center: Sequence[float] = (1e-4, 1e-4),
+    code_dim: int = 0,
+    *,
+    key: jax.Array | None = None,
+) -> eqx.Module:
+    """Create a Geo-FNO (Li et al. 2022, arXiv:2207.05209).
+
+    A learned deformation ``iphi`` maps 2-D physical points into a latent
+    unit square; a non-uniform Fourier transform moves the point values
+    onto a uniform ``s1 x s2`` latent grid, FFT-based Fourier layers act
+    there, and the last layer evaluates the Fourier series back at the
+    query points. Call as ``model(coords, x=None, out_coords=None,
+    code=None)`` with ``coords`` of shape ``(N, 2)``.
+
+    Defaults reproduce the paper's elasticity model. The deformation
+    network is part of the module; to train it with its own learning rate
+    (as upstream does), split the optimizer with ``optax.multi_transform``
+    on the ``iphi`` subtree.
+
+    Args:
+        modes1, modes2: Fourier modes kept per latent axis.
+        width: Channel width of the Fourier layers.
+        in_channels: Point feature channels (2 when the features are the
+            coordinates themselves).
+        out_channels: Output channels.
+        s1, s2: Latent grid size.
+        n_layers: Number of latent-grid Fourier layers between the
+            point-to-grid and grid-to-point layers.
+        fc_dim: Hidden width of the output projection.
+        act: Activation (``"gelu"`` is the exact erf GELU, as upstream).
+        deform: Learn the deformation ``iphi``; ``False`` uses the
+            coordinates as latent coordinates (they should lie in
+            ``[0, 1]^2``).
+        iphi_width: Width of the deformation network (divisible by 4).
+        iphi_depth: Hidden layers of the deformation network.
+        iphi_act: Activation of the deformation network.
+        iphi_center: Centre for the angle/radius features of ``iphi``.
+        code_dim: Length of an optional design-parameter vector fed to
+            ``iphi`` (0 = none).
+        key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
+
+    Returns:
+        An ``equinox.Module`` (GeoFNO).
+    """
+    from .architectures.geofno import GeoFNO
+
+    return GeoFNO(
+        modes1=modes1,
+        modes2=modes2,
+        width=width,
+        in_channels=in_channels,
+        out_channels=out_channels,
+        s1=s1,
+        s2=s2,
+        n_layers=n_layers,
+        fc_dim=fc_dim,
+        act=act,
+        deform=deform,
+        iphi_width=iphi_width,
+        iphi_depth=iphi_depth,
+        iphi_act=iphi_act,
+        iphi_center=tuple(iphi_center),
+        code_dim=code_dim,
+        key=_resolve_key(key),
+    )
+
+
+def geofno_nodal(
     ndims: int,
     nks: Sequence[int],
     Ls: Sequence[float],
@@ -747,10 +829,13 @@ def geofno(
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
-    """Create a Geometry-aware Fourier Neural Operator.
+    """Create a node-basis geometry-aware Fourier Neural Operator.
 
-    FNO variant that handles irregular geometries by mapping them
-    to a reference domain before applying spectral convolutions.
+    Projects node features onto cos/sin Fourier bases evaluated directly
+    at the mesh nodes (weighted by integration weights), so it runs on
+    irregular point sets without a latent grid. This is the variant from
+    the PKU-CMEGroup NeuralOperator code; for the Geo-FNO of Li et al.
+    2022 with a learned deformation, use :func:`geofno`.
 
     Args:
         ndims: Spatial dimensionality (1, 2, or 3).
@@ -765,14 +850,14 @@ def geofno(
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
 
     Returns:
-        An ``equinox.Module`` (GeoFNO).
+        An ``equinox.Module`` (GeoFNONodal).
     """
-    from .architectures.geofno import GeoFNO
+    from .architectures.geofno_nodal import GeoFNONodal
     from .architectures.common import compute_Fourier_modes as _compute_modes
 
     modes = _compute_modes(ndims, list(nks), list(Ls))
     modes = jnp.array(modes)
-    return GeoFNO(
+    return GeoFNONodal(
         ndims=ndims,
         modes=modes,
         layers=list(layers),
