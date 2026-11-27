@@ -19,6 +19,9 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `docs/core-models.md` summary table now includes a Reference column linking to the canonical paper for each family.
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
 
+### Fixed
+- The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
+
 ## [0.2.0] - 2026-05-31
 
 ### Added

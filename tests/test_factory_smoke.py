@@ -332,10 +332,7 @@ NOT_FACTORIES = {
 }  # fmt: skip
 
 # Known failures, each removed by the commit that fixes it (strict: an unexpected pass fails too).
-XFAIL = {
-    name: f"B1: fx.{name} is a copy of the namespace factory and passes arguments it does not take"
-    for name in FOUNDATION
-}
+XFAIL = {}
 XFAIL["unet3d"] = (
     "B5: fx.unet3d passes its default activation as the string 'celu', which UNet3D calls"
 )
@@ -370,14 +367,48 @@ def test_factory_builds_and_runs(name, build, inputs, shape):
     _check_output(eqx.filter_jit(lambda m, args: m(*args))(model, inputs()), shape)
 
 
-@pytest.mark.parametrize(
-    "name, kwargs",
-    [pytest.param(n, {}, id=n, marks=_marks(n)) for n in FOUNDATION]
-    + [pytest.param(n, kw, id=n, marks=_marks(n)) for n, kw in FOUNDATION_ARGS.items()],
-)
+# Poseidon's constructor calls float() on an array, so it cannot be built abstractly: T is built for real,
+# B and L (hundreds of millions of parameters) only under the heavy marker.
+CONCRETE = {
+    "poseidonT": [],
+    "poseidonB": [pytest.mark.heavy],
+    "poseidonL": [pytest.mark.heavy],
+}
+
+
+def _foundation_params():
+    cases = [(n, {}) for n in FOUNDATION] + list(FOUNDATION_ARGS.items())
+    return [
+        pytest.param(n, kw, id=n, marks=_marks(n) + CONCRETE.get(n, []))
+        for n, kw in cases
+    ]
+
+
+@pytest.mark.parametrize("name, kwargs", _foundation_params())
 def test_foundation_shortcut_builds(name, kwargs):
-    model = eqx.filter_eval_shape(lambda: getattr(fx, name)(**kwargs))
+    build = lambda: getattr(fx, name)(**kwargs)  # noqa: E731
+    model = build() if name in CONCRETE else eqx.filter_eval_shape(build)
     assert jax.tree.leaves(model), "the model has no arrays"
+
+
+def test_foundation_shortcuts_are_the_namespace_factories():
+    """The flat names are the namespace functions, so the two cannot drift apart (B1)."""
+    import foundax.nn as nn
+
+    pairs = {
+        "poseidonT": fx.poseidon.T, "poseidonB": fx.poseidon.B, "poseidonL": fx.poseidon.L,
+        "morph_Ti": fx.morph.Ti, "morph_S": fx.morph.S, "morph_M": fx.morph.M, "morph_L": fx.morph.L,
+        "mpp_Ti": fx.mpp.Ti, "mpp_S": fx.mpp.S, "mpp_B": fx.mpp.B, "mpp_L": fx.mpp.L,
+        "pdeformer2_small": fx.pdeformer2.small, "pdeformer2_base": fx.pdeformer2.base,
+        "pdeformer2_fast": fx.pdeformer2.fast,
+        "dpot_Ti": fx.dpot.Ti, "dpot_S": fx.dpot.S, "dpot_M": fx.dpot.M, "dpot_L": fx.dpot.L, "dpot_H": fx.dpot.H,
+        "prose_fd_1to1": fx.prose.fd_1to1, "prose_fd_2to1": fx.prose.fd_2to1,
+        "prose_ode_2to1": fx.prose.ode_2to1, "prose_pde_2to1": fx.prose.pde_2to1,
+    }  # fmt: skip
+    for name, factory in pairs.items():
+        assert getattr(fx, name) is factory, name
+    assert nn.walrus is fx.walrus.base
+    assert nn.bcat is fx.bcat.base
 
 
 def test_every_factory_is_covered():
