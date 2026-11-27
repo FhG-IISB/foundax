@@ -545,7 +545,10 @@ class FNO2D(eqx.Module):
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
 
-        self.P = Linear(in_features, hidden_channels, key=k1)
+        n_pos = 2  # coordinate channels appended when use_positions
+        self.P = Linear(
+            in_features + (n_pos if use_positions else 0), hidden_channels, key=k1
+        )
 
         self.spectral_layers = SpectralLayers2d(
             n_channels=hidden_channels,
@@ -840,7 +843,10 @@ class FNO3D(eqx.Module):
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
 
-        self.P = Linear(in_features, hidden_channels, key=k1)
+        n_pos = 3  # coordinate channels appended when use_positions
+        self.P = Linear(
+            in_features + (n_pos if use_positions else 0), hidden_channels, key=k1
+        )
 
         self.spectral_layers = SpectralLayers3d(
             n_channels=hidden_channels,

@@ -76,9 +76,6 @@ BUILDS = {name: case[0] for name, case in CORE.items()} | {
 
 # Known failures, each removed by the commit that fixes it (strict: an unexpected pass fails too).
 XFAIL = {
-    "unet3d": "B5: the default activation is the string 'celu'",
-    "cno2d": "B5: CNO adds a batch axis to one sample",
-    "geofno_nodal": "B5: out_dim=1 is squeezed away",
     "pcno": "P2.6: PCNO takes batched, channel-first internals only",
     "cgptno": "P2.6: the GNOT family takes batched input only",
     "gnot": "P2.6: the GNOT family takes batched input only",

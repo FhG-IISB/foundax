@@ -231,14 +231,14 @@ class GeoFNONodal(eqx.Module):
         Forward pass.
 
         Args:
-            x: float[batch_size, max_nnodes, in_dim] - Input data
-            node_mask: float[batch_size, max_nnodes, 1] - 1 for valid node, 0 for padding
-            nodes: float[batch_size, max_nnodes, ndims] - Node coordinates
-            node_weights: float[batch_size, max_nnodes, 1] - Integration weights (rho(x)dx)
+            x: float[max_nnodes, in_dim] - Input data (one sample; batch with jax.vmap)
+            node_mask: float[max_nnodes, 1] - 1 for valid node, 0 for padding
+            nodes: float[max_nnodes, ndims] - Node coordinates
+            node_weights: float[max_nnodes, 1] - Integration weights (rho(x)dx)
             training: Whether in training mode
 
         Returns:
-            output: float[batch_size, max_nnodes, out_dim]
+            output: float[max_nnodes, out_dim]
         """
         x = x[None, ...]
         node_mask = node_mask[None, ...]
@@ -293,4 +293,4 @@ class GeoFNONodal(eqx.Module):
 
         # Apply mask to output
         masked = x * node_mask
-        return jnp.squeeze(masked)
+        return masked[0]  # the batch axis added above

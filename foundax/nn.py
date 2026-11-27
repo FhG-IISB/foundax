@@ -97,7 +97,7 @@ def mlp(
             (``None`` = identity).
         use_bias: Add learnable biases in hidden layers.
         dropout_rate: Dropout probability (``0`` = disabled).
-        batch_norm: Apply batch normalisation after each hidden layer.
+        batch_norm: Not supported (raises): use ``layer_norm``.
         layer_norm: Apply layer normalisation after each hidden layer.
         final_layer_bias: Add a bias to the output projection.
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
@@ -307,7 +307,7 @@ def unet1d(
     out_channels: int = 1,
     depth: int = 4,
     wf: int = 6,
-    norm: str = "batch",
+    norm: str | None = "instance",
     up_mode: str = "upconv",
     groups: int = 1,
     activation: Callable = jax.nn.celu,
@@ -326,8 +326,8 @@ def unet1d(
         depth: Number of down-/up-sampling stages.
         wf: Width factor — the first encoder stage has ``2**wf``
             filters (doubles per stage).
-        norm: Normalisation type (``"batch"``, ``"layer"``,
-            ``"instance"``, ``"none"``).
+        norm: Normalisation after each convolution: ``None``, ``"layer"``,
+            ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         up_mode: Upsampling method (``"upconv"`` = transposed
             convolution, ``"upsample"`` = nearest + conv).
         groups: Number of groups for grouped convolutions.
@@ -378,8 +378,8 @@ def unet2d(
         depth: Number of down-/up-sampling stages.
         wf: Width factor — the first encoder stage has ``2**wf``
             filters (doubles per stage).
-        norm: Normalisation type (``"batch"``, ``"layer"``,
-            ``"instance"``, ``"none"``).
+        norm: Normalisation after each convolution: ``None``, ``"layer"``,
+            ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         up_mode: Upsampling method (``"upconv"`` = transposed
             convolution, ``"upsample"`` = nearest + conv).
         activation: Activation function.
@@ -411,10 +411,11 @@ def unet3d(
     out_channels: int = 1,
     depth: int = 4,
     wf: int = 6,
-    norm: str = "batch",
+    norm: str | None = "instance",
     up_mode: str = "upconv",
-    activation: str = "celu",
+    activation: str | Callable = "celu",
     padding_mode: str = "circular",
+    groups: int = 1,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -429,18 +430,20 @@ def unet3d(
         depth: Number of down-/up-sampling stages.
         wf: Width factor — the first encoder stage has ``2**wf``
             filters (doubles per stage).
-        norm: Normalisation type (``"batch"``, ``"layer"``,
-            ``"instance"``, ``"none"``).
+        norm: Normalisation after each convolution: ``None``, ``"layer"``,
+            ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         up_mode: Upsampling method (``"upconv"`` = transposed
             convolution, ``"upsample"`` = nearest + conv).
         activation: Activation function or name string.
         padding_mode: Padding mode (``"circular"``, ``"zeros"``,
             ``"reflect"``).
+        groups: Number of groups for grouped convolutions.
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
 
     Returns:
         An ``equinox.Module`` (UNet3D).
     """
+    from .architectures.common import get_activation
     from .architectures.unet import UNet3D
 
     return UNet3D(
@@ -450,8 +453,8 @@ def unet3d(
         wf=wf,
         norm=norm,
         up_mode=up_mode,
-        groups=1,
-        activation=activation,
+        groups=groups,
+        activation=get_activation(activation),
         padding_mode=padding_mode,
         key=_resolve_key(key),
     )

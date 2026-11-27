@@ -333,9 +333,6 @@ NOT_FACTORIES = {
 
 # Known failures, each removed by the commit that fixes it (strict: an unexpected pass fails too).
 XFAIL = {}
-XFAIL["unet3d"] = (
-    "B5: fx.unet3d passes its default activation as the string 'celu', which UNet3D calls"
-)
 
 
 def _params(table, prefix=""):

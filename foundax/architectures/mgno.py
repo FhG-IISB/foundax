@@ -268,8 +268,11 @@ class MgConv(eqx.Module):
             u_fine, f_fine, num_post = level_outputs[level]
             u_coarse = level_outputs[level + 1][0]
 
+            # the stride-2 transpose conv gives an even size; crop it to the fine grid
+            # (odd sizes, and the width-1 grid of MgNO1D, which would otherwise broadcast)
             u_correction = self.prolongate_layers[level](u_coarse)
-            current_u = u_fine + u_correction
+            h, w = u_fine.shape[-3], u_fine.shape[-2]
+            current_u = u_fine + u_correction[..., :h, :w, :]
 
             for i in range(num_post):
                 current_u = self.post_smooth_layers[level][i](current_u, f_fine)

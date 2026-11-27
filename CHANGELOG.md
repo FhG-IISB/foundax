@@ -14,6 +14,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - GitHub issue templates (`bug_report`, `feature_request`) and a pull-request template with a pre-merge checklist.
 - `pixi run fmt` and `pixi run all` tasks; format-check step in `.github/workflows/ci.yml`.
 - `fx.layers.make_norm(kind, channels)` / `fx.layers.Norm`: `"layer"`, `"rms"`, `"instance"` and `"group"` normalisation of one channel-last sample of any spatial rank.
+- `fx.unet3d(groups=...)`; UNets accept `norm` `"rms"` and `"instance"`.
 
 ### Changed
 - **Breaking:** the previous `fx.geofno` (node-basis Fourier operator from PKU-CMEGroup/NeuralOperator, which has no learned deformation) is renamed `fx.geofno_nodal` / `GeoFNONodal`; same arguments as before.
@@ -21,12 +22,16 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
 - **Breaking:** `norm="batch"` raises `ValueError` in FNO1D/2D/3D and `fx.layers.SpectralBlock1d/2d/3d`: a model sees one unbatched sample, so there is no batch to normalise over. Use `"instance"` (per channel over the grid), `"layer"`, `"rms"` or `"group"`.
 - **Breaking (checkpoints):** fixed arrays are no longer pytree leaves: the FNO coordinate grid, KAN knots, centres and scale factors, the SFNO Legendre table and quadrature weights, PiT distance matrices, GAOT latent positions, PCNO and `geofno_nodal` modes, the Transformer's sinusoidal encoding and DeepONet's fixed Fourier features are static `Constant` fields. Checkpoints of these models saved with 0.2 load with `scripts/migrate_checkpoint.py`.
+- **Breaking:** UNet `norm="batch"` and `fx.mlp(batch_norm=True)` raise `ValueError` (no batch inside a model). The UNet default `norm="batch"` becomes `"instance"`, which computes the same on one sample and loads the same checkpoints.
+- `fx.mgno1d` outputs change: its prolongation broadcast the width-1 grid to n×n, so every model ran on an n×n field internally; it now stays on the n×1 grid. Parameters are unchanged.
 
 ### Fixed
 - The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
 - FNO `norm="batch"` was vmapped over the grid points, so it normalised over no axes and every layer returned its bias; FNO1D `norm="instance"` built a LayerNorm. FNO and the spectral blocks now use `make_norm`; `"instance"` is an instance norm.
 - Fixed arrays stored as float leaves were trained and weight-decayed by any optimiser that takes the float leaves (`eqx.partition(model, eqx.is_inexact_array)`, as jNO does); `stop_gradient` in SFNO and DeepONet did not stop weight decay.
 - DeepONet `combination_type="attention"` returned the same output at every query point (one key token, so the softmax was 1, and no residual). The branch output is now split into `n_tokens` tokens that each query point attends over, with a residual from the trunk; the combiner's checkpoint layout changes.
+- Crashes on valid input: UNet `norm="group"` on channel-last data; UNet3D on odd sizes and with `groups > 1` (grouped convolution weights had the full input width, also in 1-D and 2-D); `fx.unet3d` with its default activation `"celu"`; MgNO on odd grids; `fx.mlp(layer_norm=True)` on `(N, D)` points; `fx.fno2d` / `fno3d` with `use_positions=True` (the lift did not count the coordinate channels).
+- `fx.cno2d` returns one sample for one sample (it added a batch axis), and `fx.geofno_nodal` keeps the channel axis for `out_dim=1` (it squeezed the output to `(N,)`, and to a scalar for one node).
 
 ## [0.2.0] - 2026-05-31
 

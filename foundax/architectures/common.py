@@ -169,7 +169,7 @@ def make_norm(
     """The normalisation layer ``kind`` for one channel-last sample with ``channels`` channels.
 
     Args:
-        kind: ``None`` (no layer: returns ``None``), ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"``
+        kind: ``None`` or ``"none"`` (no layer: returns ``None``), ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"``
             (see :class:`Norm`).
         channels: Number of channels, the last axis of the input.
         groups: Channel groups for ``"group"``; must divide ``channels``. Default: ``gcd(32, channels)``.
@@ -179,7 +179,7 @@ def make_norm(
         ValueError: for ``"batch"``: a foundax model sees one unbatched sample, so there is no batch to take
             statistics over; and for unknown kinds.
     """
-    if kind is None:
+    if kind is None or kind == "none":
         return None
     if kind == "batch":
         raise ValueError(
@@ -201,17 +201,20 @@ def make_norm(
 # ---------------------------------------------------------------------------
 
 
-def get_activation(name: str) -> Optional[Callable]:
-    """Return a JAX activation function by name.
+def get_activation(name) -> Optional[Callable]:
+    """Return a JAX activation function by name; a callable (or ``None``) is returned as it is.
 
-    Supported: ``gelu``, ``relu``, ``tanh``, ``elu``, ``leaky_relu``,
+    Supported: ``gelu``, ``relu``, ``tanh``, ``elu``, ``celu``, ``leaky_relu``,
     ``sigmoid``, ``silu`` / ``swish``, ``none``.
     """
+    if name is None or callable(name):
+        return name
     activations = {
         "gelu": jax.nn.gelu,
         "relu": jax.nn.relu,
         "tanh": jnp.tanh,
         "elu": jax.nn.elu,
+        "celu": jax.nn.celu,
         "leaky_relu": jax.nn.leaky_relu,
         "sigmoid": jax.nn.sigmoid,
         "silu": jax.nn.silu,
