@@ -40,6 +40,20 @@ KEY = jax.random.PRNGKey(42)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _trained_final_layer(model):
+    """The DiT final layer starts at zero (so does the output); give it weights, as training would."""
+    k1, k2 = jax.random.split(jax.random.PRNGKey(5))
+    fl = model.final_layer
+    return eqx.tree_at(
+        lambda m: (m.final_layer.proj.weight, m.final_layer.adaLN_proj.weight),
+        model,
+        (
+            0.1 * jax.random.normal(k1, fl.proj.weight.shape),
+            0.1 * jax.random.normal(k2, fl.adaLN_proj.weight.shape),
+        ),
+    )
+
+
 class TestTimeEmbedding:
     def test_sinusoidal_shape(self):
         emb_fn = SinusoidalTimeEmbedding(dim=32, key=KEY)
@@ -118,6 +132,7 @@ class TestDiT:
         model = fx.dit2d(
             in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
         )
+        model = _trained_final_layer(model)
         x = jax.random.normal(KEY, (16, 16, 1))
         o1 = model(x, t=0.1)
         o2 = model(x, t=0.9)
@@ -165,6 +180,7 @@ class TestDiT:
         model = fx.dit3d(
             in_channels=1, patch_size=4, hidden_size=48, depth=2, num_heads=4, key=KEY
         )
+        model = _trained_final_layer(model)
         x = jax.random.normal(KEY, (16, 16, 16, 1))
         o1 = model(x, t=0.1)
         o2 = model(x, t=0.9)

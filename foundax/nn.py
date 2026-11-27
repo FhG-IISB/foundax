@@ -2044,6 +2044,7 @@ def dit2d(
     depth: int = 6,
     num_heads: int = 8,
     mlp_ratio: float = 4.0,
+    t_scale: float = 1.0,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -2059,6 +2060,7 @@ def dit2d(
         depth: Number of DiT transformer blocks.
         num_heads: Number of attention heads.
         mlp_ratio: MLP hidden dimension multiplier inside each block.
+        t_scale: Factor on the time before its sinusoidal features (default 1; use 1000 for t in [0, 1]).
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
 
     Returns:
@@ -2073,6 +2075,7 @@ def dit2d(
         depth,
         num_heads,
         mlp_ratio,
+        t_scale=t_scale,
         key=_resolve_key(key),
     )
 
@@ -2084,6 +2087,7 @@ def dit3d(
     depth: int = 4,
     num_heads: int = 6,
     mlp_ratio: float = 4.0,
+    t_scale: float = 1.0,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -2099,6 +2103,7 @@ def dit3d(
         depth: Number of DiT transformer blocks.
         num_heads: Number of attention heads.
         mlp_ratio: MLP hidden dimension multiplier.
+        t_scale: Factor on the time before its sinusoidal features (default 1; use 1000 for t in [0, 1]).
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
 
     Returns:
@@ -2113,6 +2118,7 @@ def dit3d(
         depth,
         num_heads,
         mlp_ratio,
+        t_scale=t_scale,
         key=_resolve_key(key),
     )
 
@@ -2382,6 +2388,7 @@ def transolver(
     act: str = "gelu",
     dropout: float = 0.0,
     time_input: bool = False,
+    t_scale: float = 1.0,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -2410,6 +2417,7 @@ def transolver(
         act: Activation function name.
         dropout: Dropout probability inside attention and FFN.
         time_input: If True, model accepts a scalar timestep ``t``.
+        t_scale: Factor on ``t`` before its sinusoidal features (default 1; use 1000 for t in [0, 1]).
         key: JAX PRNG key.
 
     Returns:
@@ -2429,6 +2437,7 @@ def transolver(
         act=act,
         dropout=dropout,
         time_input=time_input,
+        t_scale=t_scale,
         key=_resolve_key(key),
     )
 
@@ -2446,6 +2455,7 @@ def transolver2d(
     dropout: float = 0.0,
     kernel: int = 3,
     time_input: bool = False,
+    t_scale: float = 1.0,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -2478,6 +2488,7 @@ def transolver2d(
         dropout=dropout,
         kernel=kernel,
         time_input=time_input,
+        t_scale=t_scale,
         key=_resolve_key(key),
     )
 
@@ -2495,6 +2506,7 @@ def transolver3d(
     dropout: float = 0.0,
     kernel: int = 3,
     time_input: bool = False,
+    t_scale: float = 1.0,
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
@@ -2525,5 +2537,6 @@ def transolver3d(
         dropout=dropout,
         kernel=kernel,
         time_input=time_input,
+        t_scale=t_scale,
         key=_resolve_key(key),
     )

@@ -8,6 +8,10 @@
 #   • channel-last, unbatched tensors  (H, W, C) and (D, H, W, C)
 #   • accepts scalar t and embeds it internally via SinusoidalTimeEmbedding
 #   • **kwargs forwarded through __call__ for pipe compatibility
+#   • no class labels, exact GELU, no learn_sigma, and no SiLU before the adaLN projections
+#     (upstream applies nn.SiLU() to the conditioning; the time embedding here ends in a Linear)
+#   • adaLN-Zero zeroes only the gates in each block (upstream: the whole modulation); the final
+#     layer's modulation and output projection start at zero as upstream
 
 from __future__ import annotations
 
@@ -200,6 +204,15 @@ class DiTBlock(eqx.Module):
 # ── final layer ───────────────────────────────────────────────────────────────
 
 
+def _zero_linear(in_features: int, out_features: int) -> Linear:
+    lin = Linear(in_features, out_features, key=jax.random.PRNGKey(0))
+    return eqx.tree_at(
+        lambda m: (m.weight, m.bias),
+        lin,
+        (jnp.zeros_like(lin.weight), jnp.zeros_like(lin.bias)),
+    )
+
+
 class FinalLayer(eqx.Module):
     """Final adaLN + linear projection before unpatching."""
 
@@ -211,10 +224,10 @@ class FinalLayer(eqx.Module):
 
     def __init__(self, hidden_size: int, out_features: int, emb_dim: int, *, key):
         self.hidden_size = hidden_size
-        k1, k2 = jax.random.split(key)
         self.norm = eqx.nn.LayerNorm(hidden_size)
-        self.proj = Linear(hidden_size, out_features, key=k1)
-        self.adaLN_proj = Linear(emb_dim, 2 * hidden_size, key=k2)
+        # zero-initialised as in DiT ("zero-out output layers"): the model starts at a zero output
+        self.proj = _zero_linear(hidden_size, out_features)
+        self.adaLN_proj = _zero_linear(emb_dim, 2 * hidden_size)
 
     def __call__(self, x: jnp.ndarray, emb: jnp.ndarray) -> jnp.ndarray:
         """x: (N, hidden_size), emb: (emb_dim,) → (N, out_features)."""
@@ -253,6 +266,7 @@ class DiT2d(eqx.Module):
         depth: int,
         num_heads: int,
         mlp_ratio: float = 4.0,
+        t_scale: float = 1.0,
         *,
         key,
     ):
@@ -266,7 +280,9 @@ class DiT2d(eqx.Module):
         self.patch_embed = PatchEmbed2d(
             patch_size, in_channels, hidden_size, key=keys[0]
         )
-        self.time_embed = SinusoidalTimeEmbedding(hidden_size, key=keys[1])
+        self.time_embed = SinusoidalTimeEmbedding(
+            hidden_size, t_scale=t_scale, key=keys[1]
+        )
         self.blocks = [
             DiTBlock(hidden_size, num_heads, mlp_ratio, hidden_size, key=keys[2 + i])
             for i in range(depth)
@@ -332,6 +348,7 @@ class DiT3d(eqx.Module):
         depth: int,
         num_heads: int,
         mlp_ratio: float = 4.0,
+        t_scale: float = 1.0,
         *,
         key,
     ):
@@ -347,7 +364,9 @@ class DiT3d(eqx.Module):
         self.patch_embed = PatchEmbed3d(
             patch_size, in_channels, hidden_size, key=keys[0]
         )
-        self.time_embed = SinusoidalTimeEmbedding(hidden_size, key=keys[1])
+        self.time_embed = SinusoidalTimeEmbedding(
+            hidden_size, t_scale=t_scale, key=keys[1]
+        )
         self.blocks = [
             DiTBlock(hidden_size, num_heads, mlp_ratio, hidden_size, key=keys[2 + i])
             for i in range(depth)

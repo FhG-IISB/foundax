@@ -15,6 +15,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `pixi run fmt` and `pixi run all` tasks; format-check step in `.github/workflows/ci.yml`.
 - `fx.layers.make_norm(kind, channels)` / `fx.layers.Norm`: `"layer"`, `"rms"`, `"instance"` and `"group"` normalisation of one channel-last sample of any spatial rank.
 - `fx.unet3d(groups=...)`; UNets accept `norm` `"rms"` and `"instance"`.
+- `t_scale` on `fx.SinusoidalTimeEmbedding`, `fx.dit2d` / `dit3d` and the Transolver factories: the time features are taken of `t_scale * t` (default 1; 1000 for t in [0, 1]).
 
 ### Changed
 - **Breaking:** the previous `fx.geofno` (node-basis Fourier operator from PKU-CMEGroup/NeuralOperator, which has no learned deformation) is renamed `fx.geofno_nodal` / `GeoFNONodal`; same arguments as before.
@@ -24,6 +25,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - **Breaking (checkpoints):** fixed arrays are no longer pytree leaves: the FNO coordinate grid, KAN knots, centres and scale factors, the SFNO Legendre table and quadrature weights, PiT distance matrices, GAOT latent positions, PCNO and `geofno_nodal` modes, the Transformer's sinusoidal encoding and DeepONet's fixed Fourier features are static `Constant` fields. Checkpoints of these models saved with 0.2 load with `scripts/migrate_checkpoint.py`.
 - **Breaking:** UNet `norm="batch"` and `fx.mlp(batch_norm=True)` raise `ValueError` (no batch inside a model). The UNet default `norm="batch"` becomes `"instance"`, which computes the same on one sample and loads the same checkpoints.
 - `fx.mgno1d` outputs change: its prolongation broadcast the width-1 grid to n×n, so every model ran on an n×n field internally; it now stays on the n×1 grid. Parameters are unchanged.
+- A new DiT outputs zero: its final adaLN projection and output projection are zero-initialised, as in the paper (the code said so and did not). Trained checkpoints are unaffected.
 
 ### Fixed
 - The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
@@ -35,6 +37,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - Dropout keys: the GNOT family reused one key across blocks and sublayers, DeepONet used one mask for all query points and all samples of `evaluate_batch`, and DeepONet's self-attention ignored its `dropout_rate`. Every layer, point and sample now draws its own mask.
 - Options that were accepted and ignored: GNOT/CGPTNO/MoEGPTNO `attn_type` now selects the linear-attention kernel (`"linear"` = `"l1"`, `"galerkin"`, `"l2"`; others raise); MgNO `padding_mode` (`circular`, `zeros`, `reflect`, `replicate`) reaches its convolutions; DeepONet `norm="rms"` is an RMS norm (it was a LayerNorm without affine) and DeepONet norms go through `make_norm` (`"batch"` raises).
 - The GNOT MLP with `n_layers=1` built two layers from one key; it is one layer. FFNO kept its spectrum in `complex64` under x64. PiT computed a percentile for locality 100, where the mask keeps every key. `KANConv2d` uses the skip policy of `KANConv1d` / `KANConv3d` (a skip for `bspline`, `bsrbf` and `relu`) and takes one sample.
+- `SinusoidalTimeEmbedding(2)` returned NaN (it divided by `half - 1`), and its frequencies were float32 under x64.
 
 ## [0.2.0] - 2026-05-31
 
