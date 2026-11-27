@@ -117,7 +117,13 @@ def _make_bspline_grid(
 
 
 class BSplineBasis(eqx.Module):
-    """B-spline basis evaluated on a fixed uniform grid."""
+    """B-spline basis evaluated on a fixed uniform grid.
+
+    The basis lives on ``grid_range``: outside it the splines no longer sum to one, and beyond
+    ``spline_order`` cells past either end every basis function is zero, so the spline part of a KAN
+    layer outputs zero there (the SiLU skip of the B-spline KANs still passes the input). Scale the
+    inputs into ``grid_range``, e.g. with a LayerNorm or ``tanh`` before the KAN.
+    """
 
     grid: Constant = eqx.field(static=True)  # knots, not trained
     in_features: int = eqx.field(static=True)
@@ -489,7 +495,7 @@ class SincBasis(eqx.Module):
 
 
 class GramBasis(eqx.Module):
-    """Gram (orthonormal Legendre) polynomials ``sqrt(2n+1) * P_n(x)`` on ``[-1, 1]``.
+    """Gram (orthonormal Legendre) polynomials ``sqrt((2n+1)/2) * P_n(x)`` on ``[-1, 1]`` (unit L2 norm).
 
     Continuous-limit Gram polynomials coincide with normalised Legendre.
     Inputs squashed by ``tanh``.

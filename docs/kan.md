@@ -73,6 +73,7 @@ Every variant has a matching **single layer** exposed under `foundax.layers` (`f
 - **Localised / multi-scale signals**: `wavelet_kan` (`morlet` for oscillatory features, `mexican_hat` for bumps), `relu_kan` (compact support).
 - **Bounded / shape-preserving**: `bernstein_kan` (partition of unity), `rational_kan` (Padé, bounded on ℝ).
 - **Original paper fidelity**: `kan` or `efficient_kan` — both implement the B-spline + SiLU-residual formulation.
+- **Inputs on the grid**: the grid bases (B-spline, RBF, sinc, ReLU-KAN, BSRBF) live on `grid_range`. Outside it the B-splines no longer sum to one, and past `spline_order` cells they are zero, so the spline part of a layer outputs zero (the SiLU skip of `kan` / `efficient_kan` still passes the input). Scale the inputs into `grid_range`, for example with a LayerNorm or `tanh` in front.
 
 ## Bases
 

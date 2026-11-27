@@ -21,7 +21,7 @@ Example::
     b2 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=16, key=ks[1]))
     b3 = fx.block(fl.SpectralBlock2d(32,  1, n_modes=16, key=ks[2]))
 
-    model = b1 > b2 > b3
+    model = b1 | b2 | b3
 """
 
 from .blocks import SpectralBlock1d, SpectralBlock2d, SpectralBlock3d

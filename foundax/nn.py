@@ -1419,7 +1419,11 @@ def kan(
     *,
     key: jax.Array | None = None,
 ) -> eqx.Module:
-    """Create a B-spline Kolmogorov-Arnold Network (Liu et al. 2024 original)."""
+    """Create a B-spline Kolmogorov-Arnold Network (Liu et al. 2024 original).
+
+    The splines live on ``grid_range``; beyond it (plus ``spline_order`` cells) they are zero and only the
+    SiLU skip passes the input, so scale the inputs into ``grid_range``.
+    """
     from .architectures.kan import KAN
 
     return KAN(
