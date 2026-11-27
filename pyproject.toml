@@ -75,6 +75,7 @@ norecursedirs = ["repos", ".venv", "build", "dist"]
 markers = [
     "heavy: slow integration tests for large model construction and single-step autodiff",
     "train: tests that require optax and perform actual training steps",
+    "gpu: tests that compare against a GPU and are skipped without one",
 ]
 
 [tool.pixi.workspace]

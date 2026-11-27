@@ -22,6 +22,26 @@ _gelu_exact = functools.partial(jax.nn.gelu, approximate=False)
 # ---------------------------------------------------------------------------
 
 
+def _irfft2_hermitian(x, s, axes, norm=None):
+    """``jnp.fft.irfft2`` of a half spectrum that need not be Hermitian, with the CPU (pocketfft) result.
+
+    After mode mixing, the entries of the half axis (``axes[-1]``) at index 0 (and at the Nyquist index for
+    an even size) need not be conjugate-symmetric over the other axes. The inverse of such input is not
+    defined: pocketfft (CPU) keeps the real part of the result, while cuFFT's power-of-2 kernels differ (1e-1
+    for the old FNO at n=128, 1e-3 for DPOT's AFNO). Projecting those entries onto their Hermitian part first
+    gives exactly the CPU result on every backend.
+    """
+    full, half = [a % x.ndim for a in axes]
+    for j in [0] + ([s[1] // 2] if s[1] % 2 == 0 and s[1] // 2 < x.shape[half] else []):
+        col = jnp.take(x, j, axis=half)
+        a = full - (full > half)
+        sym = 0.5 * (col + jnp.conj(jnp.roll(jnp.flip(col, a), 1, a)))
+        index = [slice(None)] * x.ndim
+        index[half] = j
+        x = x.at[tuple(index)].set(sym)
+    return jnp.fft.irfft2(x, s=s, axes=axes, norm=norm)
+
+
 class AFNO2D(eqx.Module):
     width: int = eqx.field(static=True)
     num_blocks: int = eqx.field(static=True)
@@ -118,7 +138,8 @@ class AFNO2D(eqx.Module):
         o2_imag = o2_imag.at[:, :kept_modes_h, :kept_modes_w].set(o2i)
 
         x_fft2 = (o2_real + 1j * o2_imag).reshape(b, x_fft.shape[1], x_fft.shape[2], c)
-        x = jnp.fft.irfft2(x_fft2, s=(h, w), axes=(1, 2), norm="ortho")
+        # mixed modes: make the inverse defined (the same result on CPU and GPU)
+        x = _irfft2_hermitian(x_fft2, s=(h, w), axes=(1, 2), norm="ortho")
         x = x + x_orig
 
         if self.channel_first:

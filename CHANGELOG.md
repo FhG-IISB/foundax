@@ -38,6 +38,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - Options that were accepted and ignored: GNOT/CGPTNO/MoEGPTNO `attn_type` now selects the linear-attention kernel (`"linear"` = `"l1"`, `"galerkin"`, `"l2"`; others raise); MgNO `padding_mode` (`circular`, `zeros`, `reflect`, `replicate`) reaches its convolutions; DeepONet `norm="rms"` is an RMS norm (it was a LayerNorm without affine) and DeepONet norms go through `make_norm` (`"batch"` raises).
 - The GNOT MLP with `n_layers=1` built two layers from one key; it is one layer. FFNO kept its spectrum in `complex64` under x64. PiT computed a percentile for locality 100, where the mask keeps every key. `KANConv2d` uses the skip policy of `KANConv1d` / `KANConv3d` (a skip for `bspline`, `bsrbf` and `relu`) and takes one sample.
 - `SinusoidalTimeEmbedding(2)` returned NaN (it divided by `half - 1`), and its frequencies were float32 under x64.
+- DPOT's AFNO2D gave a different result on the GPU at power-of-2 sizes (1e-3 at 128): after mode mixing its spectrum was not Hermitian, so `irfft2` was undefined. AFNO2D and Geo-FNO now project the zero and Nyquist columns onto their Hermitian part first (`irfftn_hermitian`), which is the CPU result on every backend.
 
 ## [0.2.0] - 2026-05-31
 

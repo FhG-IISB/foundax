@@ -23,7 +23,7 @@ import jax.numpy as jnp
 import equinox as eqx
 
 from .linear import Linear
-from .common import get_activation
+from .common import get_activation, irfftn_hermitian
 
 
 def _activation(name: str) -> Callable:
@@ -138,7 +138,8 @@ class SpectralConv2dGeo(eqx.Module):
             out_ft = jnp.zeros((s1, s2 // 2 + 1, self.out_channels), dtype=f1.dtype)
             out_ft = out_ft.at[:m1, :m2].set(f1)
             out_ft = out_ft.at[-m1:, :m2].set(f2)
-            return jnp.fft.irfft2(out_ft, s=(s1, s2), axes=(0, 1))
+            # mixed modes: make the inverse defined (the same result on CPU and GPU)
+            return irfftn_hermitian(out_ft, s=(s1, s2), axes=(0, 1))
 
         # Extend the half spectrum to negative k2 by conjugate symmetry:
         # c(-k1, -k2) = conj(c(k1, k2)).

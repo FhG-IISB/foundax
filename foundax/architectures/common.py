@@ -401,3 +401,38 @@ class ConvTranspose2d(eqx.Module):
         if was_unbatched:
             y = y[0]
         return y
+
+
+# ---------------------------------------------------------------------------
+# Inverse real FFT of a mixed spectrum
+# ---------------------------------------------------------------------------
+
+
+def irfftn_hermitian(
+    x: jax.Array, s: Sequence[int], axes: Sequence[int], norm: Optional[str] = None
+) -> jax.Array:
+    """``jnp.fft.irfftn`` of a half spectrum that need not be Hermitian, with the CPU (pocketfft) result.
+
+    After mode mixing, the entries of the half axis (``axes[-1]``) at index 0 (and at the Nyquist index for
+    an even size) need not be conjugate-symmetric over the other axes. The inverse of such input is not
+    defined: pocketfft (CPU) keeps the real part of the result, while cuFFT's power-of-2 kernels differ (1e-1
+    for the old FNO at n=128, 1e-3 for DPOT's AFNO). Projecting those entries onto their Hermitian part first
+    gives exactly the CPU result on every backend.
+    """
+    axes = [a % x.ndim for a in axes]
+    half, full = axes[-1], axes[:-1]
+    n_half = s[-1]
+    for j in [0] + (
+        [n_half // 2] if n_half % 2 == 0 and n_half // 2 < x.shape[half] else []
+    ):
+        col = jnp.take(x, j, axis=half)
+        # col[-k]: flip and roll by one on every full axis (the axes shift down once ``half`` is taken out)
+        flipped = col
+        for a in full:
+            a_col = a - (a > half)
+            flipped = jnp.roll(jnp.flip(flipped, a_col), 1, a_col)
+        sym = 0.5 * (col + jnp.conj(flipped))
+        index = [slice(None)] * x.ndim
+        index[half] = j
+        x = x.at[tuple(index)].set(sym)
+    return jnp.fft.irfftn(x, s=s, axes=axes, norm=norm)
