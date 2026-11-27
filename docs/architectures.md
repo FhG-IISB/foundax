@@ -15,7 +15,8 @@ Direct Equinox implementations in `foundax/architectures/`, exposed via `foundax
 | `fx.deeponet` | Deep Operator Network | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Branch / trunk factorisation; configurable sub-networks |
 | `fx.cno2d` | Continuous Neural Operator | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178); code from [bogdanraonic3/AI_Science_Engineering](https://github.com/bogdanraonic3/AI_Science_Engineering) | Hierarchical convolutional operator on 2D fields |
 | `fx.mgno1d`, `fx.mgno2d` | Multigrid Neural Operator | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Restriction / prolongation inspired by multigrid solvers |
-| `fx.geofno` | Geometry-aware FNO | Li et al. 2022 — [arXiv:2207.05209](https://arxiv.org/abs/2207.05209) | FNO with learned deformations for non-uniform layouts |
+| `fx.geofno` | Geo-FNO | Li et al. 2022 — [arXiv:2207.05209](https://arxiv.org/abs/2207.05209); code from [neuraloperator/Geo-FNO](https://github.com/neuraloperator/Geo-FNO) | Learned deformation of a 2-D point cloud onto a latent uniform grid; non-uniform Fourier transform in and out, FFT Fourier layers on the grid |
+| `fx.geofno_nodal` | Node-basis geometry-aware FNO | [PKU-CMEGroup/NeuralOperator](https://github.com/PKU-CMEGroup/NeuralOperator) | Fourier bases evaluated directly at the mesh nodes with integration weights; no latent grid (formerly `fx.geofno`) |
 | `fx.pcno` | Point-Cloud Neural Operator | [PKU-CMEGroup/NeuralOperator](https://github.com/PKU-CMEGroup/NeuralOperator) | Operator learning on point clouds |
 | `fx.pit` | Position-induced Transformer | Chen & Wu 2024 — [arXiv:2405.09285](https://arxiv.org/abs/2405.09285) | Coordinate-aware attention with distance-based weights |
 | `fx.pointnet` | PointNet | Qi et al. 2017 — [arXiv:1612.00593](https://arxiv.org/abs/1612.00593) | Unordered point-set encoder–decoder |
@@ -126,7 +127,7 @@ For every wired-up architecture we run a numerical-parity test that **instantiat
 |  | SFNO2d full | (16, 32, 3) → (16, 32, 2) | 4.780e-05 | 4.182e-05 |  |
 | FFNO | FactorizedSpectralConv2d | (16, 16, 8) → (16, 16, 8) | 2.384e-07 | 1.159e-07 | [alasdairtran/fourierflow](https://github.com/alasdairtran/fourierflow) |
 |  | FactorizedSpectralConv3d | (8, 10, 12, 6) → (8, 10, 12, 6) | 5.364e-07 | 1.340e-07 |  |
-| FNO (+ Geo-FNO) | SpectralConv1d | (32, 4) → (32, 6) | 3.576e-07 | 1.797e-07 | [neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator) |
+| FNO | SpectralConv1d | (32, 4) → (32, 6) | 3.576e-07 | 1.797e-07 | [neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator) |
 |  | SpectralConv2d | (16, 20, 3) → (16, 20, 5) | 3.576e-07 | 1.921e-07 |  |
 |  | SpectralConv3d | (12, 14, 16, 3) → (12, 14, 16, 4) | 3.576e-07 | 2.049e-07 |  |
 | WNO² | WNO1d structural | (32, 2) → (32, 2) | — | — | [TapasTripura/WNO](https://github.com/TapasTripura/WNO) |

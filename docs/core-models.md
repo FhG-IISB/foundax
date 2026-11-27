@@ -17,7 +17,7 @@ For the full list with paper references — including the foundation-model wrapp
 | DeepONet | `deeponet` | Lu et al. 2019 — [arXiv:1910.03193](https://arxiv.org/abs/1910.03193) | Operator learning with branch/trunk factorization |
 | CNO | `cno2d` | Raonić et al. 2023 — [arXiv:2302.01178](https://arxiv.org/abs/2302.01178) | Continuous neural operator on image-like fields |
 | MgNO | `mgno1d`, `mgno2d` | He et al. 2023 — [arXiv:2310.19809](https://arxiv.org/abs/2310.19809) | Multigrid-inspired operator learning |
-| Geometry-aware operators | `geofno`, `pcno`, `pit`, `pointnet` | GeoFNO: [arXiv:2207.05209](https://arxiv.org/abs/2207.05209); PiT: [arXiv:2405.09285](https://arxiv.org/abs/2405.09285); PointNet: [arXiv:1612.00593](https://arxiv.org/abs/1612.00593); PCNO: [github](https://github.com/PKU-CMEGroup/NeuralOperator) | Irregular meshes, coordinates, point clouds |
+| Geometry-aware operators | `geofno`, `geofno_nodal`, `pcno`, `pit`, `pointnet` | GeoFNO: [arXiv:2207.05209](https://arxiv.org/abs/2207.05209); PiT: [arXiv:2405.09285](https://arxiv.org/abs/2405.09285); PointNet: [arXiv:1612.00593](https://arxiv.org/abs/1612.00593); PCNO: [github](https://github.com/PKU-CMEGroup/NeuralOperator) | Irregular meshes, coordinates, point clouds |
 | GNOT family | `cgptno`, `gnot`, `moegptno` | Hao et al., ICML 2023 — [arXiv:2302.14376](https://arxiv.org/abs/2302.14376) | Transformer-based operator learning on irregular domains |
 | Diffusion / flow backbones | `dit2d/3d`, `ffno2d/3d`, `wno1d/2d/3d` | DiT: [arXiv:2212.09748](https://arxiv.org/abs/2212.09748); F-FNO: [arXiv:2111.13802](https://arxiv.org/abs/2111.13802); WNO: [arXiv:2205.02191](https://arxiv.org/abs/2205.02191) | Time-conditioned backbones for flow-matching and diffusion training |
 | Kolmogorov–Arnold Networks | `kan`, `fastkan`, `chebyshev_kan`, `fourier_kan`, … (17 variants) | Liu et al. 2024 — [arXiv:2404.19756](https://arxiv.org/abs/2404.19756) (and others) | MLP alternative with learnable univariate edges — see the [KAN page](kan.md) |
@@ -133,7 +133,18 @@ Use them when:
 
 ### `geofno`
 
-Geometry-aware FNO variant for non-uniform spatial layouts.
+Geo-FNO (Li et al. 2022) for 2-D point clouds. A learned deformation maps the
+points into a latent unit square, a non-uniform Fourier transform moves the
+values onto a uniform latent grid, FFT-based Fourier layers act there, and the
+last layer evaluates the Fourier series at the query points. Called as
+`model(coords, x=None, out_coords=None, code=None)`; defaults are the paper's
+elasticity model.
+
+### `geofno_nodal`
+
+Node-basis Fourier operator: cos/sin bases evaluated directly at the mesh
+nodes, weighted by integration weights, with no latent grid. This was
+the `geofno` constructor before Geo-FNO replaced it.
 
 ### `pcno`
 

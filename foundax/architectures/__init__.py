@@ -30,7 +30,8 @@ from .transformer import (
 from .deeponet import DeepONet as DeepONet
 from .cno import CNO2D as CNO2D
 from .mgno import MgNO as MgNO, MgNO1D as MgNO1D
-from .geofno import GeoFNO as GeoFNO
+from .geofno import GeoFNO as GeoFNO, IPHI as IPHI
+from .geofno_nodal import GeoFNONodal as GeoFNONodal
 from .pcno import PCNO as PCNO
 from .gnot import CGPTNO as CGPTNO, GNOT as GNOT, MoEGPTNO as MoEGPTNO
 from .pit import PiT as PiT, PiTWithCoords as PiTWithCoords

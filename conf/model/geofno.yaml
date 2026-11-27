@@ -1,0 +1,9 @@
+name: geofno
+github_url: https://github.com/neuraloperator/Geo-FNO
+hf_checkpoint: null            # no published weights; seeded random weights
+compare_needs_pt_repo: true
+has_compare: true
+convert_extra_args: []         # in-memory weight transfer
+compare_extra_args:
+  - "--geofno-root"
+  - "{repos_dir}/geofno"
