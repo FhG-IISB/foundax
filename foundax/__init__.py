@@ -14,6 +14,7 @@ from . import (
 from . import layers
 from .pipe import block, Block, Pipe, ShapeMismatchError
 from .combinators import dot, add, cat
+from .describe import describe
 from .architectures.time_embed import (
     SinusoidalTimeEmbedding,
     FiLMLayer,
@@ -96,6 +97,8 @@ __all__ = [
     "Block",
     "Pipe",
     "ShapeMismatchError",
+    # introspection
+    "describe",
     # combinators
     "dot",
     "add",
