@@ -82,7 +82,7 @@ def test_deeponet_masks_differ_between_query_points():
     model = _deeponet()
     u = jax.random.normal(KEY, (10,))
     y = jnp.full((6, 1), 0.3)
-    assert float(jnp.std(model(u, y))) == 0.0
+    assert float(jnp.std(model(u, y))) < 1e-6  # rounding: vectorised lanes may differ
     assert float(jnp.std(model(u, y, key=DROP))) > 1e-4
 
 
