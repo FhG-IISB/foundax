@@ -35,6 +35,7 @@ from foundax.architectures.fno import (
 )
 from foundax.architectures.mlp import MLP
 from foundax.architectures.linear import Linear
+from foundax.architectures.common import Norm, make_norm
 from foundax.architectures.ffno import (
     FactorizedSpectralBlock2d,
     FactorizedSpectralBlock3d,
@@ -71,6 +72,9 @@ __all__ = [
     "SpectralConv3d",
     "MLP",
     "Linear",
+    # normalisation of one channel-last sample
+    "Norm",
+    "make_norm",
     # Flow-matching backbones
     "FactorizedSpectralBlock2d",
     "FactorizedSpectralBlock3d",

@@ -1,9 +1,10 @@
 """Shared building blocks for architecture modules.
 
-Centralises BatchNorm, activation lookup, Fourier-mode computation, and
+Centralises the normalisation layers (``make_norm``), activation lookup, Fourier-mode computation, and
 NHWC convolution helpers so they aren't duplicated across architecture files.
 """
 
+import math
 from typing import Callable, Optional, Sequence, Tuple
 
 import jax
@@ -40,6 +41,96 @@ class BatchNorm(eqx.Module):
         var = jnp.var(x, axis=axes, keepdims=True)
         x = (x - mean) / jnp.sqrt(var + self.eps)
         return x * self.weight + self.bias
+
+
+# ---------------------------------------------------------------------------
+# Normalisation of one channel-last sample
+# ---------------------------------------------------------------------------
+
+NORM_KINDS = ("layer", "rms", "instance", "group")
+
+
+class Norm(eqx.Module):
+    """Normalisation of one channel-last field ``(..., C)`` of any spatial rank, with a per-channel affine map.
+
+    ``kind`` chooses the axes the statistics are taken over:
+
+    - ``"layer"``: the channels, at every point;
+    - ``"rms"``: the channels, at every point, scaled by the root mean square only (no centring, no bias);
+    - ``"instance"``: the grid, per channel;
+    - ``"group"``: the grid and the channels of each of ``groups`` channel groups.
+
+    Build it with :func:`make_norm`.
+    """
+
+    weight: jax.Array
+    bias: Optional[jax.Array]
+    kind: str = eqx.field(static=True)
+    groups: int = eqx.field(static=True)
+    eps: float = eqx.field(static=True)
+
+    def __init__(self, kind: str, channels: int, groups: int = 1, eps: float = 1e-5):
+        self.kind = kind
+        self.groups = groups
+        self.eps = eps
+        self.weight = jnp.ones(channels)
+        self.bias = None if kind == "rms" else jnp.zeros(channels)
+
+    def __call__(self, x: jax.Array, **kwargs) -> jax.Array:
+        if self.kind == "rms":
+            return (
+                x
+                * jax.lax.rsqrt(jnp.mean(x**2, axis=-1, keepdims=True) + self.eps)
+                * self.weight
+            )
+        if self.kind == "layer":
+            axes, y = (-1,), x
+        elif self.kind == "instance":
+            axes, y = tuple(range(x.ndim - 1)), x
+        else:  # group: (..., C) -> (..., G, C/G), statistics over the grid and the last axis
+            y = x.reshape(x.shape[:-1] + (self.groups, x.shape[-1] // self.groups))
+            axes = tuple(range(x.ndim - 1)) + (-1,)
+        mean = jnp.mean(y, axis=axes, keepdims=True)
+        var = jnp.var(y, axis=axes, keepdims=True)
+        y = ((y - mean) * jax.lax.rsqrt(var + self.eps)).reshape(x.shape)
+        return y * self.weight + self.bias
+
+
+def make_norm(
+    kind: Optional[str],
+    channels: int,
+    *,
+    groups: Optional[int] = None,
+    eps: float = 1e-5,
+):
+    """The normalisation layer ``kind`` for one channel-last sample with ``channels`` channels.
+
+    Args:
+        kind: ``None`` (no layer: returns ``None``), ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"``
+            (see :class:`Norm`).
+        channels: Number of channels, the last axis of the input.
+        groups: Channel groups for ``"group"``; must divide ``channels``. Default: ``gcd(32, channels)``.
+        eps: Added to the variance.
+
+    Raises:
+        ValueError: for ``"batch"``: a foundax model sees one unbatched sample, so there is no batch to take
+            statistics over; and for unknown kinds.
+    """
+    if kind is None:
+        return None
+    if kind == "batch":
+        raise ValueError(
+            'norm="batch" is not supported: foundax models take one unbatched sample (batch with jax.vmap), '
+            'so there is no batch to normalise over. Use "instance" for per-channel statistics over the grid, '
+            'or "layer", "rms" or "group".'
+        )
+    if kind not in NORM_KINDS:
+        raise ValueError(f"unknown norm {kind!r}; expected None or one of {NORM_KINDS}")
+    if kind == "group":
+        groups = math.gcd(32, channels) if groups is None else groups
+        if channels % groups:
+            raise ValueError(f"groups={groups} does not divide channels={channels}")
+    return Norm(kind, channels, groups=groups or 1, eps=eps)
 
 
 # ---------------------------------------------------------------------------

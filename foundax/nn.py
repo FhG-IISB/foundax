@@ -153,10 +153,9 @@ def fno1d(
         n_layers: Number of Fourier layers.
         n_steps: Number of auto-regressive forward steps.
         activation: Pointwise activation function.
-        norm: Normalisation type (``None``, ``"instance"``,
-            ``"batch"``, …).
+        norm: Normalisation after each spectral layer: ``None``, ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         training: Whether the model is in training mode (affects
-            dropout / batchnorm).
+            dropout).
         dropout_rate: Dropout probability (``0`` = disabled).
         key: JAX PRNG key (``None`` → ``PRNGKey(0)``).
 
@@ -213,7 +212,7 @@ def fno2d(
         n_steps: Number of auto-regressive forward steps.
         d_model: Spatial resolution of the grid ``(H, W)``.
         activation: Pointwise activation function.
-        norm: Normalisation type (``None``, ``"layer"``, …).
+        norm: Normalisation after each spectral layer: ``None``, ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         training: Whether the model is in training mode.
         use_positions: Append grid coordinates to the input.
         linear_conv: Use a linear (1×1) convolution bypass.
@@ -273,7 +272,7 @@ def fno3d(
         n_steps: Number of auto-regressive forward steps.
         d_model: Spatial resolution ``(D, H, W)``.
         activation: Pointwise activation function.
-        norm: Normalisation type (``None``, ``"layer"``, …).
+        norm: Normalisation after each spectral layer: ``None``, ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"`` (see ``make_norm``).
         training: Whether the model is in training mode.
         use_positions: Append grid coordinates to the input.
         linear_conv: Use a linear (1×1) convolution bypass.

@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from typing import Callable, Optional, Sequence, Tuple
 from einops import rearrange
-from .common import BatchNorm
+from .common import make_norm
 
 
 def _spectral_conv(
@@ -222,15 +222,11 @@ class SpectralLayers1d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        # Setup normalization layers
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "instance":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x, **kwargs):  # (grid_points, channels)
         for i, (conv, w) in enumerate(zip(self.layers_conv, self.layers_w)):
@@ -240,10 +236,8 @@ class SpectralLayers1d(eqx.Module):
             x2 = rearrange(x2, "c w -> w c")
             x = x1 + x2
 
-            # Apply normalization if specified
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dim (W,)
-                x = jax.vmap(self.norm_layers[i])(x)
+                x = self.norm_layers[i](x)
 
             # Apply activation
             x = self.activation(x)
@@ -484,12 +478,11 @@ class SpectralLayers2d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         for i, (conv, w) in enumerate(zip(self.conv_layers, self.w_layers)):
@@ -499,8 +492,7 @@ class SpectralLayers2d(eqx.Module):
             x2 = rearrange(x2, "c h w -> h w c")
             x = x1 + x2
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dims (H, W)
-                x = jax.vmap(jax.vmap(self.norm_layers[i]))(x)
+                x = self.norm_layers[i](x)
             x = self.activation(x)
         return x
 
@@ -777,12 +769,11 @@ class SpectralLayers3d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         for i, (conv, w) in enumerate(zip(self.conv_layers, self.w_layers)):
@@ -792,8 +783,7 @@ class SpectralLayers3d(eqx.Module):
             x2 = rearrange(x2, "c d h w -> d h w c")
             x = x1 + x2
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dims (D, H, W)
-                x = jax.vmap(jax.vmap(jax.vmap(self.norm_layers[i])))(x)
+                x = self.norm_layers[i](x)
             x = self.activation(x)
         return x
 

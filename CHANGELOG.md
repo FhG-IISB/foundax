@@ -13,14 +13,17 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `.pre-commit-config.yaml` (ruff + standard hygiene hooks) and `foundax/py.typed` marker for PEP 561 typing.
 - GitHub issue templates (`bug_report`, `feature_request`) and a pull-request template with a pre-merge checklist.
 - `pixi run fmt` and `pixi run all` tasks; format-check step in `.github/workflows/ci.yml`.
+- `fx.layers.make_norm(kind, channels)` / `fx.layers.Norm`: `"layer"`, `"rms"`, `"instance"` and `"group"` normalisation of one channel-last sample of any spatial rank.
 
 ### Changed
 - **Breaking:** the previous `fx.geofno` (node-basis Fourier operator from PKU-CMEGroup/NeuralOperator, which has no learned deformation) is renamed `fx.geofno_nodal` / `GeoFNONodal`; same arguments as before.
 - `docs/core-models.md` summary table now includes a Reference column linking to the canonical paper for each family.
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
+- **Breaking:** `norm="batch"` raises `ValueError` in FNO1D/2D/3D and `fx.layers.SpectralBlock1d/2d/3d`: a model sees one unbatched sample, so there is no batch to normalise over. Use `"instance"` (per channel over the grid), `"layer"`, `"rms"` or `"group"`.
 
 ### Fixed
 - The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
+- FNO `norm="batch"` was vmapped over the grid points, so it normalised over no axes and every layer returned its bias; FNO1D `norm="instance"` built a LayerNorm. FNO and the spectral blocks now use `make_norm`; `"instance"` is an instance norm.
 
 ## [0.2.0] - 2026-05-31
 
