@@ -6,6 +6,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 
 ### Added
 - `fx.geofno`: Geo-FNO of Li et al. 2022 (arXiv:2207.05209) ported from neuraloperator/Geo-FNO: learned deformation (`IPHI`, optional design code), non-uniform Fourier transform onto a latent grid and back, FFT Fourier layers on the grid. Unit tests in `tests/test_geofno.py`, parity script `scripts/compare_geofno.py` (`pixi run -e dev verify-geofno`).
+- `fx.describe(model)`: pure introspection of any `eqx.Module`. It returns the module tree (paths, shapes, dtypes, parameter counts, bytes), a summary, and, for a model built from `fx.block`, `|` pipes and `fx.dot` / `fx.add` / `fx.cat`, its dataflow graph (blocks with in/out channels, chains, combinator nodes with their branches, one input per `dot` branch). A plain module has a tree and no graph.
 - `CITATION.cff`, `CONTRIBUTING.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md`.
 - `docs/architectures.md` — single-page overview of every supported architecture with paper references, split into Core / KAN / Foundation tables.
 - README badge row, status note, citation block, and a condensed architectures summary linking to the full docs page.

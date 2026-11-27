@@ -1,11 +1,123 @@
 # FNO implementation taken from https://rodrigodzf.com/physmodjax/models/fno.html
+import itertools
+import string
+
 import equinox as eqx
 from .linear import Linear
 import jax
 import jax.numpy as jnp
-from typing import Callable, Optional, Tuple
+import numpy as np
+from typing import Callable, Optional, Sequence, Tuple
 from einops import rearrange
 from .common import BatchNorm
+
+
+def _spectral_conv(
+    x: jnp.ndarray,
+    weights: Sequence[jnp.ndarray],
+    n_modes: Sequence[int],
+    out_channels: int,
+    linear_conv: bool,
+) -> jnp.ndarray:
+    """Spectral convolution of a channel-last field ``x`` of shape ``(*spatial, C)``.
+
+    The same map as ``rfftn`` at the transform size -> keep the low modes -> mix channels per mode ->
+    ``irfftn`` -> crop, but the transform is a truncated DFT: one small dense matrix per axis that
+    produces only the kept modes. A full FFT transforms every channel over the whole (padded) grid and
+    then discards almost all of it; with ``linear_conv=True`` the size ``2n - 1`` is also often prime,
+    where FFTs are slowest. The cost here does not depend on the padding.
+
+    Args:
+        x: ``(*spatial, C)`` with ``k + 1`` spatial axes; the last spatial axis is the real (rfft) one.
+        weights: complex mode weights ``(C, out, m_1, ..., m_k, m_last)``, one per block, in the order
+            ``itertools.product(("upper", "lower"), repeat=k)`` over the ``k`` full axes (positive and
+            negative frequencies). Where an upper and a lower block keep the same frequency, the later
+            block wins, as with the sequential ``.at[].set`` of the FFT version.
+        n_modes: requested modes per spatial axis, clipped as the FFT version clips them.
+        out_channels: output channels.
+        linear_conv: transform at size ``2n - 1`` per axis (zero-padded, no wrap-around) instead of ``n``.
+    """
+    spatial = x.shape[:-1]
+    k = len(spatial) - 1
+    sizes = [2 * n - 1 if linear_conv else n for n in spatial]
+    # clipping identical to the FFT version: full axes keep (f + 1) // 2 per block, the real axis f // 2 + 1
+    m = [min(int(n_modes[a]), (sizes[a] + 1) // 2) for a in range(k)] + [
+        min(int(n_modes[k]), sizes[k] // 2 + 1)
+    ]
+    freqs = [
+        np.concatenate([np.arange(m[a]), np.arange(sizes[a] - m[a], sizes[a])])
+        for a in range(k)
+    ] + [np.arange(m[k])]
+    cdt = jnp.result_type(x.dtype, jnp.complex64)
+
+    # one stacked weight grid (C, out, 2 m_1, ..., 2 m_k, m_last): block b sits at its upper/lower halves
+    grid = [
+        w[(slice(None), slice(None)) + tuple(slice(0, mm) for mm in m)].astype(cdt)
+        for w in weights
+    ]
+    for a in reversed(range(k)):  # concatenate innermost full axis first
+        grid = [
+            jnp.concatenate(grid[i : i + 2], axis=2 + a) for i in range(0, len(grid), 2)
+        ]
+    w = grid[0]
+
+    # a frequency kept by two blocks counts once, for the later block
+    if k:
+        owner = {}
+        pos = list(itertools.product(*[range(2 * m[a]) for a in range(k)]))
+        for p in pos:
+            blk = sum((p[a] >= m[a]) << (k - 1 - a) for a in range(k))
+            f = tuple(int(freqs[a][p[a]]) for a in range(k))
+            owner[f] = max(owner.get(f, -1), blk)
+        keep = np.array(
+            [
+                sum((p[a] >= m[a]) << (k - 1 - a) for a in range(k))
+                == owner[tuple(int(freqs[a][p[a]]) for a in range(k))]
+                for p in pos
+            ]
+        ).reshape([2 * m[a] for a in range(k)])
+        if not keep.all():
+            w = (
+                w
+                * jnp.asarray(keep, dtype=cdt)[
+                    (None, None) + (slice(None),) * k + (None,)
+                ]
+            )
+
+    scale = 1.0 / np.prod(
+        sizes
+    )  # norm="ortho": 1/sqrt(size) in the forward and again in the inverse
+    fwd, inv = [], []
+    for a, (n, f, kk) in enumerate(zip(spatial, sizes, freqs)):
+        fwd.append(
+            jnp.asarray(np.exp(-2j * np.pi * np.outer(kk, np.arange(n)) / f), dtype=cdt)
+        )  # (modes, n)
+        e = np.exp(2j * np.pi * np.outer(np.arange(n), kk) / f)  # (n, modes)
+        if (
+            a == k
+        ):  # irfft: conjugate-symmetric partners count twice; the zero and Nyquist modes once
+            e = e * np.where((kk == 0) | (2 * kk == f), 1.0, 2.0)[None, :]
+        inv.append(jnp.asarray(e, dtype=cdt))
+
+    sp = string.ascii_lowercase[: k + 1]  # spatial indices
+    md = string.ascii_uppercase[: k + 1]  # mode indices
+    hi = (
+        jax.lax.Precision.HIGHEST
+    )  # the transform must be as exact as an FFT (no TF32 on GPU)
+    X = jnp.einsum(
+        f"{sp}y," + ",".join(f"{md[a]}{sp[a]}" for a in range(k + 1)) + f"->{md}y",
+        x.astype(cdt),
+        *fwd,
+        precision=hi,
+    )
+    Y = jnp.einsum(f"{md}y,yz{md}->{md}z", X, w)
+    out = jnp.einsum(
+        f"{md}z," + ",".join(f"{sp[a]}{md[a]}" for a in range(k + 1)) + f"->{sp}z",
+        Y,
+        *inv,
+        precision=hi,
+    )
+    return (out.real * scale).astype(jnp.result_type(x.dtype, jnp.float32))
 
 
 # 1 Dimensional Fourier Neural Operator
@@ -47,42 +159,12 @@ class SpectralConv1d(eqx.Module):
         )
 
     def __call__(self, x: jnp.ndarray, **kwargs):  # (w, c)
-        W, C = x.shape
-
-        # Compute FFT length based on convolution type
-        if self.linear_conv:
-            fft_len = W * 2 - 1
-        else:
-            fft_len = W
-
-        # Get the Fourier coefficients along the spatial dimension
-        X = jnp.fft.rfft(x, n=fft_len, axis=0, norm="ortho")
-
-        # Truncate to the first n_modes coefficients
-        n_modes_actual = min(self.n_modes, X.shape[0])
-        X_truncated = X[:n_modes_actual, :]
-
-        # Create complex weight and multiply
-        complex_weight = (
-            self.weight_real[:, :, :n_modes_actual]
-            + 1j * self.weight_imag[:, :, :n_modes_actual]
+        # rfft (size 2W - 1 with linear_conv) -> first n_modes -> channel mixing -> irfft -> crop,
+        # as a truncated DFT (see _spectral_conv)
+        w = self.weight_real + 1j * self.weight_imag
+        return _spectral_conv(
+            x, [w], [self.n_modes], self.out_channels, self.linear_conv
         )
-
-        # Einsum: (modes, in_channels) x (in_channels, out_channels, modes) -> (modes, out_channels)
-        X_out = jnp.einsum("mi,iom->mo", X_truncated, complex_weight)
-
-        # Pad back to full frequency domain
-        full_freq_len = fft_len // 2 + 1
-        X_padded = jnp.zeros((full_freq_len, self.out_channels), dtype=X_out.dtype)
-        X_padded = X_padded.at[:n_modes_actual, :].set(X_out)
-
-        # Inverse FFT and truncate to original length
-        x_out = jnp.fft.irfft(X_padded, n=fft_len, axis=0, norm="ortho")
-
-        # Truncate to original spatial dimension
-        x_out = x_out[:W, :]
-
-        return x_out
 
 
 class SpectralLayers1d(eqx.Module):
@@ -330,42 +412,17 @@ class SpectralConv2d(eqx.Module):
         self.weight_2_imag = jax.random.uniform(k4, shape, minval=-scale, maxval=scale)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        H, W, C = x.shape
-
+        # rfft2 (size 2n - 1 per axis with linear_conv) -> upper / lower modes -> channel mixing ->
+        # irfft2 -> crop, as a truncated DFT (see _spectral_conv)
         w1 = self.weight_1_real + 1j * self.weight_1_imag
         w2 = self.weight_2_real + 1j * self.weight_2_imag
-
-        # Static FFT sizes
-        fft_h = H * 2 - 1 if self.linear_conv else H
-        fft_w = W * 2 - 1 if self.linear_conv else W
-
-        # 2D real FFT
-        X = jnp.fft.rfft2(x, s=(fft_h, fft_w), axes=(0, 1), norm="ortho")
-        freq_h, freq_w = X.shape[0], X.shape[1]
-
-        # Static mode counts (use Python min, not jnp.minimum)
-        n_modes1 = min(self.n_modes1, (freq_h + 1) // 2)
-        n_modes2 = min(self.n_modes2, freq_w)
-
-        # Process upper and lower frequencies with static slicing
-        X_upper = X[:n_modes1, :n_modes2, :]
-        X_lower = X[-n_modes1:, :n_modes2, :]
-
-        w1_slice = w1[:, :, :n_modes1, :n_modes2]
-        w2_slice = w2[:, :, :n_modes1, :n_modes2]
-
-        out_upper = jnp.einsum("hwi,iohw->hwo", X_upper, w1_slice)
-        out_lower = jnp.einsum("hwi,iohw->hwo", X_lower, w2_slice)
-
-        # Build output in frequency domain
-        out_ft = jnp.zeros((freq_h, freq_w, self.out_channels), dtype=jnp.complex64)
-        out_ft = out_ft.at[:n_modes1, :n_modes2, :].set(out_upper)
-        out_ft = out_ft.at[-n_modes1:, :n_modes2, :].set(out_lower)
-
-        # Inverse FFT and truncate
-        return jnp.fft.irfft2(out_ft, s=(fft_h, fft_w), axes=(0, 1), norm="ortho")[
-            :H, :W, :
-        ]
+        return _spectral_conv(
+            x,
+            [w1, w2],
+            [self.n_modes1, self.n_modes2],
+            self.out_channels,
+            self.linear_conv,
+        )
 
 
 class SpectralLayers2d(eqx.Module):
@@ -640,63 +697,21 @@ class SpectralConv3d(eqx.Module):
         )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        D, H, W, C = x.shape
-
-        w1 = self.weight_1_real + 1j * self.weight_1_imag
-        w2 = self.weight_2_real + 1j * self.weight_2_imag
-        w3 = self.weight_3_real + 1j * self.weight_3_imag
-        w4 = self.weight_4_real + 1j * self.weight_4_imag
-
-        # Static FFT sizes
-        fft_d = D * 2 - 1 if self.linear_conv else D
-        fft_h = H * 2 - 1 if self.linear_conv else H
-        fft_w = W * 2 - 1 if self.linear_conv else W
-
-        # 3D real FFT
-        X = jnp.fft.rfftn(x, s=(fft_d, fft_h, fft_w), axes=(0, 1, 2), norm="ortho")
-        freq_d, freq_h, freq_w = X.shape[0], X.shape[1], X.shape[2]
-
-        # Static mode counts
-        n_modes1 = min(self.n_modes1, (freq_d + 1) // 2)
-        n_modes2 = min(self.n_modes2, (freq_h + 1) // 2)
-        n_modes3 = min(self.n_modes3, freq_w)
-
-        # Slice weights to actual mode counts
-        w1_slice = w1[:, :, :n_modes1, :n_modes2, :n_modes3]
-        w2_slice = w2[:, :, :n_modes1, :n_modes2, :n_modes3]
-        w3_slice = w3[:, :, :n_modes1, :n_modes2, :n_modes3]
-        w4_slice = w4[:, :, :n_modes1, :n_modes2, :n_modes3]
-
-        # Process 4 corners (combinations of upper/lower in depth and height dimensions)
-        # Corner 1: upper depth, upper height
-        X_corner1 = X[:n_modes1, :n_modes2, :n_modes3, :]
-        out_corner1 = jnp.einsum("dhwi,iodhw->dhwo", X_corner1, w1_slice)
-
-        # Corner 2: upper depth, lower height
-        X_corner2 = X[:n_modes1, -n_modes2:, :n_modes3, :]
-        out_corner2 = jnp.einsum("dhwi,iodhw->dhwo", X_corner2, w2_slice)
-
-        # Corner 3: lower depth, upper height
-        X_corner3 = X[-n_modes1:, :n_modes2, :n_modes3, :]
-        out_corner3 = jnp.einsum("dhwi,iodhw->dhwo", X_corner3, w3_slice)
-
-        # Corner 4: lower depth, lower height
-        X_corner4 = X[-n_modes1:, -n_modes2:, :n_modes3, :]
-        out_corner4 = jnp.einsum("dhwi,iodhw->dhwo", X_corner4, w4_slice)
-
-        # Build output in frequency domain
-        out_ft = jnp.zeros(
-            (freq_d, freq_h, freq_w, self.out_channels), dtype=jnp.complex64
+        # rfftn (size 2n - 1 per axis with linear_conv) -> four corners of upper / lower depth and
+        # height modes -> channel mixing -> irfftn -> crop, as a truncated DFT (see _spectral_conv)
+        ws = [
+            self.weight_1_real + 1j * self.weight_1_imag,  # upper depth, upper height
+            self.weight_2_real + 1j * self.weight_2_imag,  # upper depth, lower height
+            self.weight_3_real + 1j * self.weight_3_imag,  # lower depth, upper height
+            self.weight_4_real + 1j * self.weight_4_imag,  # lower depth, lower height
+        ]
+        return _spectral_conv(
+            x,
+            ws,
+            [self.n_modes1, self.n_modes2, self.n_modes3],
+            self.out_channels,
+            self.linear_conv,
         )
-        out_ft = out_ft.at[:n_modes1, :n_modes2, :n_modes3, :].set(out_corner1)
-        out_ft = out_ft.at[:n_modes1, -n_modes2:, :n_modes3, :].set(out_corner2)
-        out_ft = out_ft.at[-n_modes1:, :n_modes2, :n_modes3, :].set(out_corner3)
-        out_ft = out_ft.at[-n_modes1:, -n_modes2:, :n_modes3, :].set(out_corner4)
-
-        # Inverse FFT and truncate
-        return jnp.fft.irfftn(
-            out_ft, s=(fft_d, fft_h, fft_w), axes=(0, 1, 2), norm="ortho"
-        )[:D, :H, :W, :]
 
 
 class SpectralLayers3d(eqx.Module):
