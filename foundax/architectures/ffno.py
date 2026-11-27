@@ -91,7 +91,7 @@ class FactorizedSpectralConv2d(eqx.Module):
         out1 = jnp.einsum(
             "hmi,iom->hmo", X_w[:, :nx, :], W_x[:, :, :nx]
         )  # (H, nx, C_out)
-        out1_pad = jnp.zeros((H, W // 2 + 1, self.out_channels), dtype=jnp.complex64)
+        out1_pad = jnp.zeros((H, W // 2 + 1, self.out_channels), dtype=out1.dtype)
         out1_pad = out1_pad.at[:, :nx, :].set(out1)
         branch1 = jnp.fft.irfft(out1_pad, n=W, axis=1, norm="ortho")  # (H, W, C_out)
 
@@ -101,7 +101,7 @@ class FactorizedSpectralConv2d(eqx.Module):
         out2 = jnp.einsum(
             "mwi,iom->mwo", X_h[:ny, :, :], W_y[:, :, :ny]
         )  # (ny, W, C_out)
-        out2_pad = jnp.zeros((H // 2 + 1, W, self.out_channels), dtype=jnp.complex64)
+        out2_pad = jnp.zeros((H // 2 + 1, W, self.out_channels), dtype=out2.dtype)
         out2_pad = out2_pad.at[:ny, :, :].set(out2)
         branch2 = jnp.fft.irfft(out2_pad, n=H, axis=0, norm="ortho")  # (H, W, C_out)
 
@@ -175,7 +175,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         X_d = jnp.fft.rfft(x, axis=0, norm="ortho")  # (D//2+1, H, W, C)
         nd = min(self.n_modes_d, D // 2 + 1)
         o_d = jnp.einsum("mhwi,iom->mhwo", X_d[:nd], W_d[:, :, :nd])
-        p_d = jnp.zeros((D // 2 + 1, H, W, self.out_channels), dtype=jnp.complex64)
+        p_d = jnp.zeros((D // 2 + 1, H, W, self.out_channels), dtype=o_d.dtype)
         p_d = p_d.at[:nd].set(o_d)
         br_d = jnp.fft.irfft(p_d, n=D, axis=0, norm="ortho")  # (D, H, W, C_out)
 
@@ -183,7 +183,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         X_h = jnp.fft.rfft(x, axis=1, norm="ortho")  # (D, H//2+1, W, C)
         nh = min(self.n_modes_h, H // 2 + 1)
         o_h = jnp.einsum("dmwi,iom->dmwo", X_h[:, :nh], W_h[:, :, :nh])
-        p_h = jnp.zeros((D, H // 2 + 1, W, self.out_channels), dtype=jnp.complex64)
+        p_h = jnp.zeros((D, H // 2 + 1, W, self.out_channels), dtype=o_h.dtype)
         p_h = p_h.at[:, :nh].set(o_h)
         br_h = jnp.fft.irfft(p_h, n=H, axis=1, norm="ortho")  # (D, H, W, C_out)
 
@@ -191,7 +191,7 @@ class FactorizedSpectralConv3d(eqx.Module):
         X_w = jnp.fft.rfft(x, axis=2, norm="ortho")  # (D, H, W//2+1, C)
         nw = min(self.n_modes_w, W // 2 + 1)
         o_w = jnp.einsum("dhmi,iom->dhmo", X_w[:, :, :nw], W_w[:, :, :nw])
-        p_w = jnp.zeros((D, H, W // 2 + 1, self.out_channels), dtype=jnp.complex64)
+        p_w = jnp.zeros((D, H, W // 2 + 1, self.out_channels), dtype=o_w.dtype)
         p_w = p_w.at[:, :, :nw].set(o_w)
         br_w = jnp.fft.irfft(p_w, n=W, axis=2, norm="ortho")  # (D, H, W, C_out)
 

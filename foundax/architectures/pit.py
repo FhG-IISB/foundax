@@ -138,7 +138,7 @@ class MultiHeadPosAtt(eqx.Module):
         scaled_dist = m_dist * scale_factor  # [n_head, N_query, N_key]
 
         # Apply locality mask if needed
-        if self.locality <= 100:
+        if self.locality < 100:  # at 100 the mask keeps every key
             # Compute threshold as quantile of distances
             threshold = jnp.percentile(
                 scaled_dist, self.locality, axis=-1, keepdims=True

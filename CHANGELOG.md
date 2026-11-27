@@ -33,6 +33,8 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - Crashes on valid input: UNet `norm="group"` on channel-last data; UNet3D on odd sizes and with `groups > 1` (grouped convolution weights had the full input width, also in 1-D and 2-D); `fx.unet3d` with its default activation `"celu"`; MgNO on odd grids; `fx.mlp(layer_norm=True)` on `(N, D)` points; `fx.fno2d` / `fno3d` with `use_positions=True` (the lift did not count the coordinate channels).
 - `fx.cno2d` returns one sample for one sample (it added a batch axis), and `fx.geofno_nodal` keeps the channel axis for `out_dim=1` (it squeezed the output to `(N,)`, and to a scalar for one node).
 - Dropout keys: the GNOT family reused one key across blocks and sublayers, DeepONet used one mask for all query points and all samples of `evaluate_batch`, and DeepONet's self-attention ignored its `dropout_rate`. Every layer, point and sample now draws its own mask.
+- Options that were accepted and ignored: GNOT/CGPTNO/MoEGPTNO `attn_type` now selects the linear-attention kernel (`"linear"` = `"l1"`, `"galerkin"`, `"l2"`; others raise); MgNO `padding_mode` (`circular`, `zeros`, `reflect`, `replicate`) reaches its convolutions; DeepONet `norm="rms"` is an RMS norm (it was a LayerNorm without affine) and DeepONet norms go through `make_norm` (`"batch"` raises).
+- The GNOT MLP with `n_layers=1` built two layers from one key; it is one layer. FFNO kept its spectrum in `complex64` under x64. PiT computed a percentile for locality 100, where the mask keeps every key. `KANConv2d` uses the skip policy of `KANConv1d` / `KANConv3d` (a skip for `bspline`, `bsrbf` and `relu`) and takes one sample.
 
 ## [0.2.0] - 2026-05-31
 

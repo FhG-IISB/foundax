@@ -61,7 +61,7 @@ class GPTConfig:
     Configuration for basic GPT-style neural operator.
 
     Attributes:
-        attn_type: Attention type ('linear', 'softmax').
+        attn_type: Linear-attention kernel: 'linear' (= 'l1', the upstream default), 'galerkin' or 'l2'.
         embd_pdrop: Embedding dropout probability.
         resid_pdrop: Residual connection dropout probability.
         attn_pdrop: Attention dropout probability.
@@ -173,6 +173,9 @@ class MLP(eqx.Module):
         activation = get_activation(act)
         self.activation = activation
 
+        if n_layers == 1:
+            self.layers = [Linear(in_dim, out_dim, key=key)]
+            return
         keys = jax.random.split(key, n_layers)
         self.layers = []
 
@@ -197,6 +200,35 @@ class MLP(eqx.Module):
 # =============================================================================
 # Attention Modules
 # =============================================================================
+
+
+_ATTN_KERNELS = {"linear": "l1", "l1": "l1", "galerkin": "galerkin", "l2": "l2"}
+
+
+def _attn_kernel(name: str) -> str:
+    """The linear-attention kernel for ``attn_type``: "linear" is "l1", the upstream default."""
+    if name not in _ATTN_KERNELS:
+        raise ValueError(
+            f"unknown attn_type {name!r}; expected one of {sorted(_ATTN_KERNELS)}"
+        )
+    return _ATTN_KERNELS[name]
+
+
+def _feature_map(z: jnp.ndarray, kind: str) -> jnp.ndarray:
+    """Positive features of queries or keys: a softmax ("l1", "galerkin") or an L1 normalisation ("l2")."""
+    if kind == "l2":
+        return z / (jnp.linalg.norm(z, ord=1, axis=-1, keepdims=True) + 1e-8)
+    return jax.nn.softmax(z, axis=-1)
+
+
+def _normaliser(q, k, n_keys: int, kind: str, eps: float) -> jnp.ndarray:
+    """``1 / (q . sum_j k_j)`` per query ("l1", "l2"), or ``1 / n_keys`` ("galerkin")."""
+    if kind == "galerkin":
+        return jnp.asarray(1.0 / n_keys, q.dtype)
+    qk = q * k.sum(axis=-2, keepdims=True)
+    if kind == "l2":
+        qk = jnp.abs(qk)
+    return 1.0 / (qk.sum(axis=-1, keepdims=True) + eps)
 
 
 class LinearAttention(eqx.Module):
@@ -240,7 +272,7 @@ class LinearAttention(eqx.Module):
         self.n_embd = n_embd
         self.n_head = n_head
         self.attn_pdrop = attn_pdrop
-        self.attn_type = attn_type
+        self.attn_type = _attn_kernel(attn_type)
 
     def __call__(
         self, x: jnp.ndarray, y: Optional[jnp.ndarray] = None, *, key=None, **kwargs
@@ -319,6 +351,7 @@ class LinearCrossAttention(eqx.Module):
     n_head: int = eqx.field(static=True)
     n_inputs: int = eqx.field(static=True)
     attn_pdrop: float = eqx.field(static=True)
+    attn_type: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -326,6 +359,7 @@ class LinearCrossAttention(eqx.Module):
         n_head: int,
         n_inputs: int,
         attn_pdrop: float = 0.0,
+        attn_type: str = "l1",
         *,
         key,
         **kwargs,
@@ -343,6 +377,7 @@ class LinearCrossAttention(eqx.Module):
         self.n_head = n_head
         self.n_inputs = n_inputs
         self.attn_pdrop = attn_pdrop
+        self.attn_type = _attn_kernel(attn_type)
 
     def __call__(
         self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs
@@ -353,7 +388,7 @@ class LinearCrossAttention(eqx.Module):
         # Query projection
         q = jax.vmap(jax.vmap(self.query_proj))(x)
         q = q.reshape(B, T1, self.n_head, head_dim).transpose(0, 2, 1, 3)
-        q = jax.nn.softmax(q, axis=-1)
+        q = _feature_map(q, self.attn_type)
 
         # Start with query as residual
         out = q
@@ -369,10 +404,8 @@ class LinearCrossAttention(eqx.Module):
             k = k.reshape(B, T2, self.n_head, head_dim).transpose(0, 2, 1, 3)
             v = v.reshape(B, T2, self.n_head, head_dim).transpose(0, 2, 1, 3)
 
-            k = jax.nn.softmax(k, axis=-1)
-
-            k_sum = k.sum(axis=-2, keepdims=True)
-            D_inv = 1.0 / ((q * k_sum).sum(axis=-1, keepdims=True) + 1e-8)
+            k = _feature_map(k, self.attn_type)
+            D_inv = _normaliser(q, k, T2, self.attn_type, eps=1e-8)
 
             context = jnp.einsum("bhnd,bhnv->bhdv", k, v)
             attn_out = jnp.einsum("bhqd,bhdv->bhqv", q, context)
@@ -452,10 +485,15 @@ class CrossAttentionBlock(eqx.Module):
             n_head=cfg.n_head,
             n_inputs=cfg.n_inputs,
             attn_pdrop=cfg.attn_pdrop,
+            attn_type=cfg.attn_type,
             key=keys[0],
         )
         self.self_attn = LinearAttention(
-            n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1]
+            n_embd=n_embd,
+            n_head=cfg.n_head,
+            attn_pdrop=cfg.attn_pdrop,
+            attn_type=cfg.attn_type,
+            key=keys[1],
         )
         self.ffn1 = FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[2])
         self.ffn2 = FFN(n_embd, cfg.n_inner, n_embd, act=cfg.act, key=keys[3])
@@ -537,10 +575,15 @@ class MoECrossAttentionBlock(eqx.Module):
             n_head=cfg.n_head,
             n_inputs=cfg.n_inputs,
             attn_pdrop=cfg.attn_pdrop,
+            attn_type=cfg.attn_type,
             key=keys[0],
         )
         self.self_attn = LinearAttention(
-            n_embd=n_embd, n_head=cfg.n_head, attn_pdrop=cfg.attn_pdrop, key=keys[1]
+            n_embd=n_embd,
+            n_head=cfg.n_head,
+            attn_pdrop=cfg.attn_pdrop,
+            attn_type=cfg.attn_type,
+            key=keys[1],
         )
 
         activation = get_activation(cfg.act)

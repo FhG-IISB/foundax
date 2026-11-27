@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from typing import Callable, Optional
 from einops import repeat
-from .common import BatchNorm, Constant
+from .common import BatchNorm, Constant, make_norm
 
 
 # =============================================================================
@@ -40,16 +40,7 @@ class MLPBlock(eqx.Module):
         self.norm = norm
         self.dropout_rate = dropout_rate
 
-        if norm == "layer":
-            self.norm_layer = eqx.nn.LayerNorm(features)
-        elif norm == "batch":
-            self.norm_layer = BatchNorm(features)
-        elif norm == "group":
-            self.norm_layer = eqx.nn.GroupNorm(min(32, features), features)
-        elif norm == "rms":
-            self.norm_layer = eqx.nn.LayerNorm(features, elementwise_affine=False)
-        else:
-            self.norm_layer = None
+        self.norm_layer = make_norm(norm, features)
 
     def __call__(self, x, *, key=None, **kwargs):
         x = self.dense(x)
@@ -156,12 +147,7 @@ class ResidualBlock(eqx.Module):
         self.activation = activation
         self.norm = norm
 
-        if norm == "layer":
-            self.out_norm = eqx.nn.LayerNorm(features)
-        elif norm == "batch":
-            self.out_norm = BatchNorm(features)
-        else:
-            self.out_norm = None
+        self.out_norm = make_norm(norm, features)
 
     def __call__(self, x, *, key=None, **kwargs):
         residual = x if self.proj is None else self.proj(x)

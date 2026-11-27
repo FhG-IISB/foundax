@@ -1701,23 +1701,23 @@ class KANConv2d(eqx.Module):
             raise ValueError(
                 f"Unknown basis '{basis}'. Available: {list(_BASIS_FACTORIES)}"
             )
-        in_features = in_channels * kernel_size * kernel_size
-        b = _BASIS_FACTORIES[basis](in_features, **basis_kwargs)
-        self.kan = _BasisKANLayer(
-            in_features,
+        # the same skip policy as KANConv1d / KANConv3d
+        self.kan = _build_kan_conv(
+            basis,
+            in_channels * kernel_size * kernel_size,
             out_channels,
-            b,
-            skip=(basis in ("bspline",)),  # original-KAN style only for bspline
-            skip_activation=jax.nn.silu,
-            key=key,
+            key,
+            **basis_kwargs,
         )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        # x: (H, W, C). Extract (H, W, kH*kW*C) patches with SAME padding,
+        # x: (H, W, C), one sample. Extract (H, W, kH*kW*C) patches with SAME padding,
         # then feed each pixel's window through the KAN.
-        was_unbatched = x.ndim == 3
-        if was_unbatched:
-            x = x[None]
+        if x.ndim != 3:
+            raise ValueError(
+                f"KANConv2d takes one sample (H, W, C), got shape {x.shape}; batch with jax.vmap"
+            )
+        x = x[None]
         # NCHW for conv_general_dilated patches via reshape trick.
         # Simpler: use jax.lax.reduce_window-style patch extraction via dilated identity conv.
         N, H, W, C = x.shape
@@ -1730,10 +1730,7 @@ class KANConv2d(eqx.Module):
             axis=-2,
         )  # (N, H, W, k*k, C)
         patches = patches.reshape(N, H, W, k * k * C)
-        y = self.kan(patches)  # (N, H, W, out_channels)
-        if was_unbatched:
-            y = y[0]
-        return y
+        return self.kan(patches)[0]  # (H, W, out_channels)
 
 
 def _build_kan_conv(
