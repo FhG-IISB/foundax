@@ -464,16 +464,19 @@ class CrossAttentionBlock(eqx.Module):
     def __call__(
         self, x: jnp.ndarray, ys: List[jnp.ndarray], *, key=None, **kwargs
     ) -> jnp.ndarray:
+        # one key for each dropout: cross-attention, its residual, self-attention, its residual
+        k_ca, k_ca_res, k_sa, k_sa_res = (
+            (None,) * 4 if key is None else jax.random.split(key, 4)
+        )
         # Cross-attention
         x_norm = jax.vmap(jax.vmap(self.ln1))(x)
         ys_norm = [
             jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)
         ]
 
-        ca_out = self.cross_attn(x_norm, ys_norm, key=key)
-        if self.resid_pdrop > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            ca_out = eqx.nn.Dropout(p=self.resid_pdrop)(ca_out, key=subkey)
+        ca_out = self.cross_attn(x_norm, ys_norm, key=k_ca)
+        if self.resid_pdrop > 0 and k_ca_res is not None:
+            ca_out = eqx.nn.Dropout(p=self.resid_pdrop)(ca_out, key=k_ca_res)
         x = x + ca_out
 
         # FFN 1
@@ -482,10 +485,9 @@ class CrossAttentionBlock(eqx.Module):
 
         # Self-attention
         x_norm = jax.vmap(jax.vmap(self.ln4))(x)
-        sa_out = self.self_attn(x_norm, key=key)
-        if self.resid_pdrop > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            sa_out = eqx.nn.Dropout(p=self.resid_pdrop)(sa_out, key=subkey)
+        sa_out = self.self_attn(x_norm, key=k_sa)
+        if self.resid_pdrop > 0 and k_sa_res is not None:
+            sa_out = eqx.nn.Dropout(p=self.resid_pdrop)(sa_out, key=k_sa_res)
         x = x + sa_out
 
         # FFN 2
@@ -591,16 +593,19 @@ class MoECrossAttentionBlock(eqx.Module):
     ) -> jnp.ndarray:
         gate_scores = self._apply_gate(pos)
 
+        # one key for each dropout: cross-attention, its residual, self-attention, its residual
+        k_ca, k_ca_res, k_sa, k_sa_res = (
+            (None,) * 4 if key is None else jax.random.split(key, 4)
+        )
         # Cross-attention
         x_norm = jax.vmap(jax.vmap(self.ln1))(x)
         ys_norm = [
             jax.vmap(jax.vmap(self.ln2_branches[i]))(y) for i, y in enumerate(ys)
         ]
 
-        ca_out = self.cross_attn(x_norm, ys_norm, key=key)
-        if self.resid_pdrop > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            ca_out = eqx.nn.Dropout(p=self.resid_pdrop)(ca_out, key=subkey)
+        ca_out = self.cross_attn(x_norm, ys_norm, key=k_ca)
+        if self.resid_pdrop > 0 and k_ca_res is not None:
+            ca_out = eqx.nn.Dropout(p=self.resid_pdrop)(ca_out, key=k_ca_res)
         x = x + ca_out
 
         # MoE FFN 1
@@ -613,10 +618,9 @@ class MoECrossAttentionBlock(eqx.Module):
 
         # Self-attention
         x_norm = jax.vmap(jax.vmap(self.ln4))(x)
-        sa_out = self.self_attn(x_norm, key=key)
-        if self.resid_pdrop > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            sa_out = eqx.nn.Dropout(p=self.resid_pdrop)(sa_out, key=subkey)
+        sa_out = self.self_attn(x_norm, key=k_sa)
+        if self.resid_pdrop > 0 and k_sa_res is not None:
+            sa_out = eqx.nn.Dropout(p=self.resid_pdrop)(sa_out, key=k_sa_res)
         x = x + sa_out
 
         # MoE FFN 2
@@ -786,8 +790,13 @@ class CGPTNO(eqx.Module):
             z_list = [x]
 
         # Transformer blocks
-        for block in self.blocks:
-            x = block(x, z_list, key=key)
+        block_keys = (
+            [None] * len(self.blocks)
+            if key is None
+            else jax.random.split(key, len(self.blocks))
+        )
+        for block, block_key in zip(self.blocks, block_keys):
+            x = block(x, z_list, key=block_key)
 
         # Output projection
         x = jax.vmap(jax.vmap(self.out_mlp))(x)
@@ -936,8 +945,13 @@ class GNOT(eqx.Module):
             for i, xb in enumerate(x_branches)
         ]
 
-        for block in self.blocks:
-            x = block(x, z_list, pos, key=key)
+        block_keys = (
+            [None] * len(self.blocks)
+            if key is None
+            else jax.random.split(key, len(self.blocks))
+        )
+        for block, block_key in zip(self.blocks, block_keys):
+            x = block(x, z_list, pos, key=block_key)
 
         x = jax.vmap(jax.vmap(self.out_mlp))(x)
 

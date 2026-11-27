@@ -334,6 +334,8 @@ class AttentionBlock(eqx.Module):
         scale = jnp.sqrt(jnp.array(self.head_dim, dtype=x.dtype))
         attn = jnp.einsum("bhqd,bhkd->bhqk", q, k) / scale
         attn = jax.nn.softmax(attn, axis=-1)
+        if self.dropout_rate > 0 and key is not None:
+            attn = eqx.nn.Dropout(p=self.dropout_rate)(attn, key=key)
 
         out = jnp.einsum("bhqk,bhkd->bhqd", attn, v)
         out = out.transpose(0, 2, 1, 3).reshape(B, T, -1)
@@ -393,13 +395,15 @@ class TransformerBlock(eqx.Module):
                 return jax.vmap(jax.vmap(norm))(t)
             return norm(t)
 
+        k_attn, k_res1, k_res2 = (
+            (None,) * 3 if key is None else jax.random.split(key, 3)
+        )
         residual = x
         x_n = apply_norm(self.norm1, x)
-        x = residual + self.attn(x_n, key=key)
+        x = residual + self.attn(x_n, key=k_attn)
 
-        if self.dropout_rate > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=subkey)
+        if self.dropout_rate > 0 and k_res1 is not None:
+            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=k_res1)
 
         residual = x
         x_n = apply_norm(self.norm2, x)
@@ -419,9 +423,8 @@ class TransformerBlock(eqx.Module):
 
         x = residual + x_n
 
-        if self.dropout_rate > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=subkey)
+        if self.dropout_rate > 0 and k_res2 is not None:
+            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=k_res2)
 
         return x
 
@@ -715,6 +718,15 @@ class BranchTransformer(eqx.Module):
 # =============================================================================
 
 
+def _per_point(net, y, key):
+    """``net`` at every point of ``y`` (N, d), with its own dropout key for each point."""
+    if key is None:
+        return jax.vmap(lambda yi: net(yi))(y)
+    return jax.vmap(lambda yi, ki: net(yi, key=ki))(
+        y, jax.random.split(key, y.shape[0])
+    )
+
+
 class TrunkMLP(eqx.Module):
     """MLP-based trunk network."""
 
@@ -771,7 +783,7 @@ class TrunkMLP(eqx.Module):
             y_emb = self.embedding(y)
             y = jnp.concatenate([y, y_emb], axis=-1)
 
-        x = jax.vmap(lambda yi: self.mlp(yi, key=key))(y)
+        x = _per_point(self.mlp, y, key)
 
         if single_point:
             x = x[0]
@@ -836,7 +848,7 @@ class TrunkResMLP(eqx.Module):
             y_emb = self.embedding(y)
             y = jnp.concatenate([y, y_emb], axis=-1)
 
-        x = jax.vmap(lambda yi: self.resmlp(yi, key=key))(y)
+        x = _per_point(self.resmlp, y, key)
 
         if single_point:
             x = x[0]
@@ -1371,4 +1383,7 @@ class DeepONet(eqx.Module):
         Returns:
             Output values, shape (batch, n_points) or (batch, n_points, n_outputs)
         """
-        return jax.vmap(lambda u_i: self(u_i, y, key=key))(u)
+        if key is None:
+            return jax.vmap(lambda u_i: self(u_i, y))(u)
+        keys = jax.random.split(key, u.shape[0])
+        return jax.vmap(lambda u_i, k_i: self(u_i, y, key=k_i))(u, keys)

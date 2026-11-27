@@ -32,6 +32,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - DeepONet `combination_type="attention"` returned the same output at every query point (one key token, so the softmax was 1, and no residual). The branch output is now split into `n_tokens` tokens that each query point attends over, with a residual from the trunk; the combiner's checkpoint layout changes.
 - Crashes on valid input: UNet `norm="group"` on channel-last data; UNet3D on odd sizes and with `groups > 1` (grouped convolution weights had the full input width, also in 1-D and 2-D); `fx.unet3d` with its default activation `"celu"`; MgNO on odd grids; `fx.mlp(layer_norm=True)` on `(N, D)` points; `fx.fno2d` / `fno3d` with `use_positions=True` (the lift did not count the coordinate channels).
 - `fx.cno2d` returns one sample for one sample (it added a batch axis), and `fx.geofno_nodal` keeps the channel axis for `out_dim=1` (it squeezed the output to `(N,)`, and to a scalar for one node).
+- Dropout keys: the GNOT family reused one key across blocks and sublayers, DeepONet used one mask for all query points and all samples of `evaluate_batch`, and DeepONet's self-attention ignored its `dropout_rate`. Every layer, point and sample now draws its own mask.
 
 ## [0.2.0] - 2026-05-31
 
