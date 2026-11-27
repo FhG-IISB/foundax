@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from typing import Callable, Optional
 from einops import repeat
-from .common import BatchNorm
+from .common import BatchNorm, Constant
 
 
 # =============================================================================
@@ -229,7 +229,10 @@ class ResMLP(eqx.Module):
 class FourierFeatures(eqx.Module):
     """Fourier feature embedding for improved coordinate representation."""
 
-    B: jnp.ndarray
+    B: Optional[jnp.ndarray]  # the trained projection (learnable=True), else None
+    B_fixed: Optional[Constant] = eqx.field(
+        static=True
+    )  # the fixed projection (learnable=False)
     learnable: bool = eqx.field(static=True)
 
     def __init__(
@@ -238,14 +241,16 @@ class FourierFeatures(eqx.Module):
         self.learnable = learnable
         if learnable:
             self.B = jax.random.normal(key, (input_dim, n_features)) * scale
+            self.B_fixed = None
         else:
-            self.B = (
+            self.B = None
+            self.B_fixed = Constant(
                 jax.random.normal(jax.random.PRNGKey(0), (input_dim, n_features))
                 * scale
             )
 
     def __call__(self, x, **kwargs):
-        B = self.B if self.learnable else jax.lax.stop_gradient(self.B)
+        B = self.B if self.learnable else jnp.asarray(self.B_fixed.value, x.dtype)
         x_proj = x @ B
         return jnp.concatenate(
             [jnp.sin(2 * jnp.pi * x_proj), jnp.cos(2 * jnp.pi * x_proj)], axis=-1

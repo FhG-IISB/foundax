@@ -49,6 +49,8 @@ from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
+
+from .common import Constant
 import equinox as eqx
 
 from .linear import Linear
@@ -117,7 +119,7 @@ def _make_bspline_grid(
 class BSplineBasis(eqx.Module):
     """B-spline basis evaluated on a fixed uniform grid."""
 
-    grid: jnp.ndarray
+    grid: Constant = eqx.field(static=True)  # knots, not trained
     in_features: int = eqx.field(static=True)
     grid_size: int = eqx.field(static=True)
     spline_order: int = eqx.field(static=True)
@@ -132,30 +134,34 @@ class BSplineBasis(eqx.Module):
         self.in_features = in_features
         self.grid_size = grid_size
         self.spline_order = spline_order
-        self.grid = _make_bspline_grid(in_features, grid_size, spline_order, grid_range)
+        self.grid = Constant(
+            _make_bspline_grid(in_features, grid_size, spline_order, grid_range)
+        )
 
     @property
     def size(self) -> int:
         return self.grid_size + self.spline_order
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        return _bspline_basis(x, self.grid, self.spline_order)
+        return _bspline_basis(
+            x, jnp.asarray(self.grid.value, x.dtype), self.spline_order
+        )
 
 
 class RBFBasis(eqx.Module):
     """Gaussian radial basis on a fixed uniform grid (FastKAN)."""
 
-    centers: jnp.ndarray  # (G,)
-    inv_h: jnp.ndarray  # scalar
+    centers: Constant = eqx.field(static=True)  # (G,), not trained
+    inv_h: Constant = eqx.field(static=True)  # scalar
     grid_size: int = eqx.field(static=True)
 
     def __init__(
         self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
     ):
         self.grid_size = grid_size
-        self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
+        self.centers = Constant(jnp.linspace(grid_range[0], grid_range[1], grid_size))
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
-        self.inv_h = jnp.asarray(1.0 / h)
+        self.inv_h = Constant(jnp.asarray(1.0 / h))
 
     @property
     def size(self) -> int:
@@ -163,7 +169,9 @@ class RBFBasis(eqx.Module):
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         # (..., I, G)
-        z = (x[..., None] - self.centers) * self.inv_h
+        z = (x[..., None] - jnp.asarray(self.centers.value, x.dtype)) * jnp.asarray(
+            self.inv_h.value, x.dtype
+        )
         return jnp.exp(-(z**2))
 
 
@@ -398,7 +406,7 @@ class ReLUKANBasis(eqx.Module):
     order: int = eqx.field(static=True)
     grid_a: jnp.ndarray
     grid_b: jnp.ndarray
-    norm: jnp.ndarray  # scalar
+    norm: Constant = eqx.field(static=True)  # scalar, not trained
 
     def __init__(
         self,
@@ -414,7 +422,7 @@ class ReLUKANBasis(eqx.Module):
         self.grid_a = centers - h
         self.grid_b = centers + h
         # Normalize so peak value of (relu(h)*relu(h))**order = 1.
-        self.norm = jnp.asarray(1.0 / (h ** (2 * order)))
+        self.norm = Constant(jnp.asarray(1.0 / (h ** (2 * order))))
 
     @property
     def size(self) -> int:
@@ -424,7 +432,7 @@ class ReLUKANBasis(eqx.Module):
         z = x[..., None]
         l = jax.nn.relu(z - self.grid_a)
         r = jax.nn.relu(self.grid_b - z)
-        return self.norm * (l * r) ** self.order
+        return jnp.asarray(self.norm.value, x.dtype) * (l * r) ** self.order
 
 
 class RationalBasis(eqx.Module):
@@ -458,23 +466,25 @@ class SincBasis(eqx.Module):
     """Sinc basis: ``phi_k(x) = sinc((x - c_k) / h)`` on a uniform grid."""
 
     grid_size: int = eqx.field(static=True)
-    centers: jnp.ndarray
-    inv_h: jnp.ndarray  # scalar
+    centers: Constant = eqx.field(static=True)  # (G,), not trained
+    inv_h: Constant = eqx.field(static=True)  # scalar
 
     def __init__(
         self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
     ):
         self.grid_size = grid_size
-        self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
+        self.centers = Constant(jnp.linspace(grid_range[0], grid_range[1], grid_size))
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
-        self.inv_h = jnp.asarray(1.0 / h)
+        self.inv_h = Constant(jnp.asarray(1.0 / h))
 
     @property
     def size(self) -> int:
         return self.grid_size
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        z = (x[..., None] - self.centers) * self.inv_h
+        z = (x[..., None] - jnp.asarray(self.centers.value, x.dtype)) * jnp.asarray(
+            self.inv_h.value, x.dtype
+        )
         return jnp.sinc(z)
 
 

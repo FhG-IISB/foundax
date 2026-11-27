@@ -91,32 +91,6 @@ PARAMS |= {
     "kan.spectral_block3d": KAN_NET | SPECTRAL_3D,
 }
 
-# Known failures, each removed by the commit that fixes it (strict: an unexpected pass fails too).
-XFAIL = {
-    "fno2d_positions": "grid",
-    "fno3d_positions": "grid",
-    "deeponet_fourier": "FourierFeatures.B",
-    "transformer": "sinusoidal pe",
-    "geofno_nodal": "modes",
-    "pcno": "modes",
-    "pit": "m_dist_*",
-    "gaot_S": "positions",
-    "gaot_M": "positions",
-    "gaot_L": "positions",
-    "sfno2d": "legendre, weights",
-    "kan.relu": "norm",
-}
-XFAIL |= {
-    "kan." + n: "grid"
-    for n in ("kan", "default", "efficient", "res_block", "conv1d", "conv2d", "conv3d")
-}
-XFAIL |= {"kan." + n: "centers, inv_h" for n in ("fast", "sinc", "attention_block")}
-XFAIL |= {
-    "kan." + n: "centers, inv_h"
-    for n in ("spectral_block1d", "spectral_block2d", "spectral_block3d")
-}
-XFAIL["kan.bsrbf"] = "grid, centers, inv_h"
-
 
 def _leaf_name(path):
     """The last attribute name on a pytree path (list and dict indices are skipped)."""
@@ -126,20 +100,7 @@ def _leaf_name(path):
     return jax.tree_util.keystr(path)
 
 
-def _marks(name):
-    if name not in XFAIL:
-        return []
-    return [
-        pytest.mark.xfail(
-            reason=f"B3: fixed array stored as a float leaf ({XFAIL[name]})",
-            strict=True,
-        )
-    ]
-
-
-@pytest.mark.parametrize(
-    "name", [pytest.param(n, id=n, marks=_marks(n)) for n in BUILDS]
-)
+@pytest.mark.parametrize("name", list(BUILDS))
 def test_float_leaves_are_parameters(name):
     model = BUILDS[name](KEY)
     leaves = jax.tree_util.tree_flatten_with_path(

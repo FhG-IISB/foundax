@@ -1,6 +1,8 @@
 # Originally adapted from https://github.com/voyager-jhk/JaxTransformer
 import jax
 import jax.numpy as jnp
+
+from .common import Constant
 import equinox as eqx
 from .linear import Linear
 
@@ -28,7 +30,7 @@ class PositionalEncoding(eqx.Module):
     ``(..., seq, embed_dim)`` inputs are supported.
     """
 
-    pe: jax.Array
+    pe: Constant = eqx.field(static=True)  # (max_len, embed_dim), not trained
     max_len: int = eqx.field(static=True)
     embed_dim: int = eqx.field(static=True)
 
@@ -42,11 +44,11 @@ class PositionalEncoding(eqx.Module):
         pe = jnp.zeros((max_len, embed_dim))
         pe = pe.at[:, 0::2].set(jnp.sin(position * div_term))
         pe = pe.at[:, 1::2].set(jnp.cos(position * div_term))
-        self.pe = pe
+        self.pe = Constant(pe)
 
     def __call__(self, inputs: jnp.ndarray, **kwargs) -> jnp.ndarray:
         seq_len = inputs.shape[-2]
-        return inputs + self.pe[:seq_len].astype(inputs.dtype)
+        return inputs + jnp.asarray(self.pe.value[:seq_len], inputs.dtype)
 
 
 class TransformerMLP(eqx.Module):

@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from typing import Callable, Optional, Sequence, Tuple
 from einops import rearrange
-from .common import make_norm
+from .common import Constant, make_norm
 
 
 def _spectral_conv(
@@ -513,7 +513,7 @@ class FNO2D(eqx.Module):
     P: Linear
     spectral_layers: SpectralLayers2d
     Q_layers: list
-    grid: Optional[jnp.ndarray]
+    grid: Optional[Constant] = eqx.field(static=True)  # positions, not trained
 
     def __init__(
         self,
@@ -565,7 +565,7 @@ class FNO2D(eqx.Module):
         ]
 
         if use_positions:
-            self.grid = create_grid(d_model[0], d_model[1])
+            self.grid = Constant(create_grid(d_model[0], d_model[1]))
         else:
             self.grid = None
 
@@ -596,7 +596,7 @@ class FNO2D(eqx.Module):
 
     def advance(self, x: jnp.ndarray) -> jnp.ndarray:
         if self.use_positions and self.grid is not None:
-            x = jnp.concatenate([x, self.grid], axis=-1)
+            x = jnp.concatenate([x, jnp.asarray(self.grid.value, x.dtype)], axis=-1)
         # vmap Linear over spatial dims (H, W)
         x = jax.vmap(jax.vmap(self.P))(x)
         x = self.spectral_layers(x)
@@ -805,7 +805,7 @@ class FNO3D(eqx.Module):
     P: Linear
     spectral_layers: SpectralLayers3d
     Q_layers: list
-    grid: Optional[jnp.ndarray]
+    grid: Optional[Constant] = eqx.field(static=True)  # positions, not trained
     dropout: Optional[eqx.nn.Dropout]
 
     def __init__(
@@ -861,7 +861,7 @@ class FNO3D(eqx.Module):
         ]
 
         if use_positions:
-            self.grid = create_grid_3d(d_model[0], d_model[1], d_model[2])
+            self.grid = Constant(create_grid_3d(d_model[0], d_model[1], d_model[2]))
         else:
             self.grid = None
 
@@ -897,7 +897,7 @@ class FNO3D(eqx.Module):
 
     def advance(self, x: jnp.ndarray, key=None) -> jnp.ndarray:
         if self.use_positions and self.grid is not None:
-            x = jnp.concatenate([x, self.grid], axis=-1)
+            x = jnp.concatenate([x, jnp.asarray(self.grid.value, x.dtype)], axis=-1)
         # vmap Linear over spatial dims (D, H, W)
         x = jax.vmap(jax.vmap(jax.vmap(self.P)))(x)
         x = self.spectral_layers(x)

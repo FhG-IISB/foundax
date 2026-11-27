@@ -20,10 +20,12 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `docs/core-models.md` summary table now includes a Reference column linking to the canonical paper for each family.
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
 - **Breaking:** `norm="batch"` raises `ValueError` in FNO1D/2D/3D and `fx.layers.SpectralBlock1d/2d/3d`: a model sees one unbatched sample, so there is no batch to normalise over. Use `"instance"` (per channel over the grid), `"layer"`, `"rms"` or `"group"`.
+- **Breaking (checkpoints):** fixed arrays are no longer pytree leaves: the FNO coordinate grid, KAN knots, centres and scale factors, the SFNO Legendre table and quadrature weights, PiT distance matrices, GAOT latent positions, PCNO and `geofno_nodal` modes, the Transformer's sinusoidal encoding and DeepONet's fixed Fourier features are static `Constant` fields. Checkpoints of these models saved with 0.2 load with `scripts/migrate_checkpoint.py`.
 
 ### Fixed
 - The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
 - FNO `norm="batch"` was vmapped over the grid points, so it normalised over no axes and every layer returned its bias; FNO1D `norm="instance"` built a LayerNorm. FNO and the spectral blocks now use `make_norm`; `"instance"` is an instance norm.
+- Fixed arrays stored as float leaves were trained and weight-decayed by any optimiser that takes the float leaves (`eqx.partition(model, eqx.is_inexact_array)`, as jNO does); `stop_gradient` in SFNO and DeepONet did not stop weight decay.
 
 ## [0.2.0] - 2026-05-31
 

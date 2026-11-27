@@ -1,6 +1,8 @@
 import jax
 import jax.numpy as jnp
 import equinox as eqx
+
+from foundax.architectures.common import Constant
 import numpy as np
 import pytest
 
@@ -156,8 +158,9 @@ def test_sht_geometry_buffers_are_frozen_under_grad():
 
     grads = eqx.filter_grad(loss)(model, x, y_t)
     sht = grads.blocks[0].spectral.sht
-    assert jnp.all(sht.legendre == 0.0)
-    assert jnp.all(sht.weights == 0.0)
+    # the sphere geometry is static data, not a leaf: it has no gradient and no optimiser sees it
+    assert isinstance(sht.legendre, Constant) and isinstance(sht.weights, Constant)
+    assert all(leaf.shape != sht.legendre.shape for leaf in jax.tree.leaves(grads))
 
 
 def test_longitude_shift_equivariance():
@@ -216,9 +219,9 @@ def test_jit_compatibility():
         return eqx.filter_grad(lambda m: jnp.mean((m(x) - y_t) ** 2))(m)
 
     g = step(model, jax.random.normal(KEY, (8, 16, 2)), y_t)
-    # JIT must honour stop_gradient on the geometry buffers.
-    assert jnp.all(g.blocks[0].spectral.sht.legendre == 0.0)
-    assert jnp.all(g.blocks[0].spectral.sht.weights == 0.0)
+    # under jit too, the geometry tables stay static data
+    assert isinstance(g.blocks[0].spectral.sht.legendre, Constant)
+    assert isinstance(g.blocks[0].spectral.sht.weights, Constant)
 
 
 def test_pipe_integration_with_spherical_block():

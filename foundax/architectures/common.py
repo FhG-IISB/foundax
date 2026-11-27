@@ -4,6 +4,7 @@ Centralises the normalisation layers (``make_norm``), activation lookup, Fourier
 NHWC convolution helpers so they aren't duplicated across architecture files.
 """
 
+import hashlib
 import math
 from typing import Callable, Optional, Sequence, Tuple
 
@@ -41,6 +42,68 @@ class BatchNorm(eqx.Module):
         var = jnp.var(x, axis=axes, keepdims=True)
         x = (x - mean) / jnp.sqrt(var + self.eps)
         return x * self.weight + self.bias
+
+
+# ---------------------------------------------------------------------------
+# Fixed arrays
+# ---------------------------------------------------------------------------
+
+
+class Constant:
+    """A fixed array held in a static field of an ``eqx.Module``, so it is not a pytree leaf.
+
+    Coordinate grids, knots, quadrature tables and sinusoidal encodings are fixed by the configuration. Stored as
+    float leaves they would be trained: training code takes every float leaf as a parameter
+    (``eqx.partition(model, eqx.is_inexact_array)``), and ``jax.lax.stop_gradient`` in the forward pass does not
+    stop weight decay. Declare the field ``eqx.field(static=True)`` and read the array as ``.value`` (a read-only
+    NumPy array); under ``jit`` it becomes a constant of the compiled program.
+
+    The hash is computed once from the contents, so a model with constants can be a static argument, and two
+    models built with the same configuration compare equal.
+    """
+
+    __slots__ = ("value", "_hash")
+
+    def __init__(self, value):
+        value = np.array(value)
+        value.flags.writeable = False
+        self.value = value
+        digest = hashlib.blake2b(value.tobytes(), digest_size=16).digest()
+        self._hash = hash((value.shape, value.dtype.str, digest))
+
+    @property
+    def shape(self):
+        return self.value.shape
+
+    @property
+    def dtype(self):
+        return self.value.dtype
+
+    def __hash__(self):
+        return self._hash
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Constant):
+            return NotImplemented
+        return (
+            self._hash == other._hash
+            and self.value.shape == other.value.shape
+            and self.value.dtype == other.value.dtype
+            and np.array_equal(
+                self.value, other.value, equal_nan=self.value.dtype.kind in "fc"
+            )
+        )
+
+    def __getstate__(self):
+        return self.value
+
+    def __setstate__(self, value):
+        self.__init__(value)
+
+    def __repr__(self):
+        return f"Constant(shape={self.value.shape}, dtype={self.value.dtype})"
 
 
 # ---------------------------------------------------------------------------

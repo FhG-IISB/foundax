@@ -8,6 +8,7 @@ import equinox as eqx
 from .linear import Linear
 from .common import get_activation as _get_act
 from .common import compute_Fourier_modes as compute_Fourier_modes_helper
+from .common import Constant
 
 
 def scaled_sigmoid(x: jnp.ndarray, min_val: float, max_val: float) -> jnp.ndarray:
@@ -224,7 +225,9 @@ class PCNO(eqx.Module):
     """
 
     ndims: int = eqx.field(static=True)
-    modes: jnp.ndarray  # float[nmodes, ndims, nmeasures] — non-trainable
+    modes: Constant = eqx.field(
+        static=True
+    )  # float[nmodes, ndims, nmeasures], not trained
     nmeasures: int = eqx.field(static=True)
     layers: Sequence[int] = eqx.field(static=True)
     fc_dim: int = eqx.field(static=True)
@@ -262,7 +265,7 @@ class PCNO(eqx.Module):
         key,
     ):
         self.ndims = ndims
-        self.modes = modes
+        self.modes = Constant(modes)
         self.nmeasures = nmeasures
         self.layers = list(layers)
         self.fc_dim = fc_dim
@@ -359,7 +362,7 @@ class PCNO(eqx.Module):
         inv_L_scale = scaled_sigmoid(
             self.inv_L_scale_latent, self.inv_L_scale_min, self.inv_L_scale_max
         )
-        scaled_modes = self.modes * inv_L_scale
+        scaled_modes = self.modes.value * inv_L_scale
 
         # Compute Fourier bases
         bases_c, bases_s, bases_0 = compute_Fourier_bases(nodes, scaled_modes)

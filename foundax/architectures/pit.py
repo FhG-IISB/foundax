@@ -3,6 +3,8 @@
 from typing import List, Sequence, Tuple
 import jax
 import jax.numpy as jnp
+
+from .common import Constant
 import equinox as eqx
 from .linear import Linear
 
@@ -201,7 +203,7 @@ class PiT(eqx.Module):
     up: MultiHeadPosAtt
     de_fc1: Linear
     de_fc2: Linear
-    m_dists: Sequence[jnp.ndarray]
+    m_dists: Tuple[Constant, ...] = eqx.field(static=True)  # not trained
     in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
     hid_channels: int = eqx.field(static=True)
@@ -225,7 +227,7 @@ class PiT(eqx.Module):
         self.hid_channels = hid_channels
         self.n_head = n_head
         self.localities = tuple(localities)
-        self.m_dists = m_dists
+        self.m_dists = tuple(Constant(m) for m in m_dists)
         self.n_blocks = len(localities) - 2
 
         en_locality = localities[0]
@@ -310,12 +312,12 @@ class PiT(eqx.Module):
         x = jax.nn.gelu(x)
 
         # Downsampling attention
-        x = self.down(self.m_dists[0], x)
+        x = self.down(self.m_dists[0].value, x)
 
         # ============ Processor ============
         for i in range(self.n_blocks):
             # Position attention
-            pa_out = self.PA_blocks[i](self.m_dists[i + 1], x)
+            pa_out = self.PA_blocks[i](self.m_dists[i + 1].value, x)
 
             # MLP
             mlp_out = self.MLP_blocks[i](pa_out)
@@ -328,7 +330,7 @@ class PiT(eqx.Module):
 
         # ============ Decoder ============
         # Upsampling attention
-        x = self.up(self.m_dists[-1], x)
+        x = self.up(self.m_dists[-1].value, x)
 
         x = jax.vmap(jax.vmap(self.de_fc1))(x)
         x = jax.nn.gelu(x)
@@ -355,9 +357,9 @@ class PiTWithCoords(eqx.Module):
     up: MultiHeadPosAtt
     de_fc1: Linear
     de_fc2: Linear
-    m_dist_down: jnp.ndarray
-    m_dist_proc: jnp.ndarray
-    m_dist_up: jnp.ndarray
+    m_dist_down: Constant = eqx.field(static=True)  # not trained
+    m_dist_proc: Constant = eqx.field(static=True)
+    m_dist_up: Constant = eqx.field(static=True)
     in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
     hid_channels: int = eqx.field(static=True)
@@ -397,16 +399,16 @@ class PiTWithCoords(eqx.Module):
 
         # Precompute distance matrices for regular grids
         # Encoder: input -> latent
-        self.m_dist_down = pairwise_dist(
-            latent_res[0], latent_res[1], input_res[0], input_res[1]
+        self.m_dist_down = Constant(
+            pairwise_dist(latent_res[0], latent_res[1], input_res[0], input_res[1])
         )
         # Processor: latent -> latent
-        self.m_dist_proc = pairwise_dist(
-            latent_res[0], latent_res[1], latent_res[0], latent_res[1]
+        self.m_dist_proc = Constant(
+            pairwise_dist(latent_res[0], latent_res[1], latent_res[0], latent_res[1])
         )
         # Decoder: latent -> output
-        self.m_dist_up = pairwise_dist(
-            output_res[0], output_res[1], latent_res[0], latent_res[1]
+        self.m_dist_up = Constant(
+            pairwise_dist(output_res[0], output_res[1], latent_res[0], latent_res[1])
         )
 
         # Split keys for all sub-modules
@@ -485,13 +487,13 @@ class PiTWithCoords(eqx.Module):
         # Broadcast distance matrices for multi-head attention
         # Shape: [n_head, N_query, N_key]
         m_dist_down = jnp.broadcast_to(
-            self.m_dist_down[None, ...], (self.n_head,) + self.m_dist_down.shape
+            self.m_dist_down.value[None, ...], (self.n_head,) + self.m_dist_down.shape
         )
         m_dist_proc = jnp.broadcast_to(
-            self.m_dist_proc[None, ...], (self.n_head,) + self.m_dist_proc.shape
+            self.m_dist_proc.value[None, ...], (self.n_head,) + self.m_dist_proc.shape
         )
         m_dist_up = jnp.broadcast_to(
-            self.m_dist_up[None, ...], (self.n_head,) + self.m_dist_up.shape
+            self.m_dist_up.value[None, ...], (self.n_head,) + self.m_dist_up.shape
         )
 
         # ============ Encoder ============
