@@ -1074,18 +1074,37 @@ class CrossAttention(eqx.Module):
 
 
 class AttentionCombination(eqx.Module):
-    """Cross-attention based combination."""
+    """Cross-attention combination: each query point attends over tokens of the branch output.
+
+    The branch output ``(p,)`` is projected and split into ``n_tokens`` tokens of width ``d_model``; the projected
+    trunk output of each query point attends over them, with a residual from the trunk projection, then a linear
+    map gives the outputs. So the result depends on the input function through the tokens and on the query point
+    through the query and the residual.
+    """
 
     branch_proj: Linear
     trunk_proj: Linear
     cross_attn: CrossAttention
     output_proj: Linear
+    n_tokens: int = eqx.field(static=True)
+    d_model: int = eqx.field(static=True)
 
     def __init__(
-        self, p_branch, p_trunk, d_model=128, n_heads=4, output_dim=1, *, key, **kwargs
+        self,
+        p_branch,
+        p_trunk,
+        d_model=128,
+        n_heads=4,
+        output_dim=1,
+        n_tokens=8,
+        *,
+        key,
+        **kwargs,
     ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
-        self.branch_proj = Linear(p_branch, d_model, key=k1)
+        self.n_tokens = n_tokens
+        self.d_model = d_model
+        self.branch_proj = Linear(p_branch, n_tokens * d_model, key=k1)
         self.trunk_proj = Linear(p_trunk, d_model, key=k2)
         self.cross_attn = CrossAttention(
             d_model, d_model, d_model, n_heads=n_heads, key=k3
@@ -1097,10 +1116,10 @@ class AttentionCombination(eqx.Module):
         if single_point:
             trunk_out = trunk_out[jnp.newaxis, :]
 
-        branch_proj = self.branch_proj(branch_out)[jnp.newaxis, :]
-        trunk_proj = jax.vmap(self.trunk_proj)(trunk_out)
+        tokens = self.branch_proj(branch_out).reshape(self.n_tokens, self.d_model)
+        query = jax.vmap(self.trunk_proj)(trunk_out)  # (N, d_model)
 
-        x = self.cross_attn(trunk_proj, branch_proj)
+        x = query + self.cross_attn(query, tokens)
         x = jax.vmap(self.output_proj)(x)
 
         if single_point:
@@ -1165,6 +1184,7 @@ class DeepONet(eqx.Module):
         combination_mode="concat",
         combination_d_model=128,
         combination_n_heads=4,
+        combination_n_tokens=8,
         activation=jax.nn.gelu,
         norm=None,
         dropout_rate=0.0,
@@ -1293,6 +1313,7 @@ class DeepONet(eqx.Module):
                 d_model=combination_d_model,
                 n_heads=combination_n_heads,
                 output_dim=n_outputs,
+                n_tokens=combination_n_tokens,
                 key=k3,
             )
         else:

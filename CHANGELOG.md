@@ -26,6 +26,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - The foundation-model shortcuts `fx.poseidonT/B/L`, `fx.morph_*`, `fx.mpp_*`, `fx.pdeformer2_*`, `fx.dpot_*` (and `foundax.nn.walrus` / `bcat`) raised `TypeError`: they were copies passing arguments the namespace factories do not take. They are now the namespace factories themselves (`fx.poseidonT is fx.poseidon.T`), with their signatures and defaults.
 - FNO `norm="batch"` was vmapped over the grid points, so it normalised over no axes and every layer returned its bias; FNO1D `norm="instance"` built a LayerNorm. FNO and the spectral blocks now use `make_norm`; `"instance"` is an instance norm.
 - Fixed arrays stored as float leaves were trained and weight-decayed by any optimiser that takes the float leaves (`eqx.partition(model, eqx.is_inexact_array)`, as jNO does); `stop_gradient` in SFNO and DeepONet did not stop weight decay.
+- DeepONet `combination_type="attention"` returned the same output at every query point (one key token, so the softmax was 1, and no residual). The branch output is now split into `n_tokens` tokens that each query point attends over, with a residual from the trunk; the combiner's checkpoint layout changes.
 
 ## [0.2.0] - 2026-05-31
 

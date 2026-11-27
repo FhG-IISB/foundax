@@ -514,6 +514,7 @@ def deeponet(
     hidden_dim: int = 256,
     n_layers: int = 4,
     n_heads: int = 8,
+    n_tokens: int = 8,
     coord_embedding: Optional[Literal["fourier", "positional"]] = None,
     coord_embedding_dim: int = 64,
     coord_embedding_scale: float = 1.0,
@@ -545,6 +546,8 @@ def deeponet(
         n_layers: Depth of branch and trunk sub-networks.
         n_heads: Number of attention heads (for transformer branch or
             attention combiner).
+        n_tokens: Number of tokens the branch output is split into for the
+            attention combiner; each query point attends over them.
         coord_embedding: Optional coordinate encoding
             (``"fourier"``, ``"positional"``, ``None``).
         coord_embedding_dim: Dimension of the coordinate embedding.
@@ -583,6 +586,7 @@ def deeponet(
         combination_hidden_dims=(hidden_dim, hidden_dim // 2),
         combination_d_model=hidden_dim,
         combination_n_heads=n_heads,
+        combination_n_tokens=n_tokens,
         activation=activation,
         norm=norm,
         dropout_rate=dropout_rate,
