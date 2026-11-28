@@ -19,6 +19,9 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `docs/core-models.md` summary table now includes a Reference column linking to the canonical paper for each family.
 - `pyproject.toml` adds `authors`, `classifiers`, `[project.urls]`, and a `py.typed` package-data entry.
 
+### Fixed
+- The package metadata (`pyproject.toml`) declared the MIT license; foundax is EPL-2.0, as `LICENSE` and the README state.
+
 ## [0.2.0] - 2026-05-31
 
 ### Added
