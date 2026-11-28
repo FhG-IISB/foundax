@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 import equinox as eqx
 from .linear import Linear
-from .common import BatchNorm
+from .common import make_norm
 
 
 class MLP(eqx.Module):
@@ -62,14 +62,15 @@ class MLP(eqx.Module):
         )
 
         # Normalization layers
-        self.norm_layers = []
-        for w in layer_widths:
-            if batch_norm:
-                self.norm_layers.append(BatchNorm(w))
-            elif layer_norm:
-                self.norm_layers.append(eqx.nn.LayerNorm(w))
-            else:
-                self.norm_layers.append(None)
+        if batch_norm:
+            raise ValueError(
+                "batch_norm=True is not supported: an MLP sees one sample (batch with jax.vmap), so there is "
+                "no batch to normalise over; use layer_norm=True"
+            )
+        # over the features of each point, so (D,) and (N, D) inputs both work
+        self.norm_layers = [
+            make_norm("layer" if layer_norm else None, w) for w in layer_widths
+        ]
 
         self.activation = activation
         self.output_activation = output_activation

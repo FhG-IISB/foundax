@@ -129,4 +129,4 @@ def test_nodal_variant_still_available():
         _points(n),
         jnp.full((n, 1), 1.0 / n),
     )
-    assert out.shape == (n,)
+    assert out.shape == (n, 1)

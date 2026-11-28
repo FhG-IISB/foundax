@@ -64,7 +64,7 @@ def test_sinc_basis_matches_closed_form():
     basis = SincBasis(grid_size=8, grid_range=(-2.0, 2.0))
     x = jnp.linspace(-1.5, 1.5, 20).reshape(-1, 1)
     phi = np.asarray(basis(x))[:, 0, :]  # (20, 8)
-    centers = np.asarray(basis.centers)
+    centers = basis.centers.value
     h = (2.0 - (-2.0)) / (8 - 1)
     ref = np.sinc((np.asarray(x)[:, 0:1] - centers) / h)
     assert np.allclose(phi, ref, atol=1e-6)
@@ -73,7 +73,7 @@ def test_sinc_basis_matches_closed_form():
 def test_sinc_basis_kronecker_at_centers():
     """phi_k evaluated at center c_k = 1, at other centers = 0 (Kronecker)."""
     basis = SincBasis(grid_size=6, grid_range=(-1.0, 1.0))
-    cs = basis.centers.reshape(-1, 1)
+    cs = jnp.asarray(basis.centers.value).reshape(-1, 1)
     phi = basis(cs)[:, 0, :]  # (6, 6), phi[i, k] = sinc((c_i - c_k) / h)
     assert jnp.allclose(jnp.diag(phi), 1.0, atol=1e-6)
     off_diag = phi - jnp.eye(6)

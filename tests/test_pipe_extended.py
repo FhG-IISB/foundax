@@ -514,21 +514,21 @@ class TestPipeForward:
 
 
 class TestSpectralBlockVariants:
-    @pytest.mark.parametrize("norm", [None, "layer", "batch"])
+    @pytest.mark.parametrize("norm", [None, "layer", "rms", "instance", "group"])
     def test_spectral_block_1d_norms(self, norm):
         blk = fl.SpectralBlock1d(4, 8, n_modes=4, norm=norm, key=ks(1)[0])
         y = blk(jnp.ones((32, 4)))
         assert y.shape == (32, 8)
         assert jnp.all(jnp.isfinite(y))
 
-    @pytest.mark.parametrize("norm", [None, "layer", "batch"])
+    @pytest.mark.parametrize("norm", [None, "layer", "rms", "instance", "group"])
     def test_spectral_block_2d_norms(self, norm):
         blk = fl.SpectralBlock2d(4, 8, n_modes=4, norm=norm, key=ks(1)[0])
         y = blk(jnp.ones((12, 12, 4)))
         assert y.shape == (12, 12, 8)
         assert jnp.all(jnp.isfinite(y))
 
-    @pytest.mark.parametrize("norm", [None, "layer", "batch"])
+    @pytest.mark.parametrize("norm", [None, "layer", "rms", "instance", "group"])
     def test_spectral_block_3d_norms(self, norm):
         blk = fl.SpectralBlock3d(4, 8, n_modes=4, norm=norm, key=ks(1)[0])
         y = blk(jnp.ones((6, 6, 6, 4)))

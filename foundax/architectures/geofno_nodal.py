@@ -11,6 +11,7 @@ import jax
 import jax.numpy as jnp
 import equinox as eqx
 from .linear import Linear
+from .common import Constant
 from .common import get_activation as _get_act
 
 
@@ -142,7 +143,7 @@ class GeoFNONodal(eqx.Module):
     """
 
     ndims: int = eqx.field(static=True)
-    modes: jnp.ndarray  # float[nmodes, ndims] — non-trainable
+    modes: Constant = eqx.field(static=True)  # float[nmodes, ndims], not trained
     layers: Sequence[int] = eqx.field(static=True)
     fc_dim: int = eqx.field(static=True)
     in_dim: int = eqx.field(static=True)
@@ -170,7 +171,7 @@ class GeoFNONodal(eqx.Module):
         key,
     ):
         self.ndims = ndims
-        self.modes = modes
+        self.modes = Constant(modes)
         self.layers = list(layers)
         self.fc_dim = fc_dim
         self.in_dim = in_dim
@@ -230,14 +231,14 @@ class GeoFNONodal(eqx.Module):
         Forward pass.
 
         Args:
-            x: float[batch_size, max_nnodes, in_dim] - Input data
-            node_mask: float[batch_size, max_nnodes, 1] - 1 for valid node, 0 for padding
-            nodes: float[batch_size, max_nnodes, ndims] - Node coordinates
-            node_weights: float[batch_size, max_nnodes, 1] - Integration weights (rho(x)dx)
+            x: float[max_nnodes, in_dim] - Input data (one sample; batch with jax.vmap)
+            node_mask: float[max_nnodes, 1] - 1 for valid node, 0 for padding
+            nodes: float[max_nnodes, ndims] - Node coordinates
+            node_weights: float[max_nnodes, 1] - Integration weights (rho(x)dx)
             training: Whether in training mode
 
         Returns:
-            output: float[batch_size, max_nnodes, out_dim]
+            output: float[max_nnodes, out_dim]
         """
         x = x[None, ...]
         node_mask = node_mask[None, ...]
@@ -247,7 +248,9 @@ class GeoFNONodal(eqx.Module):
         length = len(self.layers) - 1
 
         # Compute Fourier bases
-        bases_c, bases_s, bases_0 = compute_Fourier_bases(nodes, self.modes, node_mask)
+        bases_c, bases_s, bases_0 = compute_Fourier_bases(
+            nodes, self.modes.value, node_mask
+        )
 
         # Weight bases by integration weights
         wbases_c = bases_c * node_weights
@@ -290,4 +293,4 @@ class GeoFNONodal(eqx.Module):
 
         # Apply mask to output
         masked = x * node_mask
-        return jnp.squeeze(masked)
+        return masked[0]  # the batch axis added above

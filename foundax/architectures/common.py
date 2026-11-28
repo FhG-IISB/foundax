@@ -1,9 +1,11 @@
 """Shared building blocks for architecture modules.
 
-Centralises BatchNorm, activation lookup, Fourier-mode computation, and
+Centralises the normalisation layers (``make_norm``), activation lookup, Fourier-mode computation, and
 NHWC convolution helpers so they aren't duplicated across architecture files.
 """
 
+import hashlib
+import math
 from typing import Callable, Optional, Sequence, Tuple
 
 import jax
@@ -43,21 +45,176 @@ class BatchNorm(eqx.Module):
 
 
 # ---------------------------------------------------------------------------
+# Fixed arrays
+# ---------------------------------------------------------------------------
+
+
+class Constant:
+    """A fixed array held in a static field of an ``eqx.Module``, so it is not a pytree leaf.
+
+    Coordinate grids, knots, quadrature tables and sinusoidal encodings are fixed by the configuration. Stored as
+    float leaves they would be trained: training code takes every float leaf as a parameter
+    (``eqx.partition(model, eqx.is_inexact_array)``), and ``jax.lax.stop_gradient`` in the forward pass does not
+    stop weight decay. Declare the field ``eqx.field(static=True)`` and read the array as ``.value`` (a read-only
+    NumPy array); under ``jit`` it becomes a constant of the compiled program.
+
+    The hash is computed once from the contents, so a model with constants can be a static argument, and two
+    models built with the same configuration compare equal.
+    """
+
+    __slots__ = ("value", "_hash")
+
+    def __init__(self, value):
+        value = np.array(value)
+        value.flags.writeable = False
+        self.value = value
+        digest = hashlib.blake2b(value.tobytes(), digest_size=16).digest()
+        self._hash = hash((value.shape, value.dtype.str, digest))
+
+    @property
+    def shape(self):
+        return self.value.shape
+
+    @property
+    def dtype(self):
+        return self.value.dtype
+
+    def __hash__(self):
+        return self._hash
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Constant):
+            return NotImplemented
+        return (
+            self._hash == other._hash
+            and self.value.shape == other.value.shape
+            and self.value.dtype == other.value.dtype
+            and np.array_equal(
+                self.value, other.value, equal_nan=self.value.dtype.kind in "fc"
+            )
+        )
+
+    def __getstate__(self):
+        return self.value
+
+    def __setstate__(self, value):
+        self.__init__(value)
+
+    def __repr__(self):
+        return f"Constant(shape={self.value.shape}, dtype={self.value.dtype})"
+
+
+# ---------------------------------------------------------------------------
+# Normalisation of one channel-last sample
+# ---------------------------------------------------------------------------
+
+NORM_KINDS = ("layer", "rms", "instance", "group")
+
+
+class Norm(eqx.Module):
+    """Normalisation of one channel-last field ``(..., C)`` of any spatial rank, with a per-channel affine map.
+
+    ``kind`` chooses the axes the statistics are taken over:
+
+    - ``"layer"``: the channels, at every point;
+    - ``"rms"``: the channels, at every point, scaled by the root mean square only (no centring, no bias);
+    - ``"instance"``: the grid, per channel;
+    - ``"group"``: the grid and the channels of each of ``groups`` channel groups.
+
+    Build it with :func:`make_norm`.
+    """
+
+    weight: jax.Array
+    bias: Optional[jax.Array]
+    kind: str = eqx.field(static=True)
+    groups: int = eqx.field(static=True)
+    eps: float = eqx.field(static=True)
+
+    def __init__(self, kind: str, channels: int, groups: int = 1, eps: float = 1e-5):
+        self.kind = kind
+        self.groups = groups
+        self.eps = eps
+        self.weight = jnp.ones(channels)
+        self.bias = None if kind == "rms" else jnp.zeros(channels)
+
+    def __call__(self, x: jax.Array, **kwargs) -> jax.Array:
+        if self.kind == "rms":
+            return (
+                x
+                * jax.lax.rsqrt(jnp.mean(x**2, axis=-1, keepdims=True) + self.eps)
+                * self.weight
+            )
+        if self.kind == "layer":
+            axes, y = (-1,), x
+        elif self.kind == "instance":
+            axes, y = tuple(range(x.ndim - 1)), x
+        else:  # group: (..., C) -> (..., G, C/G), statistics over the grid and the last axis
+            y = x.reshape(x.shape[:-1] + (self.groups, x.shape[-1] // self.groups))
+            axes = tuple(range(x.ndim - 1)) + (-1,)
+        mean = jnp.mean(y, axis=axes, keepdims=True)
+        var = jnp.var(y, axis=axes, keepdims=True)
+        y = ((y - mean) * jax.lax.rsqrt(var + self.eps)).reshape(x.shape)
+        return y * self.weight + self.bias
+
+
+def make_norm(
+    kind: Optional[str],
+    channels: int,
+    *,
+    groups: Optional[int] = None,
+    eps: float = 1e-5,
+):
+    """The normalisation layer ``kind`` for one channel-last sample with ``channels`` channels.
+
+    Args:
+        kind: ``None`` or ``"none"`` (no layer: returns ``None``), ``"layer"``, ``"rms"``, ``"instance"`` or ``"group"``
+            (see :class:`Norm`).
+        channels: Number of channels, the last axis of the input.
+        groups: Channel groups for ``"group"``; must divide ``channels``. Default: ``gcd(32, channels)``.
+        eps: Added to the variance.
+
+    Raises:
+        ValueError: for ``"batch"``: a foundax model sees one unbatched sample, so there is no batch to take
+            statistics over; and for unknown kinds.
+    """
+    if kind is None or kind == "none":
+        return None
+    if kind == "batch":
+        raise ValueError(
+            'norm="batch" is not supported: foundax models take one unbatched sample (batch with jax.vmap), '
+            'so there is no batch to normalise over. Use "instance" for per-channel statistics over the grid, '
+            'or "layer", "rms" or "group".'
+        )
+    if kind not in NORM_KINDS:
+        raise ValueError(f"unknown norm {kind!r}; expected None or one of {NORM_KINDS}")
+    if kind == "group":
+        groups = math.gcd(32, channels) if groups is None else groups
+        if channels % groups:
+            raise ValueError(f"groups={groups} does not divide channels={channels}")
+    return Norm(kind, channels, groups=groups or 1, eps=eps)
+
+
+# ---------------------------------------------------------------------------
 # Activation lookup
 # ---------------------------------------------------------------------------
 
 
-def get_activation(name: str) -> Optional[Callable]:
-    """Return a JAX activation function by name.
+def get_activation(name) -> Optional[Callable]:
+    """Return a JAX activation function by name; a callable (or ``None``) is returned as it is.
 
-    Supported: ``gelu``, ``relu``, ``tanh``, ``elu``, ``leaky_relu``,
+    Supported: ``gelu``, ``relu``, ``tanh``, ``elu``, ``celu``, ``leaky_relu``,
     ``sigmoid``, ``silu`` / ``swish``, ``none``.
     """
+    if name is None or callable(name):
+        return name
     activations = {
         "gelu": jax.nn.gelu,
         "relu": jax.nn.relu,
         "tanh": jnp.tanh,
         "elu": jax.nn.elu,
+        "celu": jax.nn.celu,
         "leaky_relu": jax.nn.leaky_relu,
         "sigmoid": jax.nn.sigmoid,
         "silu": jax.nn.silu,
@@ -244,3 +401,38 @@ class ConvTranspose2d(eqx.Module):
         if was_unbatched:
             y = y[0]
         return y
+
+
+# ---------------------------------------------------------------------------
+# Inverse real FFT of a mixed spectrum
+# ---------------------------------------------------------------------------
+
+
+def irfftn_hermitian(
+    x: jax.Array, s: Sequence[int], axes: Sequence[int], norm: Optional[str] = None
+) -> jax.Array:
+    """``jnp.fft.irfftn`` of a half spectrum that need not be Hermitian, with the CPU (pocketfft) result.
+
+    After mode mixing, the entries of the half axis (``axes[-1]``) at index 0 (and at the Nyquist index for
+    an even size) need not be conjugate-symmetric over the other axes. The inverse of such input is not
+    defined: pocketfft (CPU) keeps the real part of the result, while cuFFT's power-of-2 kernels differ (1e-1
+    for the old FNO at n=128, 1e-3 for DPOT's AFNO). Projecting those entries onto their Hermitian part first
+    gives exactly the CPU result on every backend.
+    """
+    axes = [a % x.ndim for a in axes]
+    half, full = axes[-1], axes[:-1]
+    n_half = s[-1]
+    for j in [0] + (
+        [n_half // 2] if n_half % 2 == 0 and n_half // 2 < x.shape[half] else []
+    ):
+        col = jnp.take(x, j, axis=half)
+        # col[-k]: flip and roll by one on every full axis (the axes shift down once ``half`` is taken out)
+        flipped = col
+        for a in full:
+            a_col = a - (a > half)
+            flipped = jnp.roll(jnp.flip(flipped, a_col), 1, a_col)
+        sym = 0.5 * (col + jnp.conj(flipped))
+        index = [slice(None)] * x.ndim
+        index[half] = j
+        x = x.at[tuple(index)].set(sym)
+    return jnp.fft.irfftn(x, s=s, axes=axes, norm=norm)

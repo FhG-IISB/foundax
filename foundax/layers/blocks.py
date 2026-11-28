@@ -16,22 +16,14 @@ import equinox as eqx
 
 from foundax.architectures.fno import SpectralConv1d, SpectralConv2d, SpectralConv3d
 from foundax.architectures.linear import Linear
-from foundax.architectures.common import BatchNorm
-
-
-def _make_norm(norm: Optional[str], channels: int) -> Optional[eqx.Module]:
-    if norm == "layer":
-        return eqx.nn.LayerNorm(channels)
-    if norm == "batch":
-        return BatchNorm(channels)
-    return None
+from foundax.architectures.common import make_norm
 
 
 class SpectralBlock1d(eqx.Module):
     """Single FNO-style spectral layer for 1-D fields: ``(W, C) -> (W, C')``.
 
     Computes ``spectral_conv(x) + linear_skip(x)``, applies optional
-    normalisation pointwise over W, then the activation.
+    normalisation (``norm``: see ``make_norm``), then the activation.
     """
 
     in_channels: int = eqx.field(static=True)
@@ -66,14 +58,14 @@ class SpectralBlock1d(eqx.Module):
             in_channels, out_channels, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer = _make_norm(norm, out_channels)
+        self.norm_layer = make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
         x = x1 + x2
         if self.norm_layer is not None:
-            x = jax.vmap(self.norm_layer)(x)
+            x = self.norm_layer(x)
         return self.activation(x)
 
 
@@ -81,7 +73,7 @@ class SpectralBlock2d(eqx.Module):
     """Single FNO-style spectral layer for 2-D fields: ``(H, W, C) -> (H, W, C')``.
 
     Computes ``spectral_conv(x) + linear_skip(x)``, applies optional
-    normalisation pointwise over H×W, then the activation.
+    normalisation (``norm``: see ``make_norm``), then the activation.
 
     Uses the same ``n_modes`` for both spatial axes; for asymmetric modes use
     ``SpectralConv2d`` directly.
@@ -119,14 +111,14 @@ class SpectralBlock2d(eqx.Module):
             in_channels, out_channels, n_modes, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer = _make_norm(norm, out_channels)
+        self.norm_layer = make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
         x = x1 + x2
         if self.norm_layer is not None:
-            x = jax.vmap(jax.vmap(self.norm_layer))(x)
+            x = self.norm_layer(x)
         return self.activation(x)
 
 
@@ -169,12 +161,12 @@ class SpectralBlock3d(eqx.Module):
             in_channels, out_channels, n_modes, n_modes, n_modes, linear_conv, key=k1
         )
         self.linear_skip = Linear(in_channels, out_channels, key=k2)
-        self.norm_layer = _make_norm(norm, out_channels)
+        self.norm_layer = make_norm(norm, out_channels)
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         x1 = self.spectral_conv(x)
         x2 = self.linear_skip(x)
         x = x1 + x2
         if self.norm_layer is not None:
-            x = jax.vmap(jax.vmap(jax.vmap(self.norm_layer)))(x)
+            x = self.norm_layer(x)
         return self.activation(x)

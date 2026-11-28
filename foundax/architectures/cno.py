@@ -429,12 +429,14 @@ class CNO2D(eqx.Module):
         Forward pass of CNO2d.
 
         Args:
-            x: Input tensor of shape (batch, height, width, in_dim) - NHWC format
+            x: One sample (height, width, in_dim), channel-last; a batch
+                (batch, height, width, in_dim) also works.
 
         Returns:
-            Output tensor of shape (batch, height, width, out_dim) - NHWC format
+            (height, width, out_dim), or (batch, height, width, out_dim) for a batch.
         """
-        if x.ndim == 3:
+        unbatched = x.ndim == 3
+        if unbatched:
             x = x[None, ...]
 
         # Lift
@@ -468,4 +470,4 @@ class CNO2D(eqx.Module):
         )
         x = self.project(x)
 
-        return x
+        return x[0] if unbatched else x

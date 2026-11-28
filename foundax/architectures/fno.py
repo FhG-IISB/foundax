@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from typing import Callable, Optional, Sequence, Tuple
 from einops import rearrange
-from .common import BatchNorm
+from .common import Constant, make_norm
 
 
 def _spectral_conv(
@@ -222,15 +222,11 @@ class SpectralLayers1d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        # Setup normalization layers
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "instance":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x, **kwargs):  # (grid_points, channels)
         for i, (conv, w) in enumerate(zip(self.layers_conv, self.layers_w)):
@@ -240,10 +236,8 @@ class SpectralLayers1d(eqx.Module):
             x2 = rearrange(x2, "c w -> w c")
             x = x1 + x2
 
-            # Apply normalization if specified
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dim (W,)
-                x = jax.vmap(self.norm_layers[i])(x)
+                x = self.norm_layers[i](x)
 
             # Apply activation
             x = self.activation(x)
@@ -484,12 +478,11 @@ class SpectralLayers2d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         for i, (conv, w) in enumerate(zip(self.conv_layers, self.w_layers)):
@@ -499,8 +492,7 @@ class SpectralLayers2d(eqx.Module):
             x2 = rearrange(x2, "c h w -> h w c")
             x = x1 + x2
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dims (H, W)
-                x = jax.vmap(jax.vmap(self.norm_layers[i]))(x)
+                x = self.norm_layers[i](x)
             x = self.activation(x)
         return x
 
@@ -521,7 +513,7 @@ class FNO2D(eqx.Module):
     P: Linear
     spectral_layers: SpectralLayers2d
     Q_layers: list
-    grid: Optional[jnp.ndarray]
+    grid: Optional[Constant] = eqx.field(static=True)  # positions, not trained
 
     def __init__(
         self,
@@ -553,7 +545,10 @@ class FNO2D(eqx.Module):
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
 
-        self.P = Linear(in_features, hidden_channels, key=k1)
+        n_pos = 2  # coordinate channels appended when use_positions
+        self.P = Linear(
+            in_features + (n_pos if use_positions else 0), hidden_channels, key=k1
+        )
 
         self.spectral_layers = SpectralLayers2d(
             n_channels=hidden_channels,
@@ -573,7 +568,7 @@ class FNO2D(eqx.Module):
         ]
 
         if use_positions:
-            self.grid = create_grid(d_model[0], d_model[1])
+            self.grid = Constant(create_grid(d_model[0], d_model[1]))
         else:
             self.grid = None
 
@@ -604,7 +599,7 @@ class FNO2D(eqx.Module):
 
     def advance(self, x: jnp.ndarray) -> jnp.ndarray:
         if self.use_positions and self.grid is not None:
-            x = jnp.concatenate([x, self.grid], axis=-1)
+            x = jnp.concatenate([x, jnp.asarray(self.grid.value, x.dtype)], axis=-1)
         # vmap Linear over spatial dims (H, W)
         x = jax.vmap(jax.vmap(self.P))(x)
         x = self.spectral_layers(x)
@@ -777,12 +772,11 @@ class SpectralLayers3d(eqx.Module):
             for i in range(n_layers)
         ]
 
-        if norm == "layer":
-            self.norm_layers = [eqx.nn.LayerNorm(n_channels) for _ in range(n_layers)]
-        elif norm == "batch":
-            self.norm_layers = [BatchNorm(n_channels) for _ in range(n_layers)]
-        else:
-            self.norm_layers = None
+        self.norm_layers = (
+            None
+            if norm is None
+            else [make_norm(norm, n_channels) for _ in range(n_layers)]
+        )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
         for i, (conv, w) in enumerate(zip(self.conv_layers, self.w_layers)):
@@ -792,8 +786,7 @@ class SpectralLayers3d(eqx.Module):
             x2 = rearrange(x2, "c d h w -> d h w c")
             x = x1 + x2
             if self.norm_layers is not None:
-                # vmap LayerNorm over spatial dims (D, H, W)
-                x = jax.vmap(jax.vmap(jax.vmap(self.norm_layers[i])))(x)
+                x = self.norm_layers[i](x)
             x = self.activation(x)
         return x
 
@@ -815,7 +808,7 @@ class FNO3D(eqx.Module):
     P: Linear
     spectral_layers: SpectralLayers3d
     Q_layers: list
-    grid: Optional[jnp.ndarray]
+    grid: Optional[Constant] = eqx.field(static=True)  # positions, not trained
     dropout: Optional[eqx.nn.Dropout]
 
     def __init__(
@@ -850,7 +843,10 @@ class FNO3D(eqx.Module):
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
 
-        self.P = Linear(in_features, hidden_channels, key=k1)
+        n_pos = 3  # coordinate channels appended when use_positions
+        self.P = Linear(
+            in_features + (n_pos if use_positions else 0), hidden_channels, key=k1
+        )
 
         self.spectral_layers = SpectralLayers3d(
             n_channels=hidden_channels,
@@ -871,7 +867,7 @@ class FNO3D(eqx.Module):
         ]
 
         if use_positions:
-            self.grid = create_grid_3d(d_model[0], d_model[1], d_model[2])
+            self.grid = Constant(create_grid_3d(d_model[0], d_model[1], d_model[2]))
         else:
             self.grid = None
 
@@ -907,7 +903,7 @@ class FNO3D(eqx.Module):
 
     def advance(self, x: jnp.ndarray, key=None) -> jnp.ndarray:
         if self.use_positions and self.grid is not None:
-            x = jnp.concatenate([x, self.grid], axis=-1)
+            x = jnp.concatenate([x, jnp.asarray(self.grid.value, x.dtype)], axis=-1)
         # vmap Linear over spatial dims (D, H, W)
         x = jax.vmap(jax.vmap(jax.vmap(self.P)))(x)
         x = self.spectral_layers(x)

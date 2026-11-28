@@ -49,6 +49,8 @@ from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
+
+from .common import Constant
 import equinox as eqx
 
 from .linear import Linear
@@ -115,9 +117,15 @@ def _make_bspline_grid(
 
 
 class BSplineBasis(eqx.Module):
-    """B-spline basis evaluated on a fixed uniform grid."""
+    """B-spline basis evaluated on a fixed uniform grid.
 
-    grid: jnp.ndarray
+    The basis lives on ``grid_range``: outside it the splines no longer sum to one, and beyond
+    ``spline_order`` cells past either end every basis function is zero, so the spline part of a KAN
+    layer outputs zero there (the SiLU skip of the B-spline KANs still passes the input). Scale the
+    inputs into ``grid_range``, e.g. with a LayerNorm or ``tanh`` before the KAN.
+    """
+
+    grid: Constant = eqx.field(static=True)  # knots, not trained
     in_features: int = eqx.field(static=True)
     grid_size: int = eqx.field(static=True)
     spline_order: int = eqx.field(static=True)
@@ -132,30 +140,34 @@ class BSplineBasis(eqx.Module):
         self.in_features = in_features
         self.grid_size = grid_size
         self.spline_order = spline_order
-        self.grid = _make_bspline_grid(in_features, grid_size, spline_order, grid_range)
+        self.grid = Constant(
+            _make_bspline_grid(in_features, grid_size, spline_order, grid_range)
+        )
 
     @property
     def size(self) -> int:
         return self.grid_size + self.spline_order
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        return _bspline_basis(x, self.grid, self.spline_order)
+        return _bspline_basis(
+            x, jnp.asarray(self.grid.value, x.dtype), self.spline_order
+        )
 
 
 class RBFBasis(eqx.Module):
     """Gaussian radial basis on a fixed uniform grid (FastKAN)."""
 
-    centers: jnp.ndarray  # (G,)
-    inv_h: jnp.ndarray  # scalar
+    centers: Constant = eqx.field(static=True)  # (G,), not trained
+    inv_h: Constant = eqx.field(static=True)  # scalar
     grid_size: int = eqx.field(static=True)
 
     def __init__(
         self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
     ):
         self.grid_size = grid_size
-        self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
+        self.centers = Constant(jnp.linspace(grid_range[0], grid_range[1], grid_size))
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
-        self.inv_h = jnp.asarray(1.0 / h)
+        self.inv_h = Constant(jnp.asarray(1.0 / h))
 
     @property
     def size(self) -> int:
@@ -163,7 +175,9 @@ class RBFBasis(eqx.Module):
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         # (..., I, G)
-        z = (x[..., None] - self.centers) * self.inv_h
+        z = (x[..., None] - jnp.asarray(self.centers.value, x.dtype)) * jnp.asarray(
+            self.inv_h.value, x.dtype
+        )
         return jnp.exp(-(z**2))
 
 
@@ -398,7 +412,7 @@ class ReLUKANBasis(eqx.Module):
     order: int = eqx.field(static=True)
     grid_a: jnp.ndarray
     grid_b: jnp.ndarray
-    norm: jnp.ndarray  # scalar
+    norm: Constant = eqx.field(static=True)  # scalar, not trained
 
     def __init__(
         self,
@@ -414,7 +428,7 @@ class ReLUKANBasis(eqx.Module):
         self.grid_a = centers - h
         self.grid_b = centers + h
         # Normalize so peak value of (relu(h)*relu(h))**order = 1.
-        self.norm = jnp.asarray(1.0 / (h ** (2 * order)))
+        self.norm = Constant(jnp.asarray(1.0 / (h ** (2 * order))))
 
     @property
     def size(self) -> int:
@@ -424,7 +438,7 @@ class ReLUKANBasis(eqx.Module):
         z = x[..., None]
         l = jax.nn.relu(z - self.grid_a)
         r = jax.nn.relu(self.grid_b - z)
-        return self.norm * (l * r) ** self.order
+        return jnp.asarray(self.norm.value, x.dtype) * (l * r) ** self.order
 
 
 class RationalBasis(eqx.Module):
@@ -458,28 +472,30 @@ class SincBasis(eqx.Module):
     """Sinc basis: ``phi_k(x) = sinc((x - c_k) / h)`` on a uniform grid."""
 
     grid_size: int = eqx.field(static=True)
-    centers: jnp.ndarray
-    inv_h: jnp.ndarray  # scalar
+    centers: Constant = eqx.field(static=True)  # (G,), not trained
+    inv_h: Constant = eqx.field(static=True)  # scalar
 
     def __init__(
         self, grid_size: int = 8, grid_range: tuple[float, float] = (-2.0, 2.0)
     ):
         self.grid_size = grid_size
-        self.centers = jnp.linspace(grid_range[0], grid_range[1], grid_size)
+        self.centers = Constant(jnp.linspace(grid_range[0], grid_range[1], grid_size))
         h = (grid_range[1] - grid_range[0]) / (grid_size - 1)
-        self.inv_h = jnp.asarray(1.0 / h)
+        self.inv_h = Constant(jnp.asarray(1.0 / h))
 
     @property
     def size(self) -> int:
         return self.grid_size
 
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        z = (x[..., None] - self.centers) * self.inv_h
+        z = (x[..., None] - jnp.asarray(self.centers.value, x.dtype)) * jnp.asarray(
+            self.inv_h.value, x.dtype
+        )
         return jnp.sinc(z)
 
 
 class GramBasis(eqx.Module):
-    """Gram (orthonormal Legendre) polynomials ``sqrt(2n+1) * P_n(x)`` on ``[-1, 1]``.
+    """Gram (orthonormal Legendre) polynomials ``sqrt((2n+1)/2) * P_n(x)`` on ``[-1, 1]`` (unit L2 norm).
 
     Continuous-limit Gram polynomials coincide with normalised Legendre.
     Inputs squashed by ``tanh``.
@@ -1691,23 +1707,23 @@ class KANConv2d(eqx.Module):
             raise ValueError(
                 f"Unknown basis '{basis}'. Available: {list(_BASIS_FACTORIES)}"
             )
-        in_features = in_channels * kernel_size * kernel_size
-        b = _BASIS_FACTORIES[basis](in_features, **basis_kwargs)
-        self.kan = _BasisKANLayer(
-            in_features,
+        # the same skip policy as KANConv1d / KANConv3d
+        self.kan = _build_kan_conv(
+            basis,
+            in_channels * kernel_size * kernel_size,
             out_channels,
-            b,
-            skip=(basis in ("bspline",)),  # original-KAN style only for bspline
-            skip_activation=jax.nn.silu,
-            key=key,
+            key,
+            **basis_kwargs,
         )
 
     def __call__(self, x: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        # x: (H, W, C). Extract (H, W, kH*kW*C) patches with SAME padding,
+        # x: (H, W, C), one sample. Extract (H, W, kH*kW*C) patches with SAME padding,
         # then feed each pixel's window through the KAN.
-        was_unbatched = x.ndim == 3
-        if was_unbatched:
-            x = x[None]
+        if x.ndim != 3:
+            raise ValueError(
+                f"KANConv2d takes one sample (H, W, C), got shape {x.shape}; batch with jax.vmap"
+            )
+        x = x[None]
         # NCHW for conv_general_dilated patches via reshape trick.
         # Simpler: use jax.lax.reduce_window-style patch extraction via dilated identity conv.
         N, H, W, C = x.shape
@@ -1720,10 +1736,7 @@ class KANConv2d(eqx.Module):
             axis=-2,
         )  # (N, H, W, k*k, C)
         patches = patches.reshape(N, H, W, k * k * C)
-        y = self.kan(patches)  # (N, H, W, out_channels)
-        if was_unbatched:
-            y = y[0]
-        return y
+        return self.kan(patches)[0]  # (H, W, out_channels)
 
 
 def _build_kan_conv(

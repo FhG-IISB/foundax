@@ -22,16 +22,20 @@ class SinusoidalTimeEmbedding(eqx.Module):
     Maps scalar t → R^dim.  Consistent with the DDPM convention
     (Ho et al., arXiv 2006.11239) but adds a learned MLP head.
 
-    ``dim`` must be even.
+    ``dim`` must be even. The features are taken of ``t_scale * t``: the frequencies run from 1 down to
+    1/10000, so for t in [0, 1] (flow matching) ``t_scale=1000`` spreads them as for DDPM's integer steps;
+    the default 1 keeps the outputs of trained models.
     """
 
     linear1: Linear
     linear2: Linear
     dim: int = eqx.field(static=True)
+    t_scale: float = eqx.field(static=True)
 
-    def __init__(self, dim: int, *, key):
+    def __init__(self, dim: int, t_scale: float = 1.0, *, key):
         assert dim % 2 == 0, "dim must be even"
         self.dim = dim
+        self.t_scale = float(t_scale)
         k1, k2 = jax.random.split(key)
         self.linear1 = Linear(dim, dim, key=k1)
         self.linear2 = Linear(dim, dim, key=k2)
@@ -39,8 +43,11 @@ class SinusoidalTimeEmbedding(eqx.Module):
     def __call__(self, t):
         """t: scalar → (dim,)."""
         half = self.dim // 2
+        t = jnp.asarray(t) * self.t_scale
+        dtype = jnp.result_type(t.dtype, jnp.asarray(0.0).dtype)
+        # DDPM spacing: exponents i / (half - 1), so the lowest frequency is exactly 1/10000 (one pair: 1)
         freqs = jnp.exp(
-            -jnp.log(10000.0) * jnp.arange(half, dtype=jnp.float32) / (half - 1)
+            -jnp.log(10000.0) * jnp.arange(half, dtype=dtype) / max(half - 1, 1)
         )
         emb = jnp.concatenate([jnp.sin(t * freqs), jnp.cos(t * freqs)])
         emb = jax.nn.gelu(self.linear1(emb))

@@ -64,7 +64,7 @@ def test_rbf_matches_closed_form():
     basis = RBFBasis(grid_size=8, grid_range=(-2.0, 2.0))
     x = jnp.linspace(-1.5, 1.5, 25).reshape(-1, 1)
     phi = np.asarray(basis(x))[:, 0, :]  # (25, 8)
-    centers = np.asarray(basis.centers)
+    centers = basis.centers.value
     h = (2.0 - (-2.0)) / (8 - 1)
     ref = np.exp(-(((np.asarray(x)[:, 0:1] - centers) / h) ** 2))
     assert np.allclose(phi, ref, atol=1e-6)

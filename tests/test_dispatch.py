@@ -83,6 +83,9 @@ class DispatchTests(unittest.TestCase):
         seen, ensure, importer = _patch_module(dpot, fake)
 
         with (
+            patch.object(
+                dpot, "_AdaptedDPOTNet", None
+            ),  # built fresh, not cached by an earlier test
             patch.object(dpot, "ensure_repo_on_path", ensure),
             patch.object(dpot.importlib, "import_module", importer),
         ):
@@ -102,6 +105,7 @@ class DispatchTests(unittest.TestCase):
         seen, ensure, importer = _patch_module(morph, fake)
 
         with (
+            patch.object(morph, "_AdaptedViT3D", None),
             patch.object(morph, "ensure_repo_on_path", ensure),
             patch.object(morph.importlib, "import_module", importer),
         ):
@@ -119,6 +123,7 @@ class DispatchTests(unittest.TestCase):
         seen, ensure, importer = _patch_module(mpp, fake)
 
         with (
+            patch.object(mpp, "_AdaptedAViT", None),
             patch.object(mpp, "ensure_repo_on_path", ensure),
             patch.object(mpp.importlib, "import_module", importer),
         ):

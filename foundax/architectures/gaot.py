@@ -50,6 +50,8 @@ import jax.numpy as jnp
 import equinox as eqx
 import numpy as np
 
+from .common import Constant
+
 
 # ---------------------------------------------------------------------------
 # Neighbor search (outside JIT — scipy KDTree, returns CSR + helper arrays)
@@ -1123,7 +1125,9 @@ class GAOT(eqx.Module):
     decoder: MAGNODecoder
     patch_linear: eqx.nn.Linear
     processor: _Transformer
-    positions: jnp.ndarray
+    positions: Constant = eqx.field(
+        static=True
+    )  # latent token coordinates, not trained
 
     input_size: int = eqx.field(static=True)
     output_size: int = eqx.field(static=True)
@@ -1183,7 +1187,7 @@ class GAOT(eqx.Module):
                 ),
                 axis=-1,
             ).reshape(-1, 3)
-        self.positions = positions
+        self.positions = Constant(positions)
 
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.encoder = MAGNOEncoder(
@@ -1241,7 +1245,7 @@ class GAOT(eqx.Module):
         if self.positional_embedding_name == "absolute":
             patch_volume = P**self.coord_dim
             pos_emb = _compute_absolute_embeddings(
-                self.positions, patch_volume * self.node_latent_size
+                jnp.asarray(self.positions.value), patch_volume * self.node_latent_size
             )
             d_have = pos_emb.shape[-1]
             d_want = patch_volume * self.node_latent_size

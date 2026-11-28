@@ -476,6 +476,7 @@ class TransolverIrregular(eqx.Module):
         act: str = "gelu",
         dropout: float = 0.0,
         time_input: bool = False,
+        t_scale: float = 1.0,
         *,
         key,
     ):
@@ -517,7 +518,9 @@ class TransolverIrregular(eqx.Module):
             keys[-1], (hidden_dim,), minval=0.0, maxval=1.0 / hidden_dim
         )
         self.time_embed = (
-            SinusoidalTimeEmbedding(hidden_dim, key=keys[0]) if time_input else None
+            SinusoidalTimeEmbedding(hidden_dim, t_scale=t_scale, key=keys[0])
+            if time_input
+            else None
         )
 
     def __call__(
@@ -592,6 +595,7 @@ class TransolverStructured2D(eqx.Module):
         dropout: float = 0.0,
         kernel: int = 3,
         time_input: bool = False,
+        t_scale: float = 1.0,
         *,
         key,
     ):
@@ -634,7 +638,9 @@ class TransolverStructured2D(eqx.Module):
             ph_key, (hidden_dim,), minval=0.0, maxval=1.0 / hidden_dim
         )
         self.time_embed = (
-            SinusoidalTimeEmbedding(hidden_dim, key=t_key) if time_input else None
+            SinusoidalTimeEmbedding(hidden_dim, t_scale=t_scale, key=t_key)
+            if time_input
+            else None
         )
 
     def __call__(
@@ -705,6 +711,7 @@ class TransolverStructured3D(eqx.Module):
         dropout: float = 0.0,
         kernel: int = 3,
         time_input: bool = False,
+        t_scale: float = 1.0,
         *,
         key,
     ):
@@ -747,7 +754,9 @@ class TransolverStructured3D(eqx.Module):
             ph_key, (hidden_dim,), minval=0.0, maxval=1.0 / hidden_dim
         )
         self.time_embed = (
-            SinusoidalTimeEmbedding(hidden_dim, key=t_key) if time_input else None
+            SinusoidalTimeEmbedding(hidden_dim, t_scale=t_scale, key=t_key)
+            if time_input
+            else None
         )
 
     def __call__(

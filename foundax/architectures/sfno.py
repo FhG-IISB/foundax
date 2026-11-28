@@ -33,7 +33,8 @@ Batch with ``jax.vmap`` externally.
 
 from __future__ import annotations
 
-from typing import Callable, Literal, Optional
+import functools
+from typing import Callable, Literal, Optional, Tuple
 
 import numpy as np
 import scipy.special as sp
@@ -42,7 +43,7 @@ import jax
 import jax.numpy as jnp
 import equinox as eqx
 
-from .common import get_activation
+from .common import Constant, get_activation
 from .linear import Linear
 
 
@@ -98,6 +99,19 @@ def _legendre_table_and_weights(
     return legendre, weights
 
 
+@functools.lru_cache(maxsize=None)
+def _sht_constants(L: int, nlat: int, grid: str) -> Tuple[Constant, Constant]:
+    """The Legendre table and quadrature weights as constants, in the default float dtype, built once."""
+    legendre, weights = _legendre_table_and_weights(L, nlat, grid)
+    dtype = jnp.asarray(0.0).dtype
+    return Constant(legendre.astype(dtype)), Constant(weights.astype(dtype))
+
+
+def _real_dtype(z: jnp.ndarray):
+    """The real dtype matching ``z`` (float32 for complex64)."""
+    return jnp.real(jnp.zeros((), z.dtype)).dtype
+
+
 # ── real-valued spherical harmonic transform ────────────────────────────────
 
 
@@ -112,8 +126,8 @@ class RealSHT2d(eqx.Module):
     zero so those weights do not contribute.
     """
 
-    legendre: jnp.ndarray  # (L, L, nlat) static (treated as buffer)
-    weights: jnp.ndarray  # (nlat,)      static (treated as buffer)
+    legendre: Constant = eqx.field(static=True)  # (L, L, nlat), not trained
+    weights: Constant = eqx.field(static=True)  # (nlat,), not trained
     L: int = eqx.field(static=True)
     nlat: int = eqx.field(static=True)
     nlon: int = eqx.field(static=True)
@@ -132,9 +146,8 @@ class RealSHT2d(eqx.Module):
             raise ValueError(
                 f"L ({L}) must be ≤ nlon//2+1 ({nlon // 2 + 1}) for stable SHT."
             )
-        legendre, weights = _legendre_table_and_weights(L, nlat, grid)
-        self.legendre = jnp.asarray(legendre)
-        self.weights = jnp.asarray(weights)
+        # built once per (L, nlat, grid): every layer of a model shares the same table
+        self.legendre, self.weights = _sht_constants(L, nlat, grid)
         self.L = L
         self.nlat = nlat
         self.nlon = nlon
@@ -146,15 +159,13 @@ class RealSHT2d(eqx.Module):
         X = jnp.fft.rfft(x, axis=1)  # (nlat, nlon//2 + 1, C)
         X = X[:, : self.L, :]
         scale = 2 * jnp.pi / self.nlon
-        # ``legendre`` and ``weights`` encode the fixed sphere geometry;
-        # they must not drift under training.
-        legendre = jax.lax.stop_gradient(self.legendre)
-        weights = jax.lax.stop_gradient(self.weights)
+        legendre = jnp.asarray(self.legendre.value, _real_dtype(X))
+        weights = jnp.asarray(self.weights.value, _real_dtype(X))
         return scale * jnp.einsum("lmi,i,imc->lmc", legendre, weights, X)
 
     def inverse(self, f_lm: jnp.ndarray) -> jnp.ndarray:
         """``(L, L, C) complex → (nlat, nlon, C) real``."""
-        legendre = jax.lax.stop_gradient(self.legendre)
+        legendre = jnp.asarray(self.legendre.value, _real_dtype(f_lm))
         F = jnp.einsum("lmi,lmc->imc", legendre, f_lm)  # (nlat, L, C) complex
         Lphi = self.nlon // 2 + 1
         F_full = jnp.zeros((self.nlat, Lphi, F.shape[-1]), dtype=F.dtype)

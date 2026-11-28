@@ -12,27 +12,56 @@ from .common import Conv2d, ConvTranspose2d
 # ============================================================
 
 
-def circular_pad_2d(x, pad):
-    """Circular (wrap) padding for NHWC or HWC tensors."""
+_PAD_MODES = {
+    "circular": "wrap",
+    "zeros": "constant",
+    "zero": "constant",
+    "reflect": "reflect",
+    "replicate": "edge",
+}
+
+
+def _pad_mode(padding_mode: str) -> str:
+    """The ``jnp.pad`` mode for a ``padding_mode`` option (case-insensitive)."""
+    mode = _PAD_MODES.get(padding_mode.lower())
+    if mode is None:
+        raise ValueError(
+            f"unknown padding_mode {padding_mode!r}; expected one of {sorted(_PAD_MODES)}"
+        )
+    return mode
+
+
+def circular_pad_2d(x, pad, mode="wrap"):
+    """Pad the two spatial axes of NHWC or HWC tensors (``mode`` as in ``jnp.pad``; circular by default)."""
     was_3d = x.ndim == 3
     if was_3d:
         x = x[None]
-    x = jnp.pad(x, ((0, 0), (pad, pad), (pad, pad), (0, 0)), mode="wrap")
+    x = jnp.pad(x, ((0, 0), (pad, pad), (pad, pad), (0, 0)), mode=mode)
     if was_3d:
         x = x[0]
     return x
 
 
 class CircularConv2d(eqx.Module):
-    """Conv2d with circular (wrap) padding."""
+    """Conv2d with explicit padding: circular (wrap) by default, or ``padding_mode``."""
 
     conv: Conv2d
     pad: int = eqx.field(static=True)
+    mode: str = eqx.field(static=True)
 
     def __init__(
-        self, in_ch, out_ch, kernel_size=3, strides=(1, 1), use_bias=False, *, key
+        self,
+        in_ch,
+        out_ch,
+        kernel_size=3,
+        strides=(1, 1),
+        use_bias=False,
+        padding_mode="circular",
+        *,
+        key,
     ):
         self.pad = kernel_size // 2
+        self.mode = _pad_mode(padding_mode)
         self.conv = Conv2d(
             in_ch,
             out_ch,
@@ -44,7 +73,7 @@ class CircularConv2d(eqx.Module):
         )
 
     def __call__(self, x, **kwargs):
-        x = circular_pad_2d(x, self.pad)
+        x = circular_pad_2d(x, self.pad, self.mode)
         return self.conv(x)
 
 
@@ -60,14 +89,30 @@ class MgIte(eqx.Module):
     S: CircularConv2d
 
     def __init__(
-        self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key
+        self,
+        num_channel_u: int,
+        num_channel_f: int,
+        use_bias: bool = False,
+        padding_mode: str = "circular",
+        *,
+        key,
     ):
         kA, kS = jax.random.split(key)
         self.A = CircularConv2d(
-            num_channel_u, num_channel_f, 3, use_bias=use_bias, key=kA
+            num_channel_u,
+            num_channel_f,
+            3,
+            use_bias=use_bias,
+            padding_mode=padding_mode,
+            key=kA,
         )
         self.S = CircularConv2d(
-            num_channel_f, num_channel_u, 3, use_bias=use_bias, key=kS
+            num_channel_f,
+            num_channel_u,
+            3,
+            use_bias=use_bias,
+            padding_mode=padding_mode,
+            key=kS,
         )
 
     def __call__(self, u: jnp.ndarray, f: jnp.ndarray) -> jnp.ndarray:
@@ -82,10 +127,21 @@ class MgIteInit(eqx.Module):
     S: CircularConv2d
 
     def __init__(
-        self, num_channel_u: int, num_channel_f: int, use_bias: bool = False, *, key
+        self,
+        num_channel_u: int,
+        num_channel_f: int,
+        use_bias: bool = False,
+        padding_mode: str = "circular",
+        *,
+        key,
     ):
         self.S = CircularConv2d(
-            num_channel_f, num_channel_u, 3, use_bias=use_bias, key=key
+            num_channel_f,
+            num_channel_u,
+            3,
+            use_bias=use_bias,
+            padding_mode=padding_mode,
+            key=key,
         )
 
     def __call__(self, f: jnp.ndarray) -> jnp.ndarray:
@@ -98,13 +154,32 @@ class Restrict(eqx.Module):
     Pi: CircularConv2d
     R: CircularConv2d
 
-    def __init__(self, num_channel_u: int, num_channel_f: int, *, key):
+    def __init__(
+        self,
+        num_channel_u: int,
+        num_channel_f: int,
+        padding_mode: str = "circular",
+        *,
+        key,
+    ):
         kPi, kR = jax.random.split(key)
         self.Pi = CircularConv2d(
-            num_channel_u, num_channel_u, 3, strides=(2, 2), use_bias=False, key=kPi
+            num_channel_u,
+            num_channel_u,
+            3,
+            strides=(2, 2),
+            use_bias=False,
+            padding_mode=padding_mode,
+            key=kPi,
         )
         self.R = CircularConv2d(
-            num_channel_f, num_channel_f, 3, strides=(2, 2), use_bias=False, key=kR
+            num_channel_f,
+            num_channel_f,
+            3,
+            strides=(2, 2),
+            use_bias=False,
+            padding_mode=padding_mode,
+            key=kR,
         )
 
     def __call__(self, u: jnp.ndarray, f: jnp.ndarray):
@@ -161,6 +236,7 @@ class MgConv(eqx.Module):
         num_channel_u: int,
         num_channel_f: int,
         use_bias: bool = False,
+        padding_mode: str = "circular",
         *,
         key,
     ):
@@ -194,7 +270,11 @@ class MgConv(eqx.Module):
                     # First pre-smooth at level 0 is MgIteInit
                     init_layers.append(
                         MgIteInit(
-                            num_channel_u, num_channel_f, use_bias=use_bias, key=subkey
+                            num_channel_u,
+                            num_channel_f,
+                            use_bias=use_bias,
+                            padding_mode=padding_mode,
+                            key=subkey,
                         )
                     )
                 else:
@@ -203,6 +283,7 @@ class MgConv(eqx.Module):
                             num_channel_u,
                             num_channel_f if level == 0 else num_channel_f,
                             use_bias=use_bias,
+                            padding_mode=padding_mode,
                             key=subkey,
                         )
                     )
@@ -210,7 +291,13 @@ class MgConv(eqx.Module):
             for i in range(num_post):
                 key, subkey = jax.random.split(key)
                 post_list.append(
-                    MgIte(num_channel_u, num_channel_f, use_bias=use_bias, key=subkey)
+                    MgIte(
+                        num_channel_u,
+                        num_channel_f,
+                        use_bias=use_bias,
+                        padding_mode=padding_mode,
+                        key=subkey,
+                    )
                 )
 
             pre_smooth_layers.append(tuple(pre_list))
@@ -219,7 +306,12 @@ class MgConv(eqx.Module):
             if level < num_levels - 1:
                 key, subkey = jax.random.split(key)
                 restrict_layers.append(
-                    Restrict(num_channel_u, num_channel_f, key=subkey)
+                    Restrict(
+                        num_channel_u,
+                        num_channel_f,
+                        padding_mode=padding_mode,
+                        key=subkey,
+                    )
                 )
                 key, subkey = jax.random.split(key)
                 prolongate_layers.append(
@@ -268,8 +360,11 @@ class MgConv(eqx.Module):
             u_fine, f_fine, num_post = level_outputs[level]
             u_coarse = level_outputs[level + 1][0]
 
+            # the stride-2 transpose conv gives an even size; crop it to the fine grid
+            # (odd sizes, and the width-1 grid of MgNO1D, which would otherwise broadcast)
             u_correction = self.prolongate_layers[level](u_coarse)
-            current_u = u_fine + u_correction
+            h, w = u_fine.shape[-3], u_fine.shape[-2]
+            current_u = u_fine + u_correction[..., :h, :w, :]
 
             for i in range(num_post):
                 current_u = self.post_smooth_layers[level][i](current_u, f_fine)
@@ -321,6 +416,7 @@ class MgNO(eqx.Module):
     ):
         if num_iteration is None:
             num_iteration = [(1, 1)] * 5
+        _pad_mode(padding_mode)  # raises for unknown modes
 
         self.activation = activation
 
@@ -337,6 +433,7 @@ class MgNO(eqx.Module):
                     num_channel_u=num_channel_u,
                     num_channel_f=in_ch,
                     use_bias=False,
+                    padding_mode=padding_mode,
                     key=k1,
                 )
             )

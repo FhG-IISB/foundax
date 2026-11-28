@@ -2,8 +2,8 @@
 
 Combinators join two pipelines (or any callables) into a single model::
 
-    branch = b1 > b2 > b3
-    trunk  = t1 > t2
+    branch = b1 | b2 | b3
+    trunk  = t1 | t2
 
     model = foundax.dot(branch, trunk)   # DeepONet-style
     model = foundax.add(branch, trunk)   # elementwise sum

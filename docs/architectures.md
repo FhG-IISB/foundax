@@ -154,7 +154,7 @@ For every wired-up architecture we run a numerical-parity test that **instantiat
 - *SFNO*: upstream `RealSHT` / `InverseRealSHT` primitives are real; the wrapping SFNO recipe is built in PT to match foundax's own (no canonical SFNO class exists upstream).
 - *FFNO*: upstream `SpectralConv2d` / 3D primitives directly. The full upstream `FNOFactorized2DBlock` has per-block FeedForward MLPs not present in our cleaner wrapper.
 - *FNO*: upstream `SpectralConv` (legacy module) with `factorization=None`, `fft_norm='ortho'`, `bias=False` to match foundax conventions.
-- *DiT*: upstream `DiTBlock` against an Equinox port that mirrors upstream's design choices (SiLU + GELU-tanh + no-affine LN). foundax's user-facing `dit2d` uses different conventions by design (no class labels, exact GELU, no `learn_sigma`).
+- *DiT*: upstream `DiTBlock` against an Equinox port that mirrors upstream's design choices (SiLU + GELU-tanh + no-affine LN). foundax's user-facing `dit2d` uses different conventions by design (no class labels, exact GELU, no `learn_sigma`, no SiLU before the adaLN projections, adaLN-Zero on the gates only).
 - *GNOT*: upstream `LinearAttention`, `LinearCrossAttention`, and `CrossAttentionBlock` primitives. The full `CGPTNO.forward` needs `dgl` for graph batching, which the parity test bypasses via sys.modules stub.
 - *GAOT*: the full upstream `GAOT` model class end-to-end (MAGNO encoder → UViT → MAGNO decoder), across 7 attention/geoembed/depth configurations. This is one of the most complete comparisons in the table. The upstream repo carries no code license; no pretrained weights have been released.
 

@@ -21,7 +21,7 @@ Example::
     b2 = fx.block(fl.SpectralBlock2d(32, 32, n_modes=16, key=ks[1]))
     b3 = fx.block(fl.SpectralBlock2d(32,  1, n_modes=16, key=ks[2]))
 
-    model = b1 > b2 > b3
+    model = b1 | b2 | b3
 """
 
 from .blocks import SpectralBlock1d, SpectralBlock2d, SpectralBlock3d
@@ -35,6 +35,7 @@ from foundax.architectures.fno import (
 )
 from foundax.architectures.mlp import MLP
 from foundax.architectures.linear import Linear
+from foundax.architectures.common import Norm, make_norm
 from foundax.architectures.ffno import (
     FactorizedSpectralBlock2d,
     FactorizedSpectralBlock3d,
@@ -71,6 +72,9 @@ __all__ = [
     "SpectralConv3d",
     "MLP",
     "Linear",
+    # normalisation of one channel-last sample
+    "Norm",
+    "make_norm",
     # Flow-matching backbones
     "FactorizedSpectralBlock2d",
     "FactorizedSpectralBlock3d",

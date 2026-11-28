@@ -80,7 +80,7 @@ def test_bspline_matches_scipy():
     )
     x = jnp.linspace(-0.5, 0.5, 20).reshape(-1, 1)
     phi = np.asarray(basis(x))[:, 0, :]  # (20, G+k)
-    knots = np.asarray(basis.grid[0])
+    knots = np.asarray(basis.grid.value[0])
     # scipy: for each basis index, build a unit-coefficient spline.
     n = grid_size + k  # number of basis functions
     ref = np.zeros((x.shape[0], n))

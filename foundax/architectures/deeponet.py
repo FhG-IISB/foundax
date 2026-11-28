@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from typing import Callable, Optional
 from einops import repeat
-from .common import BatchNorm
+from .common import BatchNorm, Constant, make_norm
 
 
 # =============================================================================
@@ -40,16 +40,7 @@ class MLPBlock(eqx.Module):
         self.norm = norm
         self.dropout_rate = dropout_rate
 
-        if norm == "layer":
-            self.norm_layer = eqx.nn.LayerNorm(features)
-        elif norm == "batch":
-            self.norm_layer = BatchNorm(features)
-        elif norm == "group":
-            self.norm_layer = eqx.nn.GroupNorm(min(32, features), features)
-        elif norm == "rms":
-            self.norm_layer = eqx.nn.LayerNorm(features, elementwise_affine=False)
-        else:
-            self.norm_layer = None
+        self.norm_layer = make_norm(norm, features)
 
     def __call__(self, x, *, key=None, **kwargs):
         x = self.dense(x)
@@ -156,12 +147,7 @@ class ResidualBlock(eqx.Module):
         self.activation = activation
         self.norm = norm
 
-        if norm == "layer":
-            self.out_norm = eqx.nn.LayerNorm(features)
-        elif norm == "batch":
-            self.out_norm = BatchNorm(features)
-        else:
-            self.out_norm = None
+        self.out_norm = make_norm(norm, features)
 
     def __call__(self, x, *, key=None, **kwargs):
         residual = x if self.proj is None else self.proj(x)
@@ -229,7 +215,10 @@ class ResMLP(eqx.Module):
 class FourierFeatures(eqx.Module):
     """Fourier feature embedding for improved coordinate representation."""
 
-    B: jnp.ndarray
+    B: Optional[jnp.ndarray]  # the trained projection (learnable=True), else None
+    B_fixed: Optional[Constant] = eqx.field(
+        static=True
+    )  # the fixed projection (learnable=False)
     learnable: bool = eqx.field(static=True)
 
     def __init__(
@@ -238,14 +227,16 @@ class FourierFeatures(eqx.Module):
         self.learnable = learnable
         if learnable:
             self.B = jax.random.normal(key, (input_dim, n_features)) * scale
+            self.B_fixed = None
         else:
-            self.B = (
+            self.B = None
+            self.B_fixed = Constant(
                 jax.random.normal(jax.random.PRNGKey(0), (input_dim, n_features))
                 * scale
             )
 
     def __call__(self, x, **kwargs):
-        B = self.B if self.learnable else jax.lax.stop_gradient(self.B)
+        B = self.B if self.learnable else jnp.asarray(self.B_fixed.value, x.dtype)
         x_proj = x @ B
         return jnp.concatenate(
             [jnp.sin(2 * jnp.pi * x_proj), jnp.cos(2 * jnp.pi * x_proj)], axis=-1
@@ -329,6 +320,8 @@ class AttentionBlock(eqx.Module):
         scale = jnp.sqrt(jnp.array(self.head_dim, dtype=x.dtype))
         attn = jnp.einsum("bhqd,bhkd->bhqk", q, k) / scale
         attn = jax.nn.softmax(attn, axis=-1)
+        if self.dropout_rate > 0 and key is not None:
+            attn = eqx.nn.Dropout(p=self.dropout_rate)(attn, key=key)
 
         out = jnp.einsum("bhqk,bhkd->bhqd", attn, v)
         out = out.transpose(0, 2, 1, 3).reshape(B, T, -1)
@@ -388,13 +381,15 @@ class TransformerBlock(eqx.Module):
                 return jax.vmap(jax.vmap(norm))(t)
             return norm(t)
 
+        k_attn, k_res1, k_res2 = (
+            (None,) * 3 if key is None else jax.random.split(key, 3)
+        )
         residual = x
         x_n = apply_norm(self.norm1, x)
-        x = residual + self.attn(x_n, key=key)
+        x = residual + self.attn(x_n, key=k_attn)
 
-        if self.dropout_rate > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=subkey)
+        if self.dropout_rate > 0 and k_res1 is not None:
+            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=k_res1)
 
         residual = x
         x_n = apply_norm(self.norm2, x)
@@ -414,9 +409,8 @@ class TransformerBlock(eqx.Module):
 
         x = residual + x_n
 
-        if self.dropout_rate > 0 and key is not None:
-            key, subkey = jax.random.split(key)
-            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=subkey)
+        if self.dropout_rate > 0 and k_res2 is not None:
+            x = eqx.nn.Dropout(p=self.dropout_rate)(x, key=k_res2)
 
         return x
 
@@ -710,6 +704,15 @@ class BranchTransformer(eqx.Module):
 # =============================================================================
 
 
+def _per_point(net, y, key):
+    """``net`` at every point of ``y`` (N, d), with its own dropout key for each point."""
+    if key is None:
+        return jax.vmap(lambda yi: net(yi))(y)
+    return jax.vmap(lambda yi, ki: net(yi, key=ki))(
+        y, jax.random.split(key, y.shape[0])
+    )
+
+
 class TrunkMLP(eqx.Module):
     """MLP-based trunk network."""
 
@@ -766,7 +769,7 @@ class TrunkMLP(eqx.Module):
             y_emb = self.embedding(y)
             y = jnp.concatenate([y, y_emb], axis=-1)
 
-        x = jax.vmap(lambda yi: self.mlp(yi, key=key))(y)
+        x = _per_point(self.mlp, y, key)
 
         if single_point:
             x = x[0]
@@ -831,7 +834,7 @@ class TrunkResMLP(eqx.Module):
             y_emb = self.embedding(y)
             y = jnp.concatenate([y, y_emb], axis=-1)
 
-        x = jax.vmap(lambda yi: self.resmlp(yi, key=key))(y)
+        x = _per_point(self.resmlp, y, key)
 
         if single_point:
             x = x[0]
@@ -1069,18 +1072,37 @@ class CrossAttention(eqx.Module):
 
 
 class AttentionCombination(eqx.Module):
-    """Cross-attention based combination."""
+    """Cross-attention combination: each query point attends over tokens of the branch output.
+
+    The branch output ``(p,)`` is projected and split into ``n_tokens`` tokens of width ``d_model``; the projected
+    trunk output of each query point attends over them, with a residual from the trunk projection, then a linear
+    map gives the outputs. So the result depends on the input function through the tokens and on the query point
+    through the query and the residual.
+    """
 
     branch_proj: Linear
     trunk_proj: Linear
     cross_attn: CrossAttention
     output_proj: Linear
+    n_tokens: int = eqx.field(static=True)
+    d_model: int = eqx.field(static=True)
 
     def __init__(
-        self, p_branch, p_trunk, d_model=128, n_heads=4, output_dim=1, *, key, **kwargs
+        self,
+        p_branch,
+        p_trunk,
+        d_model=128,
+        n_heads=4,
+        output_dim=1,
+        n_tokens=8,
+        *,
+        key,
+        **kwargs,
     ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
-        self.branch_proj = Linear(p_branch, d_model, key=k1)
+        self.n_tokens = n_tokens
+        self.d_model = d_model
+        self.branch_proj = Linear(p_branch, n_tokens * d_model, key=k1)
         self.trunk_proj = Linear(p_trunk, d_model, key=k2)
         self.cross_attn = CrossAttention(
             d_model, d_model, d_model, n_heads=n_heads, key=k3
@@ -1092,10 +1114,10 @@ class AttentionCombination(eqx.Module):
         if single_point:
             trunk_out = trunk_out[jnp.newaxis, :]
 
-        branch_proj = self.branch_proj(branch_out)[jnp.newaxis, :]
-        trunk_proj = jax.vmap(self.trunk_proj)(trunk_out)
+        tokens = self.branch_proj(branch_out).reshape(self.n_tokens, self.d_model)
+        query = jax.vmap(self.trunk_proj)(trunk_out)  # (N, d_model)
 
-        x = self.cross_attn(trunk_proj, branch_proj)
+        x = query + self.cross_attn(query, tokens)
         x = jax.vmap(self.output_proj)(x)
 
         if single_point:
@@ -1160,6 +1182,7 @@ class DeepONet(eqx.Module):
         combination_mode="concat",
         combination_d_model=128,
         combination_n_heads=4,
+        combination_n_tokens=8,
         activation=jax.nn.gelu,
         norm=None,
         dropout_rate=0.0,
@@ -1288,6 +1311,7 @@ class DeepONet(eqx.Module):
                 d_model=combination_d_model,
                 n_heads=combination_n_heads,
                 output_dim=n_outputs,
+                n_tokens=combination_n_tokens,
                 key=k3,
             )
         else:
@@ -1345,4 +1369,7 @@ class DeepONet(eqx.Module):
         Returns:
             Output values, shape (batch, n_points) or (batch, n_points, n_outputs)
         """
-        return jax.vmap(lambda u_i: self(u_i, y, key=key))(u)
+        if key is None:
+            return jax.vmap(lambda u_i: self(u_i, y))(u)
+        keys = jax.random.split(key, u.shape[0])
+        return jax.vmap(lambda u_i, k_i: self(u_i, y, key=k_i))(u, keys)
