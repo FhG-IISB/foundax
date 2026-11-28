@@ -4,6 +4,8 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-28
+
 ### Added
 - `fx.geofno`: Geo-FNO of Li et al. 2022 (arXiv:2207.05209) ported from neuraloperator/Geo-FNO: learned deformation (`IPHI`, optional design code), non-uniform Fourier transform onto a latent grid and back, FFT Fourier layers on the grid. Unit tests in `tests/test_geofno.py`, parity script `scripts/compare_geofno.py` (`pixi run -e dev verify-geofno`).
 - `fx.describe(model)`: pure introspection of any `eqx.Module`. It returns the module tree (paths, shapes, dtypes, parameter counts, bytes), a summary, and, for a model built from `fx.block`, `|` pipes and `fx.dot` / `fx.add` / `fx.cat`, its dataflow graph (blocks with in/out channels, chains, combinator nodes with their branches, one input per `dot` branch). A plain module has a tree and no graph.
@@ -39,9 +41,7 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - The GNOT MLP with `n_layers=1` built two layers from one key; it is one layer. FFNO kept its spectrum in `complex64` under x64. PiT computed a percentile for locality 100, where the mask keeps every key. `KANConv2d` uses the skip policy of `KANConv1d` / `KANConv3d` (a skip for `bspline`, `bsrbf` and `relu`) and takes one sample.
 - `SinusoidalTimeEmbedding(2)` returned NaN (it divided by `half - 1`), and its frequencies were float32 under x64.
 - DPOT's AFNO2D gave a different result on the GPU at power-of-2 sizes (1e-3 at 128): after mode mixing its spectrum was not Hermitian, so `irfft2` was undefined. AFNO2D and Geo-FNO now project the zero and Nyquist columns onto their Hermitian part first (`irfftn_hermitian`), which is the CPU result on every backend.
-
-### Fixed
-- The package metadata (`pyproject.toml`) declared the MIT license; foundax is EPL-2.0, as `LICENSE` and the README state.
+- The package metadata (`pyproject.toml`) declared the MIT license; foundax is EPL-2.0, as `LICENSE` and the README state (also in `CITATION.cff`).
 
 ## [0.2.0] - 2026-05-31
 
@@ -63,5 +63,6 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - mkdocs Material documentation site with per-family guides.
 - Hugging Face integration for foundation-model weights (`FhG-IISB/foundax`).
 
-[Unreleased]: https://github.com/FhG-IISB/foundax/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FhG-IISB/foundax/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/FhG-IISB/foundax/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FhG-IISB/foundax/releases/tag/v0.2.0
