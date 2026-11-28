@@ -40,6 +40,9 @@ All notable changes to foundax are documented here. The format follows [Keep a C
 - `SinusoidalTimeEmbedding(2)` returned NaN (it divided by `half - 1`), and its frequencies were float32 under x64.
 - DPOT's AFNO2D gave a different result on the GPU at power-of-2 sizes (1e-3 at 128): after mode mixing its spectrum was not Hermitian, so `irfft2` was undefined. AFNO2D and Geo-FNO now project the zero and Nyquist columns onto their Hermitian part first (`irfftn_hermitian`), which is the CPU result on every backend.
 
+### Fixed
+- The package metadata (`pyproject.toml`) declared the MIT license; foundax is EPL-2.0, as `LICENSE` and the README state.
+
 ## [0.2.0] - 2026-05-31
 
 ### Added
