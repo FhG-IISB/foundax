@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foundax"
-version = "0.2.0"
+version = "0.2.1"
 description = "Unified JAX model zoo for operator learning, KAN variants, and PDE foundation-model wrappers"
 license = "EPL-2.0"
 readme = "README.md"

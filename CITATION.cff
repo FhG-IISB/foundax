@@ -1,9 +1,9 @@
 cff-version: 1.2.0
 message: "If you use foundax in academic work, please cite the accompanying paper."
 title: "foundax: A Unified JAX Model Zoo for Operator Learning and PDE Foundation Models"
-version: "0.2.0"
-date-released: 2026-05-31
-license: MIT
+version: "0.2.1"
+date-released: 2026-11-28
+license: EPL-2.0
 repository-code: "https://github.com/FhG-IISB/foundax"
 url: "https://github.com/FhG-IISB/foundax"
 
